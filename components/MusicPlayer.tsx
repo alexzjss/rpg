@@ -35,26 +35,27 @@ export default function MusicPlayer({ onAddTrack }: MusicPlayerProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Mostrar botão flutuante quando: player está oculto E não há músicas
   if (!isPlayerVisible && playlist.length === 0) {
+    return (
+      <button
+        onClick={() => setPlayerVisible(true)}
+        className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all z-50"
+        title="Abrir player de música"
+      >
+        <Music size={24} />
+      </button>
+    );
+  }
+
+  // Não mostrar nada se: player está oculto OU playlist vazia
+  if (!isPlayerVisible || playlist.length === 0) {
     return null;
   }
 
+  // Mostrar player completo
   return (
-    <>
-      {/* Overlay para adicionar músicas */}
-      {!isPlayerVisible && playlist.length === 0 && (
-        <button
-          onClick={() => setPlayerVisible(true)}
-          className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all"
-          title="Abrir player de música"
-        >
-          <Music size={24} />
-        </button>
-      )}
-
-      {/* Player compacto na parte inferior */}
-      {isPlayerVisible && playlist.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-900 text-white border-t border-gray-700 shadow-2xl z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-gray-900 text-white border-t border-gray-700 shadow-2xl z-50">
           {/* Mini player com controles */}
           <div className="max-w-full px-4 py-3">
             {/* Informação da faixa atual */}
@@ -205,7 +206,5 @@ export default function MusicPlayer({ onAddTrack }: MusicPlayerProps) {
             </div>
           )}
         </div>
-      )}
-    </>
-  );
+    );
 }
