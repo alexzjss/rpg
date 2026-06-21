@@ -1515,10 +1515,10 @@
             inset: 0;
             pointer-events: none;
             background:
-                linear-gradient(100deg, rgba(255,255,255,0.08), transparent 32%),
-                radial-gradient(ellipse at 10% 12%, rgba(236,72,153,0.12), transparent 34%),
-                radial-gradient(ellipse at 90% 62%, rgba(103,232,249,0.08), transparent 36%);
-            opacity: 0.58;
+                linear-gradient(100deg, rgba(255,221,150,0.07), transparent 32%),
+                radial-gradient(ellipse at 10% 12%, rgba(249,115,22,0.14), transparent 34%),
+                radial-gradient(ellipse at 90% 62%, rgba(201,152,58,0.10), transparent 36%);
+            opacity: 0.6;
         }
         .mp-skill-header {
             position: relative;
@@ -1534,20 +1534,22 @@
         .mp-skill-kicker {
             font-size: 8px;
             font-weight: 900;
+            letter-spacing: 0.18em;
             text-transform: uppercase;
-            color: rgba(103,232,249,0.72);
+            color: rgba(249,180,84,0.82);
             line-height: 1;
         }
         .mp-skill-title {
             margin: 2px 0 0;
+            font-family: 'Playfair Display', serif;
             font-size: 30px;
             line-height: 0.9;
             font-style: italic;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0;
-            color: #fff;
-            text-shadow: 0 2px 0 rgba(236,72,153,0.75), 0 0 24px rgba(236,72,153,0.28);
+            color: #fdf0cc;
+            text-shadow: 0 2px 0 rgba(194,65,12,0.8), 0 0 24px rgba(249,115,22,0.35);
         }
         .mp-skill-actor {
             max-width: 112px;
@@ -1602,7 +1604,7 @@
         .mp-skill-row__brush {
             position: absolute;
             inset: 3px 0 2px 0;
-            background: linear-gradient(90deg, rgba(236,72,153,0.90), rgba(236,72,153,0.62) 58%, rgba(103,232,249,0.26));
+            background: linear-gradient(90deg, color-mix(in srgb, var(--skill-color) 85%, transparent), color-mix(in srgb, var(--skill-color) 50%, transparent) 58%, rgba(249,115,22,0.28));
             opacity: 0;
             transform: translateX(-18px) skewX(-8deg);
             clip-path: polygon(0 18%, 92% 0, 100% 42%, 94% 100%, 4% 86%);
@@ -1687,13 +1689,22 @@
             z-index: 1;
             margin: 0 10px 12px;
             padding: 11px 13px 12px;
-            color: rgba(15,17,23,0.92);
-            background: linear-gradient(100deg, rgba(255,255,255,0.92), rgba(236,240,245,0.78));
+            color: rgba(34,26,15,0.92);
+            background: linear-gradient(100deg, rgba(244,233,206,0.97), rgba(228,212,178,0.92));
             border-left: 6px solid var(--skill-color);
-            box-shadow: 0 -8px 24px rgba(0,0,0,0.26);
+            box-shadow: 0 -8px 24px rgba(0,0,0,0.3), inset 0 0 30px rgba(124,45,18,0.06);
             clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
             max-height: 154px;
             overflow: hidden;
+        }
+        .mp-skill-description::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.5;
+            mix-blend-mode: multiply;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.35'/%3E%3C/svg%3E");
         }
         .mp-skill-description__top {
             display: flex;
@@ -1708,13 +1719,17 @@
             font-weight: 900;
             text-transform: uppercase;
         }
+        .mp-skill-description > * {
+            position: relative;
+            z-index: 1;
+        }
         .mp-skill-description__top strong {
             flex: 1;
             min-width: 0;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            color: rgba(8,10,16,0.92);
+            color: rgba(34,26,15,0.95);
             font-size: 13px;
             font-weight: 900;
             font-style: italic;
@@ -1722,16 +1737,17 @@
         }
         .mp-skill-description__top em {
             font-family: 'JetBrains Mono', monospace;
-            color: rgba(8,10,16,0.55);
+            color: rgba(34,26,15,0.6);
             font-size: 11px;
             font-style: normal;
             font-weight: 900;
         }
         .mp-skill-description p {
             margin: 0;
-            color: rgba(8,10,16,0.75);
+            color: rgba(34,26,15,0.82);
             font-size: 11px;
-            line-height: 1.45;
+            line-height: 1.5;
+            font-style: italic;
         }
         .mp-skill-description small {
             display: block;
@@ -2540,12 +2556,12 @@
 
         /* Título de categoria de habilidade — muito maior */
         .mp-skill-title {
-            font-size: 52px !important;
+            font-size: 50px !important;
             line-height: 0.78 !important;
-            letter-spacing: -0.05em !important;
+            letter-spacing: -0.04em !important;
             text-shadow:
-                0 4px 0 rgba(236,72,153,0.92),
-                0 0 40px rgba(236,72,153,0.42) !important;
+                0 3px 0 rgba(194,65,12,0.9),
+                0 0 38px rgba(249,115,22,0.45) !important;
         }
         .mp-skill-kicker {
             font-size: 9px !important;
@@ -2593,7 +2609,7 @@
         .mp-battle-ghost--skill {
             font-size: 60px;
             letter-spacing: -0.06em;
-            color: rgba(236,72,153,0.055);
+            color: rgba(249,115,22,0.06);
             pointer-events: none;
             user-select: none;
         }
@@ -3192,7 +3208,7 @@
             position: absolute;
             bottom: 0; left: 0; right: 26px;
             height: 2px;
-            background: linear-gradient(90deg, rgba(236,72,153,0.8), rgba(240,192,96,0.5), transparent);
+            background: linear-gradient(90deg, rgba(249,115,22,0.85), rgba(240,192,96,0.6), transparent);
             pointer-events: none;
         }
 
