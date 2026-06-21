@@ -5674,6 +5674,10 @@ const App: React.FC = () => {
         </div>
       )}
 
+      <div aria-hidden className="mp-page-bg">
+        <span className="mp-glaze" />
+        <span className="mp-vignette" />
+      </div>
       <React.Fragment key={activeTab}><TabSweep tabKey={activeTab as string} label={TAB_META[activeTab].label as string} /></React.Fragment>
       {/* Navbar Superior */}
       <nav className="sticky top-0 z-50 nav-glow" style={{ background: 'linear-gradient(100deg, rgba(10,12,18,0.97), rgba(22,27,38,0.95) 58%, rgba(10,12,18,0.97))', backdropFilter: 'blur(28px) saturate(1.6)', borderBottom: '1px solid var(--border-gold)', boxShadow: '0 1px 0 rgba(201,152,58,0.15), 0 6px 40px rgba(0,0,0,0.7)', position: 'sticky', overflow: 'hidden' }}>
