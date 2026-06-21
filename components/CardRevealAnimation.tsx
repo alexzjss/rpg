@@ -6,6 +6,7 @@ import {
   getPacing,
   prefersReducedMotion,
   useAnimSequence,
+  useScramble,
 } from './combat/animFx';
 
 export type CardElement = string;
@@ -262,20 +263,31 @@ const BattleCard: React.FC<{
   );
 };
 
+const SeqDie: React.FC<{ value: number; sides: number; rolling: boolean }> = ({ value, sides, rolling }) => {
+  const shown = useScramble(value, sides, rolling);
+  return (
+    <div className={`mp-card-seq-die ${rolling ? 'mp-card-seq-die--rolling' : 'mp-card-seq-die--settled'}`}>
+      <span className="mp-card-seq-die__face">{rolling ? shown : value}</span>
+      <span className="mp-card-seq-die__edge" aria-hidden />
+    </div>
+  );
+};
+
 const RollPanel: React.FC<{
   label: string;
   roll: RollSnapshot;
   active: boolean;
   tone: string;
-}> = ({ label, roll, active, tone }) => (
+  rolling: boolean;
+}> = ({ label, roll, active, tone, rolling }) => (
   <div
-    className={`mp-card-seq-roll-panel ${active ? 'mp-card-seq-roll-panel--active' : ''}`}
+    className={`mp-card-seq-roll-panel ${active ? 'mp-card-seq-roll-panel--active' : ''} ${rolling ? 'mp-card-seq-roll-panel--rolling' : ''}`}
     style={{ ['--seq-roll-tone' as any]: tone } as React.CSSProperties}
   >
     <span className="mp-card-seq-roll-panel__label">{label}</span>
     <span className="mp-card-seq-roll-panel__notation">{roll.notation || '1d20'}</span>
-    <strong>{roll.total}</strong>
-    <span className="mp-card-seq-roll-panel__breakdown">{rollBreakdown(roll)}</span>
+    <SeqDie value={roll.total} sides={roll.numSides ?? 20} rolling={rolling} />
+    <span className="mp-card-seq-roll-panel__breakdown">{rolling ? '· rolando ·' : rollBreakdown(roll)}</span>
   </div>
 );
 
@@ -367,8 +379,9 @@ const CardRevealAnimation: React.FC<Props> = ({ payload, onComplete }) => {
           color: #fff7d6;
           font-family: "Inter", "Rajdhani", system-ui, sans-serif;
           background:
-            radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--seq-accent) 24%, transparent), transparent 34%),
-            linear-gradient(110deg, rgba(4,7,14,0.18), rgba(5,8,12,0.5));
+            radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--seq-accent) 26%, transparent), transparent 34%),
+            radial-gradient(ellipse 60% 50% at 50% 8%, rgba(249,115,22,0.14), transparent 60%),
+            linear-gradient(110deg, rgba(20,13,7,0.34), rgba(12,8,4,0.62));
           animation: mp-card-seq-enter 180ms ease-out both;
         }
 
@@ -409,11 +422,11 @@ const CardRevealAnimation: React.FC<Props> = ({ payload, onComplete }) => {
           border: 2px solid var(--seq-card-accent);
           clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
           background:
-            linear-gradient(160deg, rgba(255,255,255,0.16), transparent 22%),
-            linear-gradient(180deg, rgba(9,12,20,0.96), rgba(18,10,18,0.94));
+            linear-gradient(160deg, rgba(255,231,170,0.16), transparent 22%),
+            linear-gradient(180deg, rgba(30,19,11,0.97), rgba(38,23,13,0.95));
           box-shadow:
-            0 0 0 1px rgba(255,255,255,0.1) inset,
-            0 22px 70px rgba(0,0,0,0.62),
+            0 0 0 1px rgba(255,221,150,0.12) inset,
+            0 22px 70px rgba(0,0,0,0.66),
             0 0 46px color-mix(in srgb, var(--seq-card-accent) 58%, transparent);
           overflow: hidden;
           transform: translate(-50%, -50%) rotate(-7deg) scale(0.9);
@@ -562,9 +575,9 @@ const CardRevealAnimation: React.FC<Props> = ({ payload, onComplete }) => {
           clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
           border: 2px solid color-mix(in srgb, var(--seq-roll-tone) 72%, rgba(255,255,255,0.12));
           background:
-            linear-gradient(160deg, color-mix(in srgb, var(--seq-roll-tone) 28%, transparent), transparent 42%),
-            rgba(8,10,16,0.9);
-          box-shadow: 0 18px 55px rgba(0,0,0,0.55), inset 0 0 36px rgba(255,255,255,0.04);
+            linear-gradient(160deg, color-mix(in srgb, var(--seq-roll-tone) 30%, transparent), transparent 42%),
+            linear-gradient(180deg, rgba(24,15,8,0.93), rgba(16,10,6,0.94));
+          box-shadow: 0 18px 55px rgba(0,0,0,0.6), inset 0 0 36px rgba(124,45,18,0.1);
           overflow: hidden;
         }
 
@@ -603,13 +616,66 @@ const CardRevealAnimation: React.FC<Props> = ({ payload, onComplete }) => {
           letter-spacing: 0.08em;
         }
 
-        .mp-card-seq-roll-panel strong {
-          font-size: clamp(66px, 9vw, 118px);
-          line-height: 0.88;
+        /* Dado tumbando */
+        .mp-card-seq-die {
+          position: relative;
+          width: clamp(96px, 12vw, 150px);
+          height: clamp(96px, 12vw, 150px);
+          display: grid;
+          place-items: center;
+          margin: 2px 0;
+        }
+        .mp-card-seq-die__edge {
+          position: absolute;
+          inset: 0;
+          clip-path: polygon(50% 0, 100% 27%, 100% 73%, 50% 100%, 0 73%, 0 27%);
+          background:
+            linear-gradient(150deg, color-mix(in srgb, var(--seq-roll-tone) 60%, #ffe7aa 20%), color-mix(in srgb, var(--seq-roll-tone) 70%, #000 30%));
+          border: 2px solid color-mix(in srgb, var(--seq-roll-tone) 80%, #fff 12%);
+          box-shadow:
+            0 0 28px color-mix(in srgb, var(--seq-roll-tone) 55%, transparent),
+            inset 0 0 22px rgba(0,0,0,0.45),
+            inset 0 2px 6px rgba(255,255,255,0.3);
+          z-index: 0;
+        }
+        .mp-card-seq-die__face {
+          position: relative;
+          z-index: 1;
+          font-size: clamp(40px, 6vw, 66px);
+          line-height: 1;
           font-weight: 1000;
-          color: white;
-          text-shadow: 0 0 28px var(--seq-roll-tone);
-          animation: mp-card-seq-number-pop 580ms cubic-bezier(0.2, 1.7, 0.25, 1) both;
+          color: #fff7e2;
+          font-family: 'JetBrains Mono', monospace;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.7), 0 0 18px color-mix(in srgb, var(--seq-roll-tone) 80%, transparent);
+        }
+        .mp-card-seq-die--rolling .mp-card-seq-die__edge {
+          animation: mp-card-seq-die-tumble 0.5s linear infinite;
+        }
+        .mp-card-seq-die--rolling .mp-card-seq-die__face {
+          animation: mp-card-seq-die-flick 0.5s linear infinite;
+          opacity: 0.92;
+        }
+        .mp-card-seq-die--settled .mp-card-seq-die__edge {
+          animation: mp-card-seq-die-land 480ms cubic-bezier(0.2, 1.6, 0.3, 1) both;
+        }
+        .mp-card-seq-die--settled .mp-card-seq-die__face {
+          animation: mp-card-seq-number-pop 560ms cubic-bezier(0.2, 1.7, 0.25, 1) both;
+        }
+        @keyframes mp-card-seq-die-tumble {
+          0%   { transform: rotate(0deg) scale(1); }
+          25%  { transform: rotate(90deg) scale(0.9); }
+          50%  { transform: rotate(180deg) scale(1.05); }
+          75%  { transform: rotate(270deg) scale(0.92); }
+          100% { transform: rotate(360deg) scale(1); }
+        }
+        @keyframes mp-card-seq-die-flick {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50%      { transform: translateY(-2px) rotate(-3deg); }
+        }
+        @keyframes mp-card-seq-die-land {
+          0%   { transform: scale(1.18) rotate(-8deg); filter: brightness(1.5); }
+          60%  { transform: scale(0.96) rotate(2deg); }
+          100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
         }
 
         .mp-card-seq-result {
@@ -625,8 +691,8 @@ const CardRevealAnimation: React.FC<Props> = ({ payload, onComplete }) => {
           clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
           border: 2px solid var(--seq-accent);
           background:
-            linear-gradient(100deg, color-mix(in srgb, var(--seq-accent) 26%, transparent), transparent 32%, color-mix(in srgb, var(--seq-secondary) 20%, transparent)),
-            rgba(7,9,16,0.92);
+            linear-gradient(100deg, color-mix(in srgb, var(--seq-accent) 28%, transparent), transparent 32%, color-mix(in srgb, var(--seq-secondary) 22%, transparent)),
+            linear-gradient(180deg, rgba(22,14,7,0.94), rgba(14,9,5,0.95));
           box-shadow:
             0 0 0 1px rgba(255,255,255,0.12) inset,
             0 26px 90px rgba(0,0,0,0.6),
@@ -682,7 +748,7 @@ const CardRevealAnimation: React.FC<Props> = ({ payload, onComplete }) => {
           border: 2px solid var(--seq-accent);
           background:
             linear-gradient(160deg, rgba(255,255,255,0.24), transparent 34%),
-            linear-gradient(180deg, color-mix(in srgb, var(--seq-accent) 26%, #060912), #060912);
+            linear-gradient(180deg, color-mix(in srgb, var(--seq-accent) 26%, #160d06), #160d06);
           box-shadow: 0 0 44px color-mix(in srgb, var(--seq-accent) 58%, transparent);
           display: grid;
           place-items: center;
@@ -759,14 +825,14 @@ const CardRevealAnimation: React.FC<Props> = ({ payload, onComplete }) => {
         .mp-card-seq-clash__action {
           left: 18%;
           border: 2px solid var(--seq-attack-accent);
-          background: color-mix(in srgb, var(--seq-attack-accent) 30%, #050713);
+          background: color-mix(in srgb, var(--seq-attack-accent) 30%, #140d07);
           animation: mp-card-seq-action-defeated 950ms ease-in both;
         }
 
         .mp-card-seq-clash__reaction {
           right: 10%;
           border: 2px solid var(--seq-reaction-accent);
-          background: color-mix(in srgb, var(--seq-reaction-accent) 34%, #050713);
+          background: color-mix(in srgb, var(--seq-reaction-accent) 34%, #140d07);
           box-shadow: 0 0 64px color-mix(in srgb, var(--seq-reaction-accent) 60%, transparent);
           animation: mp-card-seq-reaction-cover 950ms cubic-bezier(0.16, 1, 0.25, 1) both;
         }
@@ -788,7 +854,7 @@ const CardRevealAnimation: React.FC<Props> = ({ payload, onComplete }) => {
           padding: 13px 24px;
           text-align: center;
           clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%);
-          background: rgba(3,7,18,0.9);
+          background: rgba(16,10,6,0.92);
           border: 1px solid var(--seq-reaction-accent);
           color: #e0f2fe;
           font-size: 12px;
@@ -933,8 +999,12 @@ const CardRevealAnimation: React.FC<Props> = ({ payload, onComplete }) => {
             padding: 16px 18px;
           }
 
-          .mp-card-seq-roll-panel strong {
-            font-size: 58px;
+          .mp-card-seq-die {
+            width: 92px;
+            height: 92px;
+          }
+          .mp-card-seq-die__face {
+            font-size: 42px;
           }
 
           .mp-card-seq-result {
@@ -968,6 +1038,7 @@ const CardRevealAnimation: React.FC<Props> = ({ payload, onComplete }) => {
               roll={payload.attackRoll}
               active={hasReaction ? actionWins : info.kind === 'hit' || info.kind === 'crit'}
               tone={hasReaction ? attackAccent : info.accent}
+              rolling={phase === 'rolls' && !reduced}
             />
             {hasReaction && payload.reactionRoll && (
               <RollPanel
@@ -975,6 +1046,7 @@ const CardRevealAnimation: React.FC<Props> = ({ payload, onComplete }) => {
                 roll={payload.reactionRoll}
                 active={reactionWins}
                 tone={reactionAccent}
+                rolling={phase === 'rolls' && !reduced}
               />
             )}
           </div>

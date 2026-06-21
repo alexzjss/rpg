@@ -71,6 +71,18 @@ export function useAnimSequence<P extends string>(
   return { phase, skip };
 }
 
+/** Número "rolando": embaralha valores em [1, sides] enquanto `rolling`, fixa em `finalValue` ao parar. */
+export function useScramble(finalValue: number, sides: number, rolling: boolean): number {
+  const [v, setV] = useState(finalValue);
+  useEffect(() => {
+    if (!rolling) { setV(finalValue); return; }
+    const s = Math.max(1, sides || 20);
+    const id = setInterval(() => setV(1 + Math.floor(Math.random() * s)), 55);
+    return () => clearInterval(id);
+  }, [rolling, finalValue, sides]);
+  return v;
+}
+
 export type AnimTier = 'trivial' | 'dramatic';
 
 export interface TierContext {
