@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { getUserReducedMotion } from '../../utils/motionPref';
 
 export interface SeqStep<P extends string> {
   phase: P;
@@ -103,8 +104,9 @@ export function getPacing(tier: AnimTier, reduced: boolean): Pacing {
 }
 
 export function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && !!window.matchMedia &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (getUserReducedMotion()) return true;
+  if (typeof window === 'undefined' || !window.matchMedia) return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 export const RESULT_TONES: Record<string, string> = {
