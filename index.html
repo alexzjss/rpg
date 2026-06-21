@@ -173,9 +173,9 @@
             100% { opacity:0; transform:translateX(-50%) translateY(-60px) scale(0.9); }
         }
 
-        /* ── Impact shockwave ring ────────────────────────────── */
+        /* ── Impact: explosão ardente no alvo ─────────────────── */
         @keyframes impact-shockwave {
-            0%   { transform:translate(-50%,-50%) scale(0.4); opacity:0.9; border-width:4px; }
+            0%   { transform:translate(-50%,-50%) scale(0.4); opacity:0.95; border-width:4px; }
             60%  { opacity:0.5; }
             100% { transform:translate(-50%,-50%) scale(2.8); opacity:0; border-width:1px; }
         }
@@ -183,11 +183,52 @@
             position:absolute; left:50%; top:50%;
             width:100%; height:100%;
             border-radius:50%;
-            border:3px solid rgba(239,68,68,0.9);
-            box-shadow:0 0 12px rgba(239,68,68,0.6);
+            border:3px solid rgba(249,115,22,0.95);
+            box-shadow:0 0 16px rgba(249,115,22,0.7), 0 0 30px rgba(239,68,68,0.4);
             pointer-events:none;
-            animation:impact-shockwave 0.55s cubic-bezier(0.1,0.8,0.2,1) both;
+            animation:impact-shockwave 0.6s cubic-bezier(0.1,0.8,0.2,1) both;
             z-index:50;
+        }
+        /* Segundo anel dourado, levemente atrasado */
+        .impact-shockwave--gold {
+            border-color: rgba(240,192,96,0.9);
+            box-shadow:0 0 16px rgba(240,192,96,0.6);
+            animation-duration: 0.72s;
+            animation-delay: 0.06s;
+        }
+        /* Núcleo de luz — clarão ardente no centro */
+        @keyframes impact-flash-core {
+            0%   { transform:translate(-50%,-50%) scale(0.2); opacity:0; }
+            18%  { opacity:1; }
+            100% { transform:translate(-50%,-50%) scale(2.2); opacity:0; }
+        }
+        .impact-flash-core {
+            position:absolute; left:50%; top:50%;
+            width:130%; height:130%; border-radius:50%;
+            background:radial-gradient(circle, rgba(255,244,214,0.95) 0%, rgba(249,115,22,0.6) 38%, rgba(239,68,68,0) 70%);
+            pointer-events:none;
+            animation:impact-flash-core 0.5s ease-out both;
+            z-index:49;
+        }
+        /* Faíscas de brasa disparando para fora */
+        @keyframes impact-spark {
+            0%   { transform:translate(-50%,-50%) rotate(var(--a,0deg)) translateY(0) scale(1); opacity:1; }
+            100% { transform:translate(-50%,-50%) rotate(var(--a,0deg)) translateY(calc(-1 * var(--dist,42px))) scale(0.2); opacity:0; }
+        }
+        .impact-spark {
+            position:absolute; left:50%; top:50%;
+            width:3px; height:11px; border-radius:2px;
+            background:linear-gradient(180deg, #fff4d6, #f97316 60%, rgba(194,65,12,0));
+            box-shadow:0 0 8px rgba(249,115,22,0.9);
+            pointer-events:none;
+            transform-origin:center;
+            animation:impact-spark 0.6s cubic-bezier(0.15,0.7,0.3,1) both;
+            z-index:51;
+        }
+        [data-reduced-motion='true'] .impact-spark,
+        [data-reduced-motion='true'] .impact-flash-core { display:none; }
+        @media (prefers-reduced-motion: reduce) {
+            .impact-spark, .impact-flash-core { display:none; }
         }
 
         /* ── Skill row click flash ────────────────────────────── */

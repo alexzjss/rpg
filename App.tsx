@@ -9758,8 +9758,8 @@ const App: React.FC = () => {
         @keyframes turn-pulse { 0%,100%{transform:scale(1);opacity:0.7;} 50%{transform:scale(1.1);opacity:1;} }
         @keyframes bar-fill { from{width:0} }
         .animate-bar-fill { animation: bar-fill 0.8s ease; }
-        .animate-impact { animation: impactAnim 0.4s ease; }
-        @keyframes impactAnim { 0%{transform:scale(1.25) rotate(3deg);filter:brightness(1.8);} 50%{transform:scale(0.95);} 100%{transform:scale(1);filter:brightness(1);} }
+        .animate-impact { animation: impactAnim 0.5s cubic-bezier(0.1,0.9,0.2,1) both; }
+        @keyframes impactAnim { 0%{transform:scale(1) rotate(0);filter:brightness(1) saturate(1);} 9%{transform:scale(1.2) rotate(2.5deg);filter:brightness(3.4) saturate(2) drop-shadow(0 0 16px rgba(249,115,22,0.9));} 24%{transform:scale(1.06) rotate(-1deg);filter:brightness(1.6);} 100%{transform:scale(1) rotate(0);filter:brightness(1) saturate(1);} }
         @keyframes statPopup { 0%{opacity:1;transform:translateX(-50%) translateY(0) scale(1);} 60%{opacity:1;transform:translateX(-50%) translateY(-20px) scale(1.15);} 100%{opacity:0;transform:translateX(-50%) translateY(-36px) scale(0.9);} }
         input[type=range] { -webkit-appearance:none; width:100%; height:4px; background:rgba(180,140,40,0.2); border-radius:99px; outline:none; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; background:linear-gradient(135deg,#c9983a,#f0c060); border-radius:50%; cursor:pointer; box-shadow:0 0 8px rgba(201,152,58,0.6); }

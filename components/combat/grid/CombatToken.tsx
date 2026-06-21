@@ -183,7 +183,23 @@ const CombatToken: React.FC<CombatTokenProps> = ({
         <ConditionBadges conditions={c.conditions} />
         <StatPopups popups={statPopups} />
 
-        {isImpacted && <div className="impact-shockwave" />}
+        {isImpacted && (
+          <>
+            <div className="impact-flash-core" />
+            <div className="impact-shockwave" />
+            <div className="impact-shockwave impact-shockwave--gold" />
+            {Array.from({ length: 9 }).map((_, i) => (
+              <span
+                key={i}
+                className="impact-spark"
+                style={{
+                  ['--a' as string]: `${i * 40}deg`,
+                  ['--dist' as string]: `${34 + (i % 3) * 12}px`,
+                }}
+              />
+            ))}
+          </>
+        )}
       </div>
     </div>
   );
