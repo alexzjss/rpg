@@ -367,10 +367,10 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
                 <button onClick={onNextTurn} className="mp-control-primary" style={{
                   padding: '7px 10px',
                   background: 'linear-gradient(135deg, #c2410c 0%, #f59e0b 36%, #ffe0a3 52%, #f0c060 66%, #c2410c 100%)',
-                  border: 'none', borderRadius: 7, color: '#0f1117', fontWeight: 700, fontSize: 10,
+                  border: 'none', borderRadius: 7, color: '#1a0f06', fontWeight: 700, fontSize: 10,
                   textTransform: 'uppercase', letterSpacing: '0.1em',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer',
-                  color: '#1a0f06', textShadow: '0 1px 0 rgba(255,231,170,0.4)',
+                  textShadow: '0 1px 0 rgba(255,231,170,0.4)',
                   boxShadow: '0 0 16px rgba(249,115,22,0.5), 0 4px 14px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.35)',
                 }}>
                   Próximo <ChevronRight size={11} />
