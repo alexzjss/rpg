@@ -1053,7 +1053,45 @@
             border-color: color-mix(in srgb, var(--team-color) 72%, white 8%);
             box-shadow: 0 0 0 1px color-mix(in srgb, var(--team-color) 55%, transparent),
                         0 14px 34px rgba(0,0,0,0.58),
-                        0 0 24px color-mix(in srgb, var(--team-color) 32%, transparent);
+                        0 0 24px color-mix(in srgb, var(--team-color) 32%, transparent),
+                        0 0 40px rgba(249,115,22,0.22);
+        }
+        /* Brasa pulsante na borda esquerda do banner ativo */
+        .mp-turn-banner--active::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+            z-index: 3;
+            background: linear-gradient(180deg, transparent, var(--ember) 18%, #ffdd96 50%, var(--ember) 82%, transparent);
+            box-shadow: 0 0 14px rgba(249,115,22,0.8);
+            animation: mp-banner-ember 2.6s ease-in-out infinite;
+        }
+        @keyframes mp-banner-ember {
+            0%, 100% { opacity: 0.55; }
+            50%      { opacity: 1; }
+        }
+        /* Sweep de luz ao virar o turno (dispara no mount via key) */
+        .mp-turn-banner--active::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 4;
+            pointer-events: none;
+            background: linear-gradient(105deg, transparent 38%, rgba(255,231,170,0.30) 50%, transparent 62%);
+            transform: translateX(-120%);
+            animation: mp-banner-sweep 0.9s ease-out 1;
+        }
+        @keyframes mp-banner-sweep {
+            from { transform: translateX(-120%); }
+            to   { transform: translateX(120%); }
+        }
+        [data-reduced-motion='true'] .mp-turn-banner--active::before,
+        [data-reduced-motion='true'] .mp-turn-banner--active::after { animation: none !important; }
+        [data-reduced-motion='true'] .mp-turn-banner--active::after { display: none; }
+        @media (prefers-reduced-motion: reduce) {
+            .mp-turn-banner--active::before, .mp-turn-banner--active::after { animation: none !important; }
+            .mp-turn-banner--active::after { display: none; }
         }
         .mp-turn-banner--down {
             filter: grayscale(1) brightness(0.62);
@@ -1107,15 +1145,44 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(0,0,0,0.52);
-            border-right: 1px solid rgba(255,255,255,0.10);
+            background: linear-gradient(180deg, rgba(20,13,7,0.72), rgba(8,5,3,0.72));
+            border-right: 1px solid color-mix(in srgb, var(--team-color) 30%, rgba(255,255,255,0.06));
         }
+        /* Número de posição — selo de cera estampado */
         .mp-turn-banner__position span {
+            position: relative;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 18px;
+            font-size: 12px;
             font-weight: 900;
-            color: var(--team-color);
             font-style: italic;
+            color: #fff3df;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--team-color) 60%, #ffd9a0 30%) 0%, var(--team-color) 38%, color-mix(in srgb, var(--team-color) 55%, #000 45%) 100%);
+            box-shadow:
+                inset 0 1px 2px rgba(255,255,255,0.4),
+                inset 0 -2px 4px rgba(0,0,0,0.5),
+                0 2px 6px rgba(0,0,0,0.6),
+                0 0 10px color-mix(in srgb, var(--team-color) 40%, transparent);
+            text-shadow: 0 1px 1px rgba(0,0,0,0.6);
+        }
+        .mp-turn-banner__position span::before {
+            content: '';
+            position: absolute;
+            inset: 2.5px;
+            border-radius: 50%;
+            border: 1px dashed rgba(0,0,0,0.28);
+            pointer-events: none;
+        }
+        .mp-turn-banner--active .mp-turn-banner__position span {
+            width: 28px;
+            height: 28px;
+            font-size: 13px;
         }
         .mp-turn-banner__portrait {
             position: absolute;
