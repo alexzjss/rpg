@@ -156,24 +156,28 @@ const CombatToken: React.FC<CombatTokenProps> = ({
           }} />
         </div>
 
-        {/* Nome */}
-        <div style={{
-          position: 'absolute', bottom: -18, left: '50%',
-          transform: 'translateX(-50%)',
-          whiteSpace: 'nowrap', fontSize: 8, fontWeight: 700,
-          letterSpacing: '0.06em', textTransform: 'uppercase',
-          color: isDefeated
-            ? '#f87171'
-            : isCurrent
-            ? '#e8c878'
-            : isSelected
-            ? '#34d399'
-            : 'rgba(255,255,255,0.4)',
-          textShadow: '0 1px 5px rgba(0,0,0,1)',
-          pointerEvents: 'none',
-          animation: isDefeated ? 'defeated-pulse 1.4s ease-in-out infinite' : 'none',
-        }}>
-          {isDefeated ? 'DERROTADO' : c.name.split(' ')[0]}
+        {/* Nome — fita-banner iluminada */}
+        <div
+          className={`mp-token-nameplate${isCurrent ? ' mp-token-nameplate--current' : ''}`}
+          style={{
+            ['--plate-color' as string]: isDefeated
+              ? '#dc2626'
+              : isCurrent
+              ? teamColor
+              : isSelected
+              ? '#34d399'
+              : 'rgba(255,255,255,0.22)',
+            color: isDefeated
+              ? '#fca5a5'
+              : isCurrent
+              ? '#fdf0cc'
+              : isSelected
+              ? '#a7f3d0'
+              : 'rgba(255,255,255,0.62)',
+            animation: isDefeated ? 'defeated-pulse 1.4s ease-in-out infinite' : 'none',
+          }}
+        >
+          {isDefeated ? '☠ DERROTADO' : c.name.split(' ')[0]}
         </div>
 
         <ConditionBadges conditions={c.conditions} />

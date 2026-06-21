@@ -17,13 +17,31 @@ const TokenRing: React.FC<TokenRingProps> = ({
 }) => (
   <>
     {isCurrent && (
-      <div style={{
-        position: 'absolute', inset: -10, borderRadius: '50%',
-        border: `2px solid ${teamColor}`,
-        boxShadow: `0 0 18px ${teamColor}88`,
-        animation: 'turn-pulse 2.2s ease-in-out infinite',
-        pointerEvents: 'none',
-      }} />
+      <>
+        {/* Halo de brasa pulsante */}
+        <div className="mp-token-halo" style={{ ['--halo-color' as string]: teamColor }} />
+        {/* Anel de runas em filigrana, girando */}
+        <div className="mp-token-runes" style={{ ['--rune-color' as string]: teamColor }}>
+          <svg viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="47" stroke={teamColor} strokeWidth="1.4"
+              strokeDasharray="2 5" strokeLinecap="round" opacity="0.9" />
+          </svg>
+        </div>
+        <div className="mp-token-runes mp-token-runes--rev" style={{ ['--rune-color' as string]: teamColor }}>
+          <svg viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="47" stroke="#f0c060" strokeWidth="0.8"
+              strokeDasharray="0.5 11" strokeLinecap="round" opacity="0.8" />
+          </svg>
+        </div>
+        {/* Anel sólido com pulso */}
+        <div style={{
+          position: 'absolute', inset: -10, borderRadius: '50%',
+          border: `2px solid ${teamColor}`,
+          boxShadow: `0 0 18px ${teamColor}aa, inset 0 0 10px ${teamColor}44`,
+          animation: 'turn-pulse 2.2s ease-in-out infinite',
+          pointerEvents: 'none',
+        }} />
+      </>
     )}
     {isSelected && !isCurrent && (
       <div style={{

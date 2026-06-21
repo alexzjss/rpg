@@ -5,19 +5,34 @@ interface TokenBaseProps {
 }
 
 const TokenBase: React.FC<TokenBaseProps> = ({ teamColor }) => (
-  <div style={{
-    position: 'absolute',
-    bottom: -6,
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: '90%',
-    height: 10,
-    borderRadius: '50%',
-    background: teamColor,
-    filter: 'blur(5px)',
-    opacity: 0.38,
-    pointerEvents: 'none',
-  }} />
+  <>
+    {/* Marca de brasa / chamuscado no chão */}
+    <div style={{
+      position: 'absolute',
+      bottom: -7,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      width: '96%',
+      height: 12,
+      borderRadius: '50%',
+      background: `radial-gradient(ellipse, ${teamColor} 0%, rgba(124,45,18,0.6) 45%, transparent 72%)`,
+      filter: 'blur(5px)',
+      opacity: 0.5,
+      pointerEvents: 'none',
+    }} />
+    <div style={{
+      position: 'absolute',
+      bottom: -4,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      width: '60%',
+      height: 5,
+      borderRadius: '50%',
+      background: 'rgba(0,0,0,0.55)',
+      filter: 'blur(3px)',
+      pointerEvents: 'none',
+    }} />
+  </>
 );
 
 export default TokenBase;
