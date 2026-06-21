@@ -116,11 +116,15 @@ const GridSVGLayer: React.FC<GridSVGLayerProps> = ({
     const lines: React.ReactNode[] = [];
     for (let i = 1; i < n; i++) {
       const v = (i / n) * 100;
+      // Linhas-mestras (a cada 2) recebem mais brilho dourado — filigrana
+      const major = i % 2 === 0;
+      const stroke = major ? 'rgba(240,192,96,0.16)' : 'rgba(212,168,83,0.085)';
+      const w = major ? 0.22 : 0.14;
       lines.push(
         <line key={`v${i}`} x1={v} y1={0} x2={v} y2={100}
-          stroke="rgba(212,168,83,0.07)" strokeWidth={0.15} />,
+          stroke={stroke} strokeWidth={w} />,
         <line key={`h${i}`} x1={0} y1={v} x2={100} y2={v}
-          stroke="rgba(212,168,83,0.07)" strokeWidth={0.15} />,
+          stroke={stroke} strokeWidth={w} />,
       );
     }
     return <g>{lines}</g>;

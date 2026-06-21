@@ -9,6 +9,7 @@ import CombatToken from './CombatToken';
 import GridSVGLayer, { svgPoint } from './GridSVGLayer';
 import FogRevealOverlay from './FogRevealOverlay';
 import ArenaToolbar from './ArenaToolbar';
+import EmberField from './EmberField';
 import { correctedDist } from './aoeHelpers';
 
 // ── Helper ───────────────────────────────────────────────────
@@ -314,20 +315,43 @@ const CombatArena: React.FC<CombatArenaProps> = ({
         flex: isFullscreen ? undefined : 1,
         width: isFullscreen ? '100vw' : '100%',
         height: isFullscreen ? '100vh' : '100%',
-        background: 'radial-gradient(ellipse at 42% 22%, rgba(38,26,8,0.95) 0%, rgba(4,6,14,0.98) 55%, rgba(2,4,10,1) 100%)',
+        background: 'radial-gradient(ellipse 78% 60% at 50% 6%, rgba(92,42,12,0.55) 0%, rgba(46,26,12,0.72) 30%, rgba(24,16,9,0.97) 64%, rgba(14,10,6,1) 100%)',
         overflow: 'hidden',
       }}
       onPointerMove={handleArenaPointerMove}
       onPointerUp={handleArenaPointerUp}
     >
-      {/* Atmospheric overlays */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.045, backgroundImage: 'radial-gradient(rgba(201,152,58,1) 1px, transparent 1px)', backgroundSize: '24px 24px', zIndex: 1 }} />
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 0%, rgba(201,152,58,0.09) 0%, transparent 50%)', zIndex: 1 }} />
-      <div className="mp-battle-ghost mp-battle-ghost--arena" style={{ zIndex: 1 }}>COMBATE</div>
+      {/* Atmospheric overlays — registro ardente */}
+      <div className="mp-battle-forge-glow" />
+      <div className="mp-battle-canvas" />
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.05, backgroundImage: 'radial-gradient(rgba(240,192,96,1) 1px, transparent 1px)', backgroundSize: '26px 26px', zIndex: 1 }} />
+      <div className="mp-battle-ghost mp-battle-ghost--arena mp-battle-ghost--ardent" style={{ zIndex: 1 }}>COMBATE</div>
       <div className="mp-battle-stripes" />
       <div className="mp-battle-vignette" />
-      <div className="mp-battle-top-slash" />
+      <div className="mp-battle-top-slash mp-battle-top-slash--molten" />
       <div className="mp-battle-bottom-fade" />
+      <EmberField />
+
+      {/* Cantos iluminados — filigrana de manuscrito */}
+      {(['tl', 'tr', 'bl', 'br'] as const).map(pos => (
+        <div key={pos} className={`mp-battle-corner mp-battle-corner--${pos}`}>
+          <svg viewBox="0 0 116 116" fill="none">
+            <path d="M10 10 L48 10 M10 10 L10 48" stroke="url(#cg)" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M10 10 Q40 14 46 40 Q52 22 70 18" stroke="url(#cg)" strokeWidth="1.6" fill="none" opacity="0.85" />
+            <circle cx="10" cy="10" r="4.5" fill="url(#cg)" />
+            <circle cx="50" cy="10" r="2.2" fill="#f0c060" opacity="0.7" />
+            <circle cx="10" cy="50" r="2.2" fill="#f0c060" opacity="0.7" />
+            <path d="M18 18 Q30 20 34 32" stroke="#f97316" strokeWidth="1" fill="none" opacity="0.55" />
+            <defs>
+              <linearGradient id="cg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="#f0c060" />
+                <stop offset="0.55" stopColor="#f97316" />
+                <stop offset="1" stopColor="#c2410c" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+      ))}
 
       {/* Toolbar (master only) */}
       {mode === 'master' && (
@@ -365,13 +389,13 @@ const CombatArena: React.FC<CombatArenaProps> = ({
             backgroundSize: '100% 100%',
             backgroundPosition: 'center',
             borderRadius: 16,
-            boxShadow: '0 0 0 2px rgba(212,168,83,0.18), 0 0 60px rgba(0,0,0,0.9), inset 0 0 0 1px rgba(255,255,255,0.03)',
+            boxShadow: '0 0 0 1.5px rgba(240,192,96,0.32), 0 0 0 3px rgba(124,45,18,0.35), 0 0 70px rgba(0,0,0,0.92), inset 0 0 90px rgba(124,45,18,0.18), inset 0 0 0 1px rgba(255,221,150,0.06)',
             overflow: 'hidden',
           }}
         >
-          {/* Default bg when no image */}
+          {/* Default bg when no image — pedra-brasa pintada */}
           {!combat.backgroundImage && (
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(145deg, #1e180e 0%, #100e08 100%)', borderRadius: 16 }} />
+            <div style={{ position: 'absolute', inset: 0, borderRadius: 16, background: 'radial-gradient(ellipse 90% 70% at 50% 20%, #2a1d10 0%, #1c1409 48%, #120d07 100%)' }} />
           )}
 
           {/* SVG layer (grid, AoE, range, rulers, fog) */}
