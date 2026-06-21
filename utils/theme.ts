@@ -4,7 +4,7 @@ import { CardType, DamageType } from '../types';
 // PALETTE — fonte única dos tokens base (espelha o :root do index.html)
 // ─────────────────────────────────────────────────────────────────
 export const PALETTE = {
-  bgBase:    '#0f1117',
+  bgBase:    '#13100b',
   bgSurface: '#161b26',
   bgRaised:  '#1c2234',
   bgOverlay: '#222840',
@@ -12,7 +12,7 @@ export const PALETTE = {
   goldMid:   '#c9983a',
   goldBright:'#f0c060',
   goldPale:  '#fdf0cc',
-  textPrimary:   '#eef2ff',
+  textPrimary:   '#f3ecdd',
   textSecondary: '#9aabcc',
   textMuted:     '#4e5f7a',
   textFaint:     '#2e3849',
@@ -40,6 +40,15 @@ export const PALETTE = {
   danger:        '#ef4444',            // erro/perigo (alias semântico)
   success:       '#22c55e',            // sucesso (alias semântico)
   warning:       '#f59e0b',            // alerta/atenção (alias semântico)
+  // ── Fase 0: paleta ardente + clima pergaminho ──────────
+  ember:           '#f97316',
+  emberDeep:       '#c2410c',
+  auraPurple:      '#a855f7',
+  parchmentBg:     '#e9dcbf',
+  parchmentRaised: '#f1e7cf',
+  parchmentInk:    '#221a0f',
+  parchmentInkSoft:'#5a4a30',
+  parchmentBorder: 'rgba(34,26,15,0.25)',
 } as const;
 
 // Mapa token -> CSS var name (mantém os nomes já usados no index.html)
@@ -55,6 +64,10 @@ const CSS_VAR_MAP: Record<keyof typeof PALETTE, string> = {
   paperWhite: '--paper-white', ink: '--ink', panelGlass: '--panel-glass',
   brushDark: '--brush-dark', brushLight: '--brush-light',
   danger: '--danger', success: '--success', warning: '--warning',
+  ember: '--ember', emberDeep: '--ember-deep', auraPurple: '--aura-purple',
+  parchmentBg: '--parchment-bg', parchmentRaised: '--parchment-raised',
+  parchmentInk: '--parchment-ink', parchmentInkSoft: '--parchment-ink-soft',
+  parchmentBorder: '--parchment-border',
 };
 
 /** Injeta as CSS vars no :root a partir do PALETTE (chamada no boot). */
