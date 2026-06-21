@@ -366,11 +366,12 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <button onClick={onNextTurn} className="mp-control-primary" style={{
                   padding: '7px 10px',
-                  background: 'linear-gradient(135deg, #7a5e1a 0%, #f0c060 50%, #7a5e1a 100%)',
+                  background: 'linear-gradient(135deg, #c2410c 0%, #f59e0b 36%, #ffe0a3 52%, #f0c060 66%, #c2410c 100%)',
                   border: 'none', borderRadius: 7, color: '#0f1117', fontWeight: 700, fontSize: 10,
                   textTransform: 'uppercase', letterSpacing: '0.1em',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer',
-                  boxShadow: '0 0 12px rgba(122,94,26,0.33)',
+                  color: '#1a0f06', textShadow: '0 1px 0 rgba(255,231,170,0.4)',
+                  boxShadow: '0 0 16px rgba(249,115,22,0.5), 0 4px 14px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.35)',
                 }}>
                   Próximo <ChevronRight size={11} />
                 </button>
@@ -402,13 +403,14 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
                 className={combat.combatants.length > 0 ? 'mp-control-primary' : 'mp-control-secondary'}
                 style={{
                   width: '100%', padding: '9px 12px',
-                  background: combat.combatants.length === 0 ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #7a5e1a 0%, #f0c060 50%, #7a5e1a 100%)',
+                  background: combat.combatants.length === 0 ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #c2410c 0%, #f59e0b 36%, #ffe0a3 52%, #f0c060 66%, #c2410c 100%)',
                   border: 'none', borderRadius: 7,
                   color: combat.combatants.length === 0 ? 'var(--text-faint)' : '#0f1117',
                   fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   cursor: combat.combatants.length === 0 ? 'not-allowed' : 'pointer',
-                  boxShadow: combat.combatants.length === 0 ? 'none' : '0 0 14px rgba(122,94,26,0.33)',
+                  textShadow: combat.combatants.length === 0 ? 'none' : '0 1px 0 rgba(255,231,170,0.4)',
+                  boxShadow: combat.combatants.length === 0 ? 'none' : '0 0 18px rgba(249,115,22,0.5), 0 4px 16px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35)',
                 }}>
                 <Play size={12} /> Iniciar Combate
               </button>

@@ -983,17 +983,30 @@
             transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease !important;
         }
         .mp-control-primary {
-            background: linear-gradient(105deg, var(--gold-bright), var(--gold-mid) 52%, rgba(236,72,153,0.82)) !important;
-            color: #080a10 !important;
-            border: 1px solid rgba(240,192,96,0.70) !important;
-            box-shadow: 0 10px 26px rgba(0,0,0,0.36), 0 0 22px rgba(201,152,58,0.28) !important;
+            background: linear-gradient(105deg, #c2410c 0%, #f59e0b 34%, #ffe0a3 52%, #f0c060 68%, #c2410c 100%) !important;
+            color: #1a0f06 !important;
+            border: 1px solid rgba(255,205,130,0.78) !important;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.42), 0 0 22px rgba(249,115,22,0.5), inset 0 1px 0 rgba(255,255,255,0.4) !important;
+            text-shadow: 0 1px 0 rgba(255,231,170,0.45);
         }
         .mp-control-primary:hover {
             transform: translateY(-1px);
-            filter: brightness(1.08);
+            filter: brightness(1.1) saturate(1.08);
+            box-shadow: 0 10px 28px rgba(0,0,0,0.5), 0 0 30px rgba(249,115,22,0.7), inset 0 1px 0 rgba(255,255,255,0.45) !important;
         }
+        /* Variante pequena (ex: Adicionar) — selo sutil, não ritual */
         .mp-control-primary--small {
             min-height: 31px;
+            background: linear-gradient(180deg, rgba(122,94,26,0.22), rgba(122,94,26,0.10)) !important;
+            color: var(--gold-bright) !important;
+            border: 1px solid rgba(201,152,58,0.34) !important;
+            box-shadow: none !important;
+            text-shadow: none;
+        }
+        .mp-control-primary--small:hover {
+            background: linear-gradient(180deg, rgba(201,152,58,0.30), rgba(122,94,26,0.16)) !important;
+            border-color: rgba(240,192,96,0.5) !important;
+            box-shadow: 0 0 14px rgba(201,152,58,0.22) !important;
         }
         .mp-control-secondary {
             background: rgba(19,16,11,0.54) !important;
@@ -2650,10 +2663,10 @@
         .mp-battle-arena-btn {
             border-radius: 0 !important;
             clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%) !important;
-            background: rgba(4,6,14,0.88) !important;
-            border: 1px solid rgba(201,152,58,0.28) !important;
+            background: linear-gradient(180deg, rgba(30,20,11,0.9), rgba(18,12,7,0.9)) !important;
+            border: 1px solid rgba(201,152,58,0.3) !important;
             color: var(--gold-mid) !important;
-            backdrop-filter: blur(12px) saturate(1.1) !important;
+            backdrop-filter: blur(12px) saturate(1.15) !important;
             transition: all 0.16s ease !important;
         }
         .mp-battle-arena-btn:hover {
