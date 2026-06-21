@@ -155,7 +155,7 @@ const ContextCardList: React.FC<ContextCardListProps> = ({
       name: item.name,
       description: item.description,
       typeLabel: 'IT',
-      accent: PALETTE.goldMid,
+      accent: 'var(--gold-mid)',
       sideLabel: `x${item.quantity}`,
       item,
     }));
@@ -320,7 +320,7 @@ const ContextCardList: React.FC<ContextCardListProps> = ({
             })}
           </div>
 
-          <div className="mp-skill-description" style={{ ['--skill-color' as any]: activeEntry?.accent ?? PALETTE.goldMid }}>
+          <div className="mp-skill-description" style={{ ['--skill-color' as any]: activeEntry?.accent ?? 'var(--gold-mid)' }}>
             <div className="mp-skill-description__top">
               <span>{activeEntry?.typeLabel}</span>
               <strong>{activeEntry?.name}</strong>

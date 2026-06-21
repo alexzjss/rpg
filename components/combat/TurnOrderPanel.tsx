@@ -1,6 +1,5 @@
 import React from 'react';
 import { CombatState, Card, Item } from '../../types';
-import { PALETTE } from '../../utils/theme';
 import TurnOrderRow from './TurnOrderRow';
 import { ActionCategory } from './ActionIconRail';
 
@@ -55,7 +54,7 @@ const TurnOrderPanel: React.FC<TurnOrderPanelProps> = ({
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: 11,
                 fontWeight: 900,
-                color: PALETTE.goldBright,
+                color: 'var(--gold-bright)',
                 background: 'rgba(0,0,0,0.52)',
                 border: '1px solid rgba(240,192,96,0.42)',
                 borderRadius: 3,
@@ -84,9 +83,9 @@ const TurnOrderPanel: React.FC<TurnOrderPanelProps> = ({
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: 10,
               fontWeight: 900,
-              color: PALETTE.goldBright,
-              background: `${PALETTE.goldDim}44`,
-              border: `1px solid ${PALETTE.goldDim}88`,
+              color: 'var(--gold-bright)',
+              background: 'rgba(122,94,26,0.27)',
+              border: '1px solid rgba(122,94,26,0.53)',
               borderRadius: 5,
               padding: '1px 6px',
             }}>

@@ -6,7 +6,7 @@ import {
   Trash2, X, Check, Zap, ShieldAlert, Star,
 } from 'lucide-react';
 import { CombatState, Combatant, Card, PRESET_CONDITIONS } from '../../types';
-import { PALETTE, PIN_COLORS } from '../../utils/theme';
+import { PIN_COLORS } from '../../utils/theme';
 import CardFusionPanel from './CardFusionPanel';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -107,9 +107,9 @@ const Section: React.FC<SectionProps> = ({ label, icon, isOpen, onToggle, childr
       {badge !== undefined && badge > 0 && (
         <span style={{
           fontSize: 7, fontWeight: 900,
-          background: `${PALETTE.goldDim}33`,
-          border: `1px solid ${PALETTE.goldDim}55`,
-          color: PALETTE.goldMid, borderRadius: 4, padding: '1px 5px',
+          background: 'rgba(122,94,26,0.20)',
+          border: '1px solid rgba(122,94,26,0.33)',
+          color: 'var(--gold-mid)', borderRadius: 4, padding: '1px 5px',
         }}>
           {badge}
         </span>
@@ -261,9 +261,9 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
             <button key={m} onClick={() => setMode(m)} className={`mp-control-mode ${mode === m ? 'mp-control-mode--active' : ''}`} style={{
               fontSize: 7, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
               padding: '2px 7px', borderRadius: 4,
-              background: mode === m ? `${PALETTE.goldDim}33` : 'transparent',
-              border: `1px solid ${mode === m ? `${PALETTE.goldDim}77` : 'rgba(255,255,255,0.1)'}`,
-              color: mode === m ? PALETTE.goldMid : 'var(--text-faint)',
+              background: mode === m ? 'rgba(122,94,26,0.20)' : 'transparent',
+              border: `1px solid ${mode === m ? 'rgba(122,94,26,0.47)' : 'rgba(255,255,255,0.1)'}`,
+              color: mode === m ? 'var(--gold-mid)' : 'var(--text-faint)',
               cursor: 'pointer', transition: 'all 0.15s ease',
             }}>
               {m === 'controls' ? 'Controles' : 'Contextual'}
@@ -307,7 +307,7 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <div style={{
                   fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 24, fontWeight: 700, lineHeight: 1, color: PALETTE.goldBright, flexShrink: 0,
+                  fontSize: 24, fontWeight: 700, lineHeight: 1, color: 'var(--gold-bright)', flexShrink: 0,
                 }}>
                   R{combat.round}
                 </div>
@@ -366,11 +366,11 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <button onClick={onNextTurn} className="mp-control-primary" style={{
                   padding: '7px 10px',
-                  background: `linear-gradient(135deg, ${PALETTE.goldDim} 0%, ${PALETTE.goldBright} 50%, ${PALETTE.goldDim} 100%)`,
+                  background: 'linear-gradient(135deg, #7a5e1a 0%, #f0c060 50%, #7a5e1a 100%)',
                   border: 'none', borderRadius: 7, color: '#0f1117', fontWeight: 700, fontSize: 10,
                   textTransform: 'uppercase', letterSpacing: '0.1em',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer',
-                  boxShadow: `0 0 12px ${PALETTE.goldDim}55`,
+                  boxShadow: '0 0 12px rgba(122,94,26,0.33)',
                 }}>
                   Próximo <ChevronRight size={11} />
                 </button>
@@ -402,13 +402,13 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
                 className={combat.combatants.length > 0 ? 'mp-control-primary' : 'mp-control-secondary'}
                 style={{
                   width: '100%', padding: '9px 12px',
-                  background: combat.combatants.length === 0 ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg, ${PALETTE.goldDim} 0%, ${PALETTE.goldBright} 50%, ${PALETTE.goldDim} 100%)`,
+                  background: combat.combatants.length === 0 ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #7a5e1a 0%, #f0c060 50%, #7a5e1a 100%)',
                   border: 'none', borderRadius: 7,
                   color: combat.combatants.length === 0 ? 'var(--text-faint)' : '#0f1117',
                   fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   cursor: combat.combatants.length === 0 ? 'not-allowed' : 'pointer',
-                  boxShadow: combat.combatants.length === 0 ? 'none' : `0 0 14px ${PALETTE.goldDim}55`,
+                  boxShadow: combat.combatants.length === 0 ? 'none' : '0 0 14px rgba(122,94,26,0.33)',
                 }}>
                 <Play size={12} /> Iniciar Combate
               </button>
@@ -438,8 +438,8 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
             <div style={{ display: 'flex', gap: 5 }}>
               <button onClick={onAddCombatant} className="mp-control-primary mp-control-primary--small" style={{
                 flex: 1, padding: '6px 8px',
-                background: `${PALETTE.goldDim}1e`, border: `1px solid ${PALETTE.goldDim}44`, borderRadius: 7,
-                color: PALETTE.goldBright, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                background: 'rgba(122,94,26,0.12)', border: '1px solid rgba(122,94,26,0.27)', borderRadius: 7,
+                color: 'var(--gold-bright)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                 fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer',
               }}>
                 <UserPlus size={12} /> Adicionar
@@ -592,7 +592,7 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
             {/* Custom Pins */}
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-faint)' }}>
               <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <MapPin size={8} style={{ color: PALETTE.goldMid }} /> Pins do Grid
+                <MapPin size={8} style={{ color: 'var(--gold-mid)' }} /> Pins do Grid
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <input type="text" placeholder="Rótulo do pin (opcional)..." value={pinLabel}
