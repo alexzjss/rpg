@@ -3399,6 +3399,136 @@
         /* fundo de página por clima */
         .mp-page-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bg-base); }
         :root[data-atmosphere='parchment'] .mp-page-bg { background: var(--parchment-bg); }
+
+        /* ═══════════════════════════════════════════════════════════
+           JORNADA — clima pergaminho / manuscrito de viagem
+           ═══════════════════════════════════════════════════════════ */
+        .mp-journey {
+            position: relative;
+            color: var(--parchment-ink);
+            --jp-ink: #221a0f;
+            --jp-ink-soft: #5a4a30;
+            --jp-paper: #ece0c2;
+            --jp-paper-raised: #f4ead2;
+            --jp-paper-deep: #ddcca6;
+            --jp-edge: rgba(74,54,24,0.34);
+            --jp-edge-soft: rgba(74,54,24,0.18);
+            --jp-gold: #9a7322;
+            --jp-ember: #b4470f;
+        }
+        /* textura de papel sobre o fundo da página enquanto na Jornada */
+        :root[data-atmosphere='parchment'] .mp-page-bg::after {
+            content: '';
+            position: absolute; inset: 0;
+            opacity: 0.5; mix-blend-mode: multiply;
+            background-image:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='jp'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23jp)' opacity='0.28'/%3E%3C/svg%3E"),
+                radial-gradient(ellipse at 50% 0%, rgba(154,115,34,0.12), transparent 60%);
+            background-size: 200px 200px, cover;
+        }
+
+        /* ── Overrides de classes Tailwind escuras dentro da Jornada ── */
+        .mp-journey .text-white { color: var(--jp-ink) !important; }
+        .mp-journey .text-slate-300 { color: #43361f !important; }
+        .mp-journey .text-slate-400 { color: #5a4a30 !important; }
+        .mp-journey .text-slate-500 { color: #6b5a3c !important; }
+        .mp-journey .text-slate-600 { color: #7a6a48 !important; }
+        .mp-journey .bg-slate-900,
+        .mp-journey .bg-slate-900\/80,
+        .mp-journey .bg-slate-900\/80\/50,
+        .mp-journey .bg-slate-800,
+        .mp-journey .bg-black\/50 {
+            background: var(--jp-paper-raised) !important;
+            color: var(--jp-ink) !important;
+        }
+        .mp-journey .border-slate-800,
+        .mp-journey .border-slate-700,
+        .mp-journey .border-amber-900\/20 { border-color: var(--jp-edge) !important; }
+        .mp-journey .glass-panel {
+            background: linear-gradient(135deg, var(--jp-paper-raised), var(--jp-paper)) !important;
+            border: 1px solid var(--jp-edge) !important;
+            color: var(--jp-ink) !important;
+            box-shadow: 0 10px 30px rgba(60,40,10,0.18), inset 0 1px 0 rgba(255,255,255,0.5) !important;
+            backdrop-filter: none !important;
+        }
+        /* botões escuros viram pergaminho gravado */
+        .mp-journey .bg-slate-900.hover\:bg-slate-800,
+        .mp-journey button.bg-slate-900 {
+            background: linear-gradient(180deg, var(--jp-paper-raised), var(--jp-paper-deep)) !important;
+            color: var(--jp-ink) !important;
+            border-color: var(--jp-edge) !important;
+        }
+        .mp-journey textarea::placeholder,
+        .mp-journey input::placeholder { color: rgba(74,54,24,0.45) !important; }
+
+        /* ── Header iluminado da Jornada ── */
+        .mp-journey-title {
+            font-family: 'Playfair Display', serif !important;
+            font-style: italic; font-weight: 900;
+            color: var(--jp-ink) !important;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.5), 0 2px 14px rgba(154,115,34,0.22);
+            letter-spacing: -0.01em;
+        }
+        .mp-journey-kicker {
+            font-family: 'Cinzel', serif !important;
+            color: var(--jp-ember) !important;
+            letter-spacing: 0.32em !important;
+        }
+        /* sub-tabs em pergaminho */
+        .mp-journey-subtabs {
+            background: rgba(120,90,30,0.10) !important;
+            border: 1px solid var(--jp-edge-soft) !important;
+        }
+
+        /* ── Local como miniatura de manuscrito iluminado ── */
+        .mp-journey-miniature {
+            position: relative;
+            border: 0 !important;
+            padding: 12px;
+            background:
+                linear-gradient(135deg, #f4ead2, #e2d0a8) !important;
+            box-shadow: 0 16px 44px rgba(60,40,10,0.3), inset 0 1px 0 rgba(255,255,255,0.6) !important;
+        }
+        .mp-journey-miniature__inner {
+            position: relative; height: 100%; overflow: hidden;
+            border: 2px solid var(--jp-gold);
+            box-shadow: inset 0 0 0 1px rgba(255,235,180,0.4), 0 0 0 1px rgba(74,54,24,0.4);
+        }
+        .mp-journey-miniature__corner {
+            position: absolute; width: 54px; height: 54px; z-index: 5; pointer-events: none;
+        }
+        .mp-journey-miniature__corner svg { width: 100%; height: 100%; }
+        .mp-journey-miniature__corner--tl { top: 4px; left: 4px; }
+        .mp-journey-miniature__corner--tr { top: 4px; right: 4px; transform: scaleX(-1); }
+        .mp-journey-miniature__corner--bl { bottom: 4px; left: 4px; transform: scaleY(-1); }
+        .mp-journey-miniature__corner--br { bottom: 4px; right: 4px; transform: scale(-1,-1); }
+
+        /* ── Diário de Bordo como crônica em pergaminho ── */
+        .mp-journey-chronicle {
+            background: linear-gradient(135deg, #f4ead2, #e8dab6) !important;
+            border: 1px solid var(--jp-edge) !important;
+            border-left: 5px solid var(--jp-ember) !important;
+            box-shadow: 0 10px 30px rgba(60,40,10,0.2), inset 0 0 40px rgba(154,115,34,0.06) !important;
+        }
+        .mp-journey-chronicle__title {
+            font-family: 'Cinzel', serif !important;
+            color: var(--jp-ember) !important;
+            letter-spacing: 0.22em !important;
+        }
+        .mp-journey-chronicle textarea {
+            background: transparent !important;
+            border: none !important;
+            color: var(--jp-ink) !important;
+            font-family: 'Inter', sans-serif;
+            font-style: italic;
+            line-height: 1.7 !important;
+        }
+        .mp-journey-dropcap::first-letter {
+            float: left; font-family: 'Playfair Display', serif; font-style: italic;
+            font-weight: 900; font-size: 3.1em; line-height: 0.78;
+            padding: 6px 10px 0 0; color: var(--jp-ember);
+            text-shadow: 0 2px 6px rgba(180,71,15,0.25);
+        }
     </style>
 <script type="importmap">
 {

@@ -5772,7 +5772,7 @@ const App: React.FC = () => {
         {/* ... (Previous tabs code omitted for brevity as they are unchanged) ... */}
         {/* Aba Jornada */}
         {activeTab === 'journey' && journey && (
-          <div className="anim-fade-up flex flex-col gap-4" style={{ height:'100%', overflow:'hidden' }}>
+          <div className="anim-fade-up flex flex-col gap-4 mp-journey" style={{ height:'100%', overflow:'hidden' }}>
              {/* Header & Controls */}
              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
