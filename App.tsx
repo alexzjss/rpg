@@ -7512,7 +7512,7 @@ const App: React.FC = () => {
 
         {/* Aba Personagens */}
         {activeTab === 'characters' && (
-          <div className="anim-fade-up" style={{ height:'100%', overflowY:'auto', display:'flex', flexDirection:'column', gap:0 }}>
+          <div className="anim-fade-up mp-darktab" style={{ height:'100%', overflowY:'auto', display:'flex', flexDirection:'column', gap:0 }}>
 
             {/* Barra de ações — compacta, sem duplicar o título que já está no header */}
             <div style={{
@@ -7610,7 +7610,7 @@ const App: React.FC = () => {
 
         {/* Aba Habilidades */}
         {activeTab === 'cards' && (
-          <div className="space-y-8 anim-fade-up" style={{ height:'100%', overflowY:'auto' }}>
+          <div className="space-y-8 anim-fade-up mp-darktab" style={{ height:'100%', overflowY:'auto' }}>
             <div className="flex flex-col gap-6">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 anim-fade-up">
                 <div>
@@ -7775,7 +7775,7 @@ const App: React.FC = () => {
 
         {/* Aba Itens (catálogo) */}
         {activeTab === 'items' && (
-          <div className="space-y-8 anim-fade-up" style={{ height:'100%', overflowY:'auto' }}>
+          <div className="space-y-8 anim-fade-up mp-darktab" style={{ height:'100%', overflowY:'auto' }}>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 <h2 className="text-4xl font-black text-white uppercase italic tracking-tight">Arsenal</h2>
@@ -7822,7 +7822,7 @@ const App: React.FC = () => {
 
         {/* ─── ABA SELOS ─── */}
         {activeTab === 'seals' && (
-          <div className="space-y-8 anim-fade-up" style={{ height:'100%', overflowY:'auto' }}>
+          <div className="space-y-8 anim-fade-up mp-darktab" style={{ height:'100%', overflowY:'auto' }}>
             <div className="flex flex-col gap-6">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 anim-fade-up">
                 <div>
@@ -7967,7 +7967,7 @@ const App: React.FC = () => {
 
         {/* Aba Extras (omitted as mostly unchanged) */}
         {activeTab === 'extras' && (
-          <div className="space-y-6 anim-fade-up max-w-6xl mx-auto" style={{ height:'100%', overflowY:'auto' }}>
+          <div className="space-y-6 anim-fade-up max-w-6xl mx-auto mp-darktab" style={{ height:'100%', overflowY:'auto' }}>
             {/* Tab Bar */}
             <div className="bg-slate-900/70 border border-white/5 p-1.5 rounded-2xl flex flex-wrap gap-1 w-fit mx-auto shadow-xl">
               {([

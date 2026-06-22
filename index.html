@@ -1936,16 +1936,17 @@
             color: #fff;
             text-shadow: 0 3px 0 rgba(0,0,0,0.32), 0 0 40px rgba(0,0,0,0.45);
         }
-        /* mp-section-kicker: rótulo pequeno acima de títulos (ciano frio) */
+        /* mp-section-kicker: rótulo pequeno acima de títulos (brasa-ouro) */
         .mp-section-kicker {
             display: inline-block;
+            font-family: 'Cinzel', serif;
             font-size: 9px;
-            font-weight: 900;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.42em;
             line-height: 1;
-            color: var(--accent-cyan);
-            text-shadow: 0 0 14px color-mix(in srgb, var(--accent-cyan) 40%, transparent);
+            color: var(--gold-bright);
+            text-shadow: 0 0 14px color-mix(in srgb, var(--ember) 45%, transparent);
         }
 
         /* ─── Pincelada de realce reutilizável ─────────────────────────── */
@@ -2107,9 +2108,9 @@
             justify-content: center;
             gap: 8px;
             padding: 11px 22px;
-            border: 1px solid rgba(240,192,96,0.7);
-            background: linear-gradient(105deg, var(--gold-bright), var(--gold-mid) 52%, var(--accent-pink));
-            color: #080a10;
+            border: 1px solid rgba(255,205,130,0.78);
+            background: linear-gradient(105deg, #f0c060, #c9983a 48%, var(--ember));
+            color: #1a0f06;
             font-weight: 900;
             font-size: 12px;
             text-transform: uppercase;
@@ -3553,6 +3554,42 @@
             border-color: var(--jp-edge) !important;
         }
         .mp-journey-cards option { color: #221a0f; background: #f4ead2; }
+
+        /* ═══════════════════════════════════════════════════════════
+           ABAS ESCURAS (Personagens/Habilidades/Itens/Selos/Extras)
+           Aquece os tons slate (cinza-frio) para marrom-ardente.
+           Escopado a .mp-darktab para não afetar Combate/Jornada.
+           ═══════════════════════════════════════════════════════════ */
+        /* texto */
+        .mp-darktab .text-slate-300 { color: #ddcfb0 !important; }
+        .mp-darktab .text-slate-400 { color: #b8a888 !important; }
+        .mp-darktab .text-slate-500 { color: #8f7e5a !important; }
+        .mp-darktab .text-slate-600 { color: #6e6044 !important; }
+        .mp-darktab .text-slate-700 { color: #574a32 !important; }
+        /* fundos */
+        .mp-darktab .bg-slate-900,
+        .mp-darktab .bg-slate-900\/80,
+        .mp-darktab .bg-slate-900\/60,
+        .mp-darktab .bg-slate-900\/50,
+        .mp-darktab .bg-slate-950 {
+            background-color: #1b1710 !important;
+        }
+        .mp-darktab .bg-slate-800,
+        .mp-darktab .bg-slate-800\/80,
+        .mp-darktab .bg-slate-800\/60,
+        .mp-darktab .bg-slate-800\/50 {
+            background-color: #241e14 !important;
+        }
+        .mp-darktab .hover\:bg-slate-800:hover,
+        .mp-darktab .hover\:bg-slate-700:hover { background-color: #2e2718 !important; }
+        /* bordas */
+        .mp-darktab .border-slate-800 { border-color: rgba(201,152,58,0.20) !important; }
+        .mp-darktab .border-slate-700 { border-color: rgba(201,152,58,0.30) !important; }
+        .mp-darktab .border-slate-600 { border-color: rgba(201,152,58,0.38) !important; }
+        .mp-darktab .hover\:border-amber-600:hover { border-color: rgba(240,192,96,0.6) !important; }
+        /* acentos frios inline -> ember (escopado aos cards via substring) */
+        .mp-darktab [style*="color: rgb(103, 232, 249)"] { color: #f0c060 !important; }
+        .mp-darktab [style*="rgb(56, 189, 248)"] { color: #f59e0b !important; }
     </style>
 <script type="importmap">
 {
