@@ -5775,13 +5775,14 @@ const App: React.FC = () => {
           <div className="anim-fade-up flex flex-col gap-4 mp-journey" style={{ height:'100%', overflow:'hidden' }}>
              {/* Header & Controls */}
              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                   <h2 className="text-4xl font-black text-white uppercase italic">Jornada</h2>
-                   <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Exploração e Aventura</p>
+                <div style={{ position:'relative' }}>
+                   <p className="mp-journey-kicker font-bold uppercase text-xs" style={{ marginBottom: 2 }}>Crônica de Viagem</p>
+                   <h2 className="mp-journey-title text-5xl font-black uppercase">Jornada</h2>
+                   <p className="mp-journey-kicker font-bold uppercase tracking-widest text-sm" style={{ marginTop: 4, opacity: 0.75 }}>Exploração e Aventura</p>
                 </div>
                 <div className="flex gap-4 flex-wrap">
                    {/* Sub-tab navigation */}
-                   <div className="flex gap-1 p-1 rounded-2xl" style={{ background:'rgba(0,0,0,0.3)', border:'1px solid rgba(255,255,255,0.06)' }}>
+                   <div className="flex gap-1 p-1 rounded-2xl mp-journey-subtabs" style={{ background:'rgba(0,0,0,0.3)', border:'1px solid rgba(255,255,255,0.06)' }}>
                      {([
                        { key:'mapa', icon:<Compass className="w-4 h-4"/>, label:'Mapa' },
                        { key:'cozinhar', icon:<ChefHat className="w-4 h-4"/>, label:'Cozinhar' },
@@ -5799,11 +5800,11 @@ const App: React.FC = () => {
                                : 'rgba(201,152,58,0.25)')
                              : 'transparent',
                            color: journeySubTab === tab.key
-                             ? (tab.key === 'cozinhar' ? '#fb923c'
-                               : tab.key === 'forjar' ? '#c084fc'
-                               : tab.key === 'upgrades' ? '#34d399'
-                               : '#f0c060')
-                             : 'rgba(255,255,255,0.35)',
+                             ? (tab.key === 'cozinhar' ? '#b4470f'
+                               : tab.key === 'forjar' ? '#7e22ce'
+                               : tab.key === 'upgrades' ? '#0f766e'
+                               : '#9a7322')
+                             : 'rgba(74,54,24,0.5)',
                            border: journeySubTab === tab.key
                              ? `1px solid ${tab.key === 'cozinhar' ? 'rgba(234,88,12,0.4)' : tab.key === 'forjar' ? 'rgba(168,85,247,0.4)' : tab.key === 'upgrades' ? 'rgba(16,185,129,0.35)' : 'rgba(201,152,58,0.4)'}`
                              : '1px solid transparent',
