@@ -8333,22 +8333,10 @@ const App: React.FC = () => {
       )}
 
       <style>{`
-        @keyframes el-card-hover-pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
-        @keyframes cardHoverFloat {
-          0%,100% { transform: translateY(0px) rotate(0deg); }
-          35%     { transform: translateY(-7px) rotate(0.35deg); }
-          65%     { transform: translateY(-4px) rotate(-0.2deg); }
-        }
-        @keyframes cardShimmerSweep {
-          0%   { opacity:0; transform: translateX(-110%) skewX(-20deg); }
-          40%  { opacity:0.22; }
-          100% { opacity:0; transform: translateX(280%) skewX(-20deg); }
-        }
         @keyframes seal-orb-pulse {
           0%,100% { box-shadow: 0 0 10px rgba(234,88,12,0.45), inset 0 0 6px rgba(234,88,12,0.15); }
           50%     { box-shadow: 0 0 28px rgba(234,88,12,0.9), inset 0 0 14px rgba(234,88,12,0.35); }
         }
-        @keyframes sealRuneSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
       `}</style>
 
       {/* ── BURN CARD MODAL (QUEIMAR) ──────────────────────── */}
