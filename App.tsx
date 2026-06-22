@@ -6322,7 +6322,7 @@ const App: React.FC = () => {
              {journeySubTab === 'cozinhar' && (() => {
                const cookRecipes = (journey.recipes || []).filter(r => r.type === 'cozinhar');
                return (
-                 <div className="flex-1 min-h-0 overflow-y-auto custom-scroll">
+                 <div className="flex-1 min-h-0 overflow-y-auto custom-scroll mp-journey-cards">
                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:16, padding:'4px 2px' }}>
                      {cookRecipes.map(recipe => {
                        const canCraftBy = journeyCharacters.filter(char => {
@@ -6404,7 +6404,7 @@ const App: React.FC = () => {
              {journeySubTab === 'forjar' && (() => {
                const forgeRecipes = (journey.recipes || []).filter(r => r.type === 'forjar');
                return (
-                 <div className="flex-1 min-h-0 overflow-y-auto custom-scroll">
+                 <div className="flex-1 min-h-0 overflow-y-auto custom-scroll mp-journey-cards">
                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:16, padding:'4px 2px' }}>
                      {forgeRecipes.map(recipe => {
                        const canCraftBy = journeyCharacters.filter(char => {
@@ -6485,7 +6485,7 @@ const App: React.FC = () => {
                const luckConf = { sorte:{ label:'🍀 Sorte', color:'#34d399', bg:'rgba(52,211,153,0.15)', border:'rgba(52,211,153,0.4)' }, neutro:{ label:'⚖ Neutro', color:'#94a3b8', bg:'rgba(148,163,184,0.1)', border:'rgba(148,163,184,0.3)' }, azar:{ label:'💀 Azar', color:'#f87171', bg:'rgba(248,113,113,0.12)', border:'rgba(248,113,113,0.4)' } };
                const journeyParty = characters.filter(c => c.isInJourney);
                return (
-                 <div style={{ flex:1, display:'flex', flexDirection:'column', gap:20, minHeight:0, overflowY:'auto', paddingBottom:20 }} className="custom-scroll">
+                 <div style={{ flex:1, display:'flex', flexDirection:'column', gap:20, minHeight:0, overflowY:'auto', paddingBottom:20 }} className="custom-scroll mp-journey-cards">
                    {/* Shop header */}
                    <div style={{ display:'flex', gap:16, alignItems:'stretch', flexWrap:'wrap' }}>
                      {/* Config panel */}
