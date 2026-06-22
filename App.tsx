@@ -5868,8 +5868,20 @@ const App: React.FC = () => {
              <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
                 {/* Left: Location & Log */}
                 <div className="lg:col-span-2 flex flex-col gap-6">
-                   {/* Location Visualization */}
-                   <div className="relative flex-1 rounded-[3rem] overflow-hidden border border-slate-800 group shadow-2xl bg-slate-900/80">
+                   {/* Location Visualization — miniatura de manuscrito iluminado */}
+                   <div className="relative flex-1 rounded-2xl overflow-hidden group shadow-2xl bg-slate-900/80 mp-journey-framed">
+                      <div className="mp-journey-frame-overlay" />
+                      {(['tl','tr','bl','br'] as const).map(pos => (
+                        <div key={pos} className={`mp-journey-frame-corner mp-journey-frame-corner--${pos}`}>
+                          <svg viewBox="0 0 58 58" fill="none">
+                            <path d="M6 6 L30 6 M6 6 L6 30" stroke="#caa44e" strokeWidth="2.5" strokeLinecap="round" />
+                            <path d="M6 6 Q22 9 26 24 Q30 13 42 11" stroke="#9a7322" strokeWidth="1.4" fill="none" opacity="0.9" />
+                            <circle cx="6" cy="6" r="3.6" fill="#caa44e" />
+                            <circle cx="30" cy="6" r="1.8" fill="#9a7322" opacity="0.8" />
+                            <circle cx="6" cy="30" r="1.8" fill="#9a7322" opacity="0.8" />
+                          </svg>
+                        </div>
+                      ))}
                       <img src={journey.image || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2868&auto=format&fit=crop'} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[20s] ease-linear hover:scale-110" />
                       
                       {/* Night overlay */}
@@ -6292,14 +6304,14 @@ const App: React.FC = () => {
                       </div>
                    </div>
                    
-                   {/* Notes */}
-                   <div className="h-64 glass-panel rounded-[2.5rem] p-6 flex flex-col border border-amber-900/20">
-                      <h3 className="text-sm font-extrabold uppercase text-slate-500 tracking-widest mb-4 flex items-center gap-2"><ScrollText className="w-4 h-4" /> Diário de Bordo</h3>
-                      <textarea 
+                   {/* Notes — Diário de Bordo (crônica em pergaminho) */}
+                   <div className="h-64 rounded-[2.5rem] p-6 flex flex-col mp-journey-chronicle">
+                      <h3 className="mp-journey-chronicle__title text-sm font-extrabold uppercase tracking-widest mb-4 flex items-center gap-2"><ScrollText className="w-4 h-4" /> Diário de Bordo</h3>
+                      <textarea
                         value={journey.notes}
                         onChange={(e) => updateJourney({ notes: e.target.value })}
-                        className="flex-1 bg-slate-900/80/50 border border-slate-800 rounded-2xl p-4 text-sm text-slate-300 outline-none focus:border-amber-600 resize-none custom-scroll leading-relaxed" 
-                        placeholder="Anotações sobre a aventura..." 
+                        className="flex-1 rounded-2xl p-4 text-sm outline-none resize-none custom-scroll leading-relaxed"
+                        placeholder="Que estas páginas guardem a sua aventura..."
                       />
                    </div>
                 </div>
