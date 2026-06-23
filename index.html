@@ -3603,23 +3603,28 @@
           --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
         }
 
-        /* ----- Anel: dock-joia persistente (flutua no canto inferior) ----- */
+        /* ----- Anel do Mestre: dock discreto (portal no body, canto inferior esquerdo) ----- */
         /* z-index 99: acima dos painéis de combate (.mp-collapse-tab em z-95), abaixo de modais (100) e da roda (200) */
-        .mp-ring { position: fixed; left: 20px; bottom: 16px; z-index: 99; width: 320px; height: 168px; pointer-events: none; }
-        .mp-ring__hub, .mp-ring__sat { pointer-events: auto; }
+        .mp-ring { position: fixed; left: 16px; bottom: 16px; z-index: 99; width: 260px; height: 150px; pointer-events: none; }
+        /* aberto: a caixa inteira vira zona de hover (mantém aberto sem buracos) e fecha ao sair/clicar no vazio */
+        .mp-ring[data-open="true"] { pointer-events: auto; }
+        .mp-ring__hub { pointer-events: auto; }
         .mp-ring__hub {
           position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
-          width: 96px; height: 96px; border-radius: 50%; overflow: hidden;
+          width: 54px; height: 54px; border-radius: 50%; overflow: hidden;
           display: grid; place-items: center; cursor: pointer;
-          background: radial-gradient(circle at 50% 35%, #2a2113, #15110a);
-          border: 2px solid var(--brass); color: var(--text-primary);
-          box-shadow: 0 0 28px rgba(249,115,22,0.45), inset 0 1px 0 rgba(255,255,255,0.12);
-          transition: box-shadow .25s ease, border-color .25s ease, background .35s ease;
+          background: radial-gradient(circle at 50% 35%, #241d11, #14110a);
+          border: 1px solid var(--brass); color: var(--text-secondary); opacity: 0.88;
+          box-shadow: 0 3px 12px rgba(0,0,0,0.5);
+          transition: box-shadow .25s ease, border-color .25s ease, background .35s ease, opacity .25s ease, color .25s ease;
         }
-        .mp-ring__hub:hover { box-shadow: 0 0 38px rgba(249,115,22,0.6), inset 0 1px 0 rgba(255,255,255,0.18); }
+        .mp-ring__hub:hover, .mp-ring[data-open="true"] .mp-ring__hub {
+          opacity: 1; color: var(--text-primary); border-color: var(--accent);
+          box-shadow: 0 3px 14px rgba(0,0,0,0.55), 0 0 18px rgba(249,115,22,0.4);
+        }
         .mp-ring__hub[data-mode="journey"] {
-          background: radial-gradient(circle at 50% 35%, #f1e7cf, #d9c79c);
-          color: #221a0f; box-shadow: 0 0 24px rgba(201,152,58,0.5);
+          background: radial-gradient(circle at 50% 35%, #efe4c9, #d8c69a);
+          color: #4a3a1c; border-color: var(--brass);
         }
         /* face que vira (flip em Y) a cada troca de modo */
         .mp-ring__hub-face { display: grid; place-items: center; animation: mp-hub-flip .5s cubic-bezier(.4,0,.2,1) both; }
@@ -3629,25 +3634,37 @@
           100% { transform: perspective(420px) rotateY(0deg); opacity: 1; }
         }
         .mp-ring__sat {
-          position: absolute; left: 50%; bottom: 16px;
-          width: 52px; height: 52px; margin: -26px; border-radius: 50%;
+          position: absolute; left: 50%; bottom: 9px;
+          width: 42px; height: 42px; margin: -21px; border-radius: 50%;
           display: grid; place-items: center; cursor: pointer;
-          background: linear-gradient(135deg, #2a2417, #1b1710);
+          background: linear-gradient(135deg, #241f14, #18140d);
           border: 1px solid var(--border-mid); color: var(--text-secondary);
-          transition: transform .26s cubic-bezier(.34,1.32,.5,1), opacity .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+          transition: transform .24s cubic-bezier(.34,1.3,.5,1), opacity .18s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
         }
-        .mp-ring__sat:hover { color: var(--text-primary); border-color: var(--brass); box-shadow: 0 0 14px rgba(201,152,58,0.35); }
+        .mp-ring__sat:hover { color: var(--text-primary); border-color: var(--brass); box-shadow: 0 2px 12px rgba(0,0,0,0.5), 0 0 12px rgba(201,152,58,0.3); }
         .mp-ring__sat[aria-selected="true"] {
           border-color: var(--accent); color: var(--text-primary);
-          box-shadow: 0 0 16px rgba(249,115,22,0.4);
+          box-shadow: 0 0 14px rgba(249,115,22,0.4);
         }
         /* sem movimento: revela sem animar */
         [data-reduced-motion="true"] .mp-ring__hub-face { animation: none; }
-        [data-reduced-motion="true"] .mp-ring__sat { transition: opacity .12s linear; }
+        [data-reduced-motion="true"] .mp-ring__sat { transition: opacity .1s linear; }
         @media (prefers-reduced-motion: reduce) {
           .mp-ring__hub-face { animation: none; }
-          .mp-ring__sat { transition: opacity .12s linear; }
+          .mp-ring__sat { transition: opacity .1s linear; }
         }
+
+        /* ----- Utilitários discretos (canto inferior direito) ----- */
+        .mp-utils { position: fixed; right: 14px; bottom: 14px; z-index: 99; display: flex; gap: 6px; opacity: 0.35; transition: opacity .2s ease; }
+        .mp-utils:hover { opacity: 1; }
+        .mp-utils__btn {
+          width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; cursor: pointer;
+          background: rgba(20,16,10,0.7); border: 1px solid var(--border-mid); color: var(--text-secondary);
+          transition: color .2s ease, border-color .2s ease, background .2s ease;
+        }
+        .mp-utils__btn:hover { color: var(--text-primary); border-color: var(--brass); background: rgba(32,25,14,0.92); }
+        .mp-utils__btn:disabled { opacity: 0.4; cursor: default; }
 
         /* ----- Roda de comando (invocada) ----- */
         .mp-cmdwheel {

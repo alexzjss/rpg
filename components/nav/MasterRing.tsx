@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { TabId } from '../../utils/atmosphere';
 import { NAV_DESTS, SATELLITES } from './navModel';
 import { polar, satelliteAngles } from './ringGeometry';
 
-const RADIUS = 132;
-const ARC = 160;
-const CLOSE_DELAY = 200;
+const RADIUS = 104;
+const ARC = 150;
+const CLOSE_DELAY = 240;
 
 export function MasterRing({ activeTab, mode, onSelect, onToggleMode }: {
   activeTab: TabId; mode: TabId;
@@ -26,12 +27,15 @@ export function MasterRing({ activeTab, mode, onSelect, onToggleMode }: {
   const angles = satelliteAngles(SATELLITES.length, ARC);
   const HubIcon = NAV_DESTS[mode].icon;
 
-  return (
+  const node = (
     <div
       className="mp-ring"
       role="tablist"
       aria-label="Navegação do Mestre"
       data-open={open}
+      onMouseEnter={openNow}
+      onMouseLeave={scheduleClose}
+      onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
     >
       {SATELLITES.map((id, i) => {
         const d = NAV_DESTS[id];
@@ -42,10 +46,10 @@ export function MasterRing({ activeTab, mode, onSelect, onToggleMode }: {
               transform: `translate(${p.x}px, ${p.y}px) scale(1)`,
               opacity: 1,
               pointerEvents: 'auto',
-              transitionDelay: `${i * 28}ms`,
+              transitionDelay: `${i * 22}ms`,
             }
           : {
-              transform: 'translate(0px, 30px) scale(0.2)',
+              transform: 'translate(0px, 22px) scale(0.25)',
               opacity: 0,
               pointerEvents: 'none',
               transitionDelay: '0ms',
@@ -61,11 +65,10 @@ export function MasterRing({ activeTab, mode, onSelect, onToggleMode }: {
             className="mp-ring__sat"
             style={style}
             onMouseEnter={openNow}
-            onMouseLeave={scheduleClose}
             onFocus={openNow}
             onClick={() => { onSelect(id); setOpen(false); }}
           >
-            <Icon className="w-5 h-5" aria-hidden />
+            <Icon style={{ width: 18, height: 18 }} aria-hidden />
           </button>
         );
       })}
@@ -74,18 +77,20 @@ export function MasterRing({ activeTab, mode, onSelect, onToggleMode }: {
         aria-selected={activeTab === mode}
         aria-expanded={open}
         aria-label={NAV_DESTS[mode].label}
-        title={`${NAV_DESTS[mode].label} — clique para alternar Combate/Jornada`}
+        title={`${NAV_DESTS[mode].label} — clique para alternar Combate/Jornada · passe o mouse para ver as abas`}
         className="mp-ring__hub"
         data-mode={mode}
         onMouseEnter={openNow}
-        onMouseLeave={scheduleClose}
         onFocus={openNow}
         onClick={() => { onToggleMode(); openNow(); }}
       >
         <span key={mode} className="mp-ring__hub-face">
-          <HubIcon className="w-7 h-7" aria-hidden />
+          <HubIcon style={{ width: 22, height: 22 }} aria-hidden />
         </span>
       </button>
     </div>
   );
+
+  if (typeof document === 'undefined') return node;
+  return createPortal(node, document.body);
 }

@@ -5695,84 +5695,37 @@ const App: React.FC = () => {
         <span className="mp-vignette" />
       </div>
       <React.Fragment key={activeTab}><TabSweep tabKey={activeTab as string} label={TAB_META[activeTab].label as string} /></React.Fragment>
-      {/* Navbar Superior */}
-      <nav className="sticky top-0 z-50 nav-glow" style={{ background: 'linear-gradient(100deg, rgba(10,12,18,0.97), rgba(22,27,38,0.95) 58%, rgba(10,12,18,0.97))', backdropFilter: 'blur(28px) saturate(1.6)', borderBottom: '1px solid var(--border-gold)', boxShadow: '0 1px 0 rgba(201,152,58,0.15), 0 6px 40px rgba(0,0,0,0.7)', position: 'sticky', overflow: 'hidden' }}>
-        {/* Costura diagonal de acento (gold/pink/ciano) */}
-        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(100deg, transparent 0 60%, rgba(236,72,153,0.10) 60.5%, transparent 61.5%), linear-gradient(100deg, transparent 0 74%, rgba(103,232,249,0.08) 74.5%, transparent 75.5%)' }} />
-        <span aria-hidden className="mp-canvas" />
-        {/* Marca d'água: palavra gigante da aba ativa, integrada ao fundo */}
-        <div aria-hidden className="mp-page-title" style={{ position: 'absolute', left: -18, top: '50%', transform: 'translateY(-50%)', fontSize: 64, lineHeight: 1, whiteSpace: 'nowrap', color: '#fff', opacity: 0.025, pointerEvents: 'none' }}>
-          {TAB_META[activeTab].label}
-        </div>
-        <div className="px-5 md:px-7 py-3 flex flex-col md:flex-row items-center justify-between gap-3" style={{ position: 'relative' }}>
-          {/* Logo */}
-          <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #c9983a, #8a6520)', clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)', boxShadow: '0 0 24px rgba(201,152,58,0.45), inset 0 1px 0 rgba(255,255,255,0.2)' }}>
-                <Swords className="text-white w-6 h-6 relative z-10" />
-              </div>
-              <div className="hidden md:block" style={{ minWidth: 0 }}>
-                <Title kicker={TAB_META[activeTab].kicker} level={2}
-                       style={{ fontSize: 'clamp(20px, 1.9vw, 28px)', marginTop: 3 }}>
-                  {TAB_META[activeTab].label}
-                </Title>
-              </div>
-            </div>
-          </div>
-
-          {/* Navegação migrada para o Anel do Mestre (dock-joia flutuante, renderizado fora da navbar) */}
-          <div className="flex items-center gap-2">
-
-            <div className="flex items-center gap-1 pl-2" style={{ borderLeft: '1px solid var(--border-faint)' }}>
-                {/* Toggle movimento reduzido */}
-                <button
-                  onClick={() => { const v = !reducedMotion; setUserReducedMotion(v); setReducedMotion(v); }}
-                  className="mp-cta mp-cta--ghost transition-all"
-                  style={{ padding: '9px' }}
-                  title={reducedMotion ? 'Movimento reduzido — clique para animar' : 'Reduzir movimento'}
-                  aria-pressed={reducedMotion}
-                >
-                  <span style={{ fontSize: 14 }}>{reducedMotion ? '○' : '⚡'}</span>
-                </button>
-                {/* Salvar agora */}
-                <button
-                    onClick={handleManualSave}
-                    disabled={isLoading || autoSaveStatus === 'saving'}
-                    className="mp-cta mp-cta--secondary transition-all"
-                    style={{ padding: '9px', opacity: isLoading ? 0.5 : 1 }}
-                    title="Salvar agora (Ctrl+S)"
-                >
-                    <Save className="w-4 h-4" />
-                </button>
-                {/* Exportar backup */}
-                <button
-                    onClick={handleDownloadBackup}
-                    className="mp-cta mp-cta--secondary transition-all"
-                    style={{ padding: '9px' }}
-                    title="Exportar backup completo (inclui selos, notas, histórico)"
-                >
-                    <Download className="w-4 h-4" />
-                </button>
-                {/* Importar backup */}
-                <button
-                    onClick={() => backupFileRef.current?.click()}
-                    className="mp-cta mp-cta--secondary transition-all"
-                    style={{ padding: '9px' }}
-                    title="Importar backup (.json)"
-                >
-                    <Upload className="w-4 h-4" />
-                </button>
-                <input
-                    type="file"
-                    ref={backupFileRef}
-                    onChange={handleUploadBackup}
-                    className="hidden"
-                    accept=".json"
-                />
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/* Barra superior removida — navegação no Anel do Mestre; utilitários discretos no canto */}
+      <div className="mp-utils" aria-label="Utilidades do Mestre">
+        {/* Toggle movimento reduzido */}
+        <button
+          onClick={() => { const v = !reducedMotion; setUserReducedMotion(v); setReducedMotion(v); }}
+          className="mp-utils__btn"
+          title={reducedMotion ? 'Movimento reduzido — clique para animar' : 'Reduzir movimento'}
+          aria-pressed={reducedMotion}
+        >
+          <span style={{ fontSize: 13 }}>{reducedMotion ? '○' : '⚡'}</span>
+        </button>
+        {/* Salvar agora */}
+        <button
+          onClick={handleManualSave}
+          disabled={isLoading || autoSaveStatus === 'saving'}
+          className="mp-utils__btn"
+          style={{ opacity: isLoading ? 0.5 : 1 }}
+          title="Salvar agora (Ctrl+S)"
+        >
+          <Save className="w-4 h-4" />
+        </button>
+        {/* Exportar backup */}
+        <button onClick={handleDownloadBackup} className="mp-utils__btn" title="Exportar backup completo (inclui selos, notas, histórico)">
+          <Download className="w-4 h-4" />
+        </button>
+        {/* Importar backup */}
+        <button onClick={() => backupFileRef.current?.click()} className="mp-utils__btn" title="Importar backup (.json)">
+          <Upload className="w-4 h-4" />
+        </button>
+        <input type="file" ref={backupFileRef} onChange={handleUploadBackup} className="hidden" accept=".json" />
+      </div>
 
       <MasterRing
         activeTab={activeTab as any}
