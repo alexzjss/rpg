@@ -109,6 +109,7 @@ import CombatArena from './components/combat/grid/CombatArena';
 import { migrateCombatState } from './utils/combatMigration';
 import { applyAtmosphere, atmosphereForTab } from './utils/atmosphere';
 import { TabSweep, Title } from './components/ui';
+import { MasterRing, CommandWheel, useRadialNav } from './components/nav';
 import { getUserReducedMotion, setUserReducedMotion } from './utils/motionPref';
 
 // Command icons (base64)
@@ -3086,6 +3087,20 @@ const App: React.FC = () => {
   React.useEffect(() => {
     applyAtmosphere(atmosphereForTab(activeTab as Parameters<typeof atmosphereForTab>[0]));
   }, [activeTab]);
+  const radial = useRadialNav({ activeTab: activeTab as any, onSelect: (id) => setActiveTab(id as any) });
+  React.useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      // não sequestrar teclas enquanto o usuário digita em campos
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (e.key === '`' && !radial.wheelOpen) { e.preventDefault(); radial.openWheel(); }
+      else radial.handleKey(e);
+    };
+    const up = (e: KeyboardEvent) => { if (e.key === '`') radial.closeWheel(); };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+  }, [radial]);
   const [itemSearchTerm, setItemSearchTerm] = useState('');
   const [editingCatalogItem, setEditingCatalogItem] = useState<Item | null>(null);
   const [giveItemTarget, setGiveItemTarget] = useState<Item | null>(null);
@@ -5686,7 +5701,7 @@ const App: React.FC = () => {
         <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(100deg, transparent 0 60%, rgba(236,72,153,0.10) 60.5%, transparent 61.5%), linear-gradient(100deg, transparent 0 74%, rgba(103,232,249,0.08) 74.5%, transparent 75.5%)' }} />
         <span aria-hidden className="mp-canvas" />
         {/* Marca d'água: palavra gigante da aba ativa, integrada ao fundo */}
-        <div aria-hidden className="mp-page-title" style={{ position: 'absolute', left: -18, top: '50%', transform: 'translateY(-50%)', fontSize: 104, lineHeight: 1, whiteSpace: 'nowrap', color: '#fff', opacity: 0.05, pointerEvents: 'none' }}>
+        <div aria-hidden className="mp-page-title" style={{ position: 'absolute', left: -18, top: '50%', transform: 'translateY(-50%)', fontSize: 64, lineHeight: 1, whiteSpace: 'nowrap', color: '#fff', opacity: 0.025, pointerEvents: 'none' }}>
           {TAB_META[activeTab].label}
         </div>
         <div className="px-5 md:px-7 py-3 flex flex-col md:flex-row items-center justify-between gap-3" style={{ position: 'relative' }}>
@@ -5705,17 +5720,8 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 no-scrollbar">
-            <div className="flex items-center gap-1.5">
-              <TabButton icon={<Swords className="w-4 h-4" />} active={activeTab === 'combat'} onClick={() => setActiveTab('combat')}>Combate</TabButton>
-              <TabButton icon={<Compass className="w-4 h-4" />} active={activeTab === 'journey'} onClick={() => setActiveTab('journey')}>Jornada</TabButton>
-              <TabButton icon={<Users className="w-4 h-4" />} active={activeTab === 'characters'} onClick={() => setActiveTab('characters')}>Personagens</TabButton>
-              <TabButton icon={<Layers className="w-4 h-4" />} active={activeTab === 'cards'} onClick={() => setActiveTab('cards')}>Habilidades</TabButton>
-              <TabButton icon={<Backpack className="w-4 h-4" />} active={activeTab === 'items'} onClick={() => setActiveTab('items')}>Itens</TabButton>
-              <TabButton icon={<Sparkles className="w-4 h-4" />} active={activeTab === 'seals'} onClick={() => setActiveTab('seals')}>Selos</TabButton>
-              <TabButton icon={<LayoutGrid className="w-4 h-4" />} active={activeTab === 'extras'} onClick={() => setActiveTab('extras')}>Extras</TabButton>
-            </div>
+          {/* Navegação migrada para o Anel do Mestre (dock-joia flutuante, renderizado fora da navbar) */}
+          <div className="flex items-center gap-2">
 
             <div className="flex items-center gap-1 pl-2" style={{ borderLeft: '1px solid var(--border-faint)' }}>
                 {/* Toggle movimento reduzido */}
@@ -5767,6 +5773,20 @@ const App: React.FC = () => {
           </div>
         </div>
       </nav>
+
+      <MasterRing
+        activeTab={activeTab as any}
+        mode={radial.mode as any}
+        onSelect={(id) => setActiveTab(id as any)}
+        onToggleMode={radial.toggleMode}
+      />
+
+      <CommandWheel
+        open={radial.wheelOpen}
+        activeTab={activeTab as any}
+        onSelect={(id) => setActiveTab(id as any)}
+        onClose={radial.closeWheel}
+      />
 
       <main className="flex-1 p-5 md:p-8 max-w-[1920px] mx-auto w-full" style={{ overflow: 'auto', minHeight: 0, height: 0 }}>
         {/* ... (Previous tabs code omitted for brevity as they are unchanged) ... */}

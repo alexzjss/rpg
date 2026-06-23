@@ -4,7 +4,7 @@ import { NAV_DESTS, SATELLITES } from './navModel';
 import { polar, satelliteAngles } from './ringGeometry';
 
 const RADIUS = 132;
-const ARC = 200;
+const ARC = 160;
 
 export function MasterRing({ activeTab, mode, onSelect, onToggleMode }: {
   activeTab: TabId; mode: TabId;

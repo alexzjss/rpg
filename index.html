@@ -3603,8 +3603,8 @@
           --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
         }
 
-        /* ----- Anel: dock-joia persistente ----- */
-        .mp-ring { position: relative; width: 320px; height: 168px; pointer-events: none; }
+        /* ----- Anel: dock-joia persistente (flutua no canto inferior) ----- */
+        .mp-ring { position: fixed; left: 20px; bottom: 16px; z-index: 90; width: 320px; height: 168px; pointer-events: none; }
         .mp-ring__hub, .mp-ring__sat { pointer-events: auto; }
         .mp-ring__hub {
           position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
