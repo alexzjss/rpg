@@ -109,7 +109,7 @@ import CombatArena from './components/combat/grid/CombatArena';
 import { migrateCombatState } from './utils/combatMigration';
 import { applyAtmosphere, atmosphereForTab } from './utils/atmosphere';
 import { TabSweep, Title } from './components/ui';
-import { MasterRing, CommandWheel, useRadialNav } from './components/nav';
+import { useKeyboardNav } from './components/nav';
 import { getUserReducedMotion, setUserReducedMotion } from './utils/motionPref';
 
 // Command icons (base64)
@@ -3087,20 +3087,18 @@ const App: React.FC = () => {
   React.useEffect(() => {
     applyAtmosphere(atmosphereForTab(activeTab as Parameters<typeof atmosphereForTab>[0]));
   }, [activeTab]);
-  const radial = useRadialNav({ activeTab: activeTab as any, onSelect: (id) => setActiveTab(id as any) });
+  // Navegação por teclado: 1-7 vão direto às abas; setas ciclam. (Sem UI de navegação visível.)
+  const kbNav = useKeyboardNav({ activeTab: activeTab as any, onSelect: (id) => setActiveTab(id as any) });
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       // não sequestrar teclas enquanto o usuário digita em campos
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-      if (e.key === '`' && !radial.wheelOpen) { e.preventDefault(); radial.openWheel(); }
-      else radial.handleKey(e);
+      kbNav.handleKey(e);
     };
-    const up = (e: KeyboardEvent) => { if (e.key === '`') radial.closeWheel(); };
     window.addEventListener('keydown', down);
-    window.addEventListener('keyup', up);
-    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
-  }, [radial]);
+    return () => { window.removeEventListener('keydown', down); };
+  }, [kbNav]);
   const [itemSearchTerm, setItemSearchTerm] = useState('');
   const [editingCatalogItem, setEditingCatalogItem] = useState<Item | null>(null);
   const [giveItemTarget, setGiveItemTarget] = useState<Item | null>(null);
@@ -5726,20 +5724,6 @@ const App: React.FC = () => {
         </button>
         <input type="file" ref={backupFileRef} onChange={handleUploadBackup} className="hidden" accept=".json" />
       </div>
-
-      <MasterRing
-        activeTab={activeTab as any}
-        mode={radial.mode as any}
-        onSelect={(id) => setActiveTab(id as any)}
-        onToggleMode={radial.toggleMode}
-      />
-
-      <CommandWheel
-        open={radial.wheelOpen}
-        activeTab={activeTab as any}
-        onSelect={(id) => setActiveTab(id as any)}
-        onClose={radial.closeWheel}
-      />
 
       <main className="flex-1 p-5 md:p-8 max-w-[1920px] mx-auto w-full" style={{ overflow: 'auto', minHeight: 0, height: 0 }}>
         {/* ... (Previous tabs code omitted for brevity as they are unchanged) ... */}
