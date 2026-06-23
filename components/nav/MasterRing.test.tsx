@@ -20,6 +20,16 @@ describe('MasterRing', () => {
     expect(sel?.getAttribute('aria-label')).toContain('Selos');
   });
 
+  it('satélites escondidos por padrão; hover no hub revela (data-open)', () => {
+    const { container } = render(
+      <MasterRing activeTab="combat" mode="combat" onSelect={() => {}} onToggleMode={() => {}} />
+    );
+    const ring = container.querySelector('.mp-ring')!;
+    expect(ring.getAttribute('data-open')).toBe('false');
+    fireEvent.mouseEnter(container.querySelector('.mp-ring__hub')!);
+    expect(ring.getAttribute('data-open')).toBe('true');
+  });
+
   it('clicar num satélite chama onSelect; clicar no hub chama onToggleMode', () => {
     const onSelect = vi.fn(); const onToggleMode = vi.fn();
     const { container } = render(
