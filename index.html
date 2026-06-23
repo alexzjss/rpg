@@ -3590,6 +3590,66 @@
         /* acentos frios inline -> ember (escopado aos cards via substring) */
         .mp-darktab [style*="color: rgb(103, 232, 249)"] { color: #f0c060 !important; }
         .mp-darktab [style*="rgb(56, 189, 248)"] { color: #f59e0b !important; }
+
+        /* ===== A Forja do Mestre — Fundação "brasa disciplinada" ===== */
+        :root {
+          /* acento único de ação */
+          --accent: var(--ember, #f97316);
+          --brass: #c9983a;
+          --brass-dark: #8a6520;
+          /* escala tipográfica disciplinada */
+          --fs-1: 12px; --fs-2: 14px; --fs-3: 16px; --fs-4: 20px; --fs-5: 28px; --fs-6: 40px;
+          /* espaçamento base 4px */
+          --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+        }
+
+        /* ----- Anel: dock-joia persistente ----- */
+        .mp-ring { position: relative; width: 320px; height: 168px; pointer-events: none; }
+        .mp-ring__hub, .mp-ring__sat { pointer-events: auto; }
+        .mp-ring__hub {
+          position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+          width: 96px; height: 96px; border-radius: 50%;
+          display: grid; place-items: center; cursor: pointer;
+          background: radial-gradient(circle at 50% 35%, #2a2113, #15110a);
+          border: 2px solid var(--brass); color: var(--text-primary);
+          box-shadow: 0 0 28px rgba(249,115,22,0.45), inset 0 1px 0 rgba(255,255,255,0.12);
+          transition: transform .18s ease, box-shadow .25s ease;
+        }
+        .mp-ring__hub:hover { transform: translateX(-50%) scale(1.05); }
+        .mp-ring__hub[data-mode="journey"] {
+          background: radial-gradient(circle at 50% 35%, #f1e7cf, #d9c79c);
+          color: #221a0f; box-shadow: 0 0 24px rgba(201,152,58,0.5);
+        }
+        .mp-ring__sat {
+          position: absolute; left: 50%; bottom: 16px;
+          width: 52px; height: 52px; margin: -26px; border-radius: 50%;
+          display: grid; place-items: center; cursor: pointer;
+          background: linear-gradient(135deg, #2a2417, #1b1710);
+          border: 1px solid var(--border-mid); color: var(--text-secondary);
+          transition: transform .18s ease, border-color .2s ease, color .2s ease;
+        }
+        .mp-ring__sat:hover { transform: scale(1.12); color: var(--text-primary); }
+        .mp-ring__sat[aria-selected="true"] {
+          border-color: var(--accent); color: var(--text-primary);
+          box-shadow: 0 0 16px rgba(249,115,22,0.4);
+        }
+
+        /* ----- Roda de comando (invocada) ----- */
+        .mp-cmdwheel {
+          position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
+          background: rgba(8,8,6,0.55); backdrop-filter: blur(6px);
+        }
+        .mp-cmdwheel__disc { position: relative; width: 360px; height: 360px; }
+        .mp-cmdwheel__item {
+          position: absolute; left: 50%; top: 50%; width: 76px; height: 76px; margin: -38px;
+          border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+          background: linear-gradient(135deg, #2a2417, #15110a);
+          border: 1px solid var(--brass); color: var(--text-primary);
+          animation: mp-wheel-in .16s ease both;
+        }
+        @keyframes mp-wheel-in { from { opacity: 0; transform: scale(.7); } to { opacity: 1; } }
+        [data-reduced-motion="true"] .mp-cmdwheel__item { animation: none; }
+        @media (prefers-reduced-motion: reduce) { .mp-cmdwheel__item { animation: none; } }
     </style>
 <script type="importmap">
 {
