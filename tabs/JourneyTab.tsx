@@ -687,7 +687,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                            </div>
                            {/* Body */}
                            <div style={{ padding:'14px 16px' }}>
-                             {recipe.description && <p style={{ fontSize:11, color:'rgba(255,255,255,0.45)', marginBottom:12, lineHeight:1.5 }}>{recipe.description}</p>}
+                             {recipe.description && <p className="mp-jcard__muted" style={{ fontSize:11, marginBottom:12, lineHeight:1.5 }}>{recipe.description}</p>}
                              {/* Ingredients */}
                              <div style={{ marginBottom:12 }}>
                                <p style={{ fontSize:9, fontWeight:700, color:'rgba(251,146,60,0.6)', textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:6 }}>Ingredientes</p>
@@ -696,7 +696,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                                    const _craftChar = craftCharacterId ? characters.find(c=>c.id===craftCharacterId) : null;
                                    const haveCount = (_craftChar ? resolveOwnedItems(_craftChar, items).find(it=>it.name.toLowerCase()===ing.itemName.toLowerCase())?.quantity ?? 0 : 0);
                                    return (
-                                     <span key={i} style={{ fontSize:10, fontWeight:600, color:'rgba(255,255,255,0.7)', background:'rgba(234,88,12,0.1)', border:'1px solid rgba(234,88,12,0.2)', borderRadius:6, padding:'3px 8px' }}>
+                                     <span key={i} className="mp-jcard__white" style={{ fontSize:10, fontWeight:600, background:'rgba(234,88,12,0.1)', border:'1px solid rgba(234,88,12,0.2)', borderRadius:6, padding:'3px 8px' }}>
                                        {ing.quantity}× {ing.itemName}
                                      </span>
                                    );
@@ -726,7 +726,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                        <div style={{ gridColumn:'1/-1', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, padding:'60px 0', opacity:0.3 }}>
                          <ChefHat style={{ width:48, height:48, color:'#fb923c' }} />
                          <p className="mp-jcard__white" style={{ fontSize:13, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.2em' }}>Nenhuma receita cadastrada</p>
-                         <p style={{ fontSize:11, color:'rgba(255,255,255,0.5)' }}>Clique em "Nova Receita" para adicionar</p>
+                         <p className="mp-jcard__muted" style={{ fontSize:11 }}>Clique em "Nova Receita" para adicionar</p>
                        </div>
                      )}
                    </div>
@@ -769,13 +769,13 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                            </div>
                            {/* Body */}
                            <div style={{ padding:'14px 16px' }}>
-                             {recipe.description && <p style={{ fontSize:11, color:'rgba(255,255,255,0.45)', marginBottom:12, lineHeight:1.5 }}>{recipe.description}</p>}
+                             {recipe.description && <p className="mp-jcard__muted" style={{ fontSize:11, marginBottom:12, lineHeight:1.5 }}>{recipe.description}</p>}
                              {/* Materials */}
                              <div style={{ marginBottom:12 }}>
                                <p style={{ fontSize:9, fontWeight:700, color:'rgba(192,132,252,0.6)', textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:6 }}>Materiais</p>
                                <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
                                  {recipe.ingredients.map((ing, i) => (
-                                   <span key={i} style={{ fontSize:10, fontWeight:600, color:'rgba(255,255,255,0.7)', background:'rgba(168,85,247,0.1)', border:'1px solid rgba(168,85,247,0.2)', borderRadius:6, padding:'3px 8px' }}>
+                                   <span key={i} className="mp-jcard__white" style={{ fontSize:10, fontWeight:600, background:'rgba(168,85,247,0.1)', border:'1px solid rgba(168,85,247,0.2)', borderRadius:6, padding:'3px 8px' }}>
                                      {ing.quantity}× {ing.itemName}
                                    </span>
                                  ))}
@@ -804,7 +804,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                        <div style={{ gridColumn:'1/-1', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, padding:'60px 0', opacity:0.3 }}>
                          <Hammer style={{ width:48, height:48, color:'#c084fc' }} />
                          <p className="mp-jcard__white" style={{ fontSize:13, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.2em' }}>Nenhuma forja cadastrada</p>
-                         <p style={{ fontSize:11, color:'rgba(255,255,255,0.5)' }}>Clique em "Nova Receita de Forja" para adicionar</p>
+                         <p className="mp-jcard__muted" style={{ fontSize:11 }}>Clique em "Nova Receita de Forja" para adicionar</p>
                        </div>
                      )}
                    </div>
@@ -831,7 +831,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
 
                        {/* Offer count */}
                        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                         <label style={{ fontSize:9, fontWeight:700, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.12em', width:90, flexShrink:0 }}>Nº de ofertas</label>
+                         <label className="mp-jcard__faint" style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', width:90, flexShrink:0 }}>Nº de ofertas</label>
                          <div style={{ display:'flex', gap:4 }}>
                            {[2,3,4,5,6,8].map(n => (
                              <button key={n} onClick={() => setUpgradeShopOfferCount(n)}
@@ -846,7 +846,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
 
                        {/* Luck selector */}
                        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                         <label style={{ fontSize:9, fontWeight:700, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.12em', width:90, flexShrink:0 }}>Sorte</label>
+                         <label className="mp-jcard__faint" style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', width:90, flexShrink:0 }}>Sorte</label>
                          <div style={{ display:'flex', gap:5 }}>
                            {(['sorte','neutro','azar'] as UpgradeLuck[]).map(l => (
                              <button key={l} onClick={() => setUpgradeShopLuck(l)}
@@ -860,7 +860,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                        </div>
 
                        {/* Luck description */}
-                       <div style={{ fontSize:9, color:'rgba(255,255,255,0.3)', lineHeight:1.5, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:10, padding:'8px 12px' }}>
+                       <div className="mp-jcard__faint" style={{ fontSize:9, lineHeight:1.5, background:'rgba(0,0,0,0.04)', border:'1px solid rgba(34,26,15,0.1)', borderRadius:10, padding:'8px 12px' }}>
                          {upgradeShopLuck === 'sorte' && '🍀 Itens raros têm mais chance de aparecer e recebem descontos frequentes. Sorte favorece os corajosos!'}
                          {upgradeShopLuck === 'neutro' && '⚖ Sorteio totalmente aleatório. Qualquer item pode aparecer com variação leve de preço (±20%).'}
                          {upgradeShopLuck === 'azar' && '💀 Itens comuns dominam as ofertas e os preços sobem. Só para quem aguenta o tranco.'}
@@ -896,7 +896,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                        </div>
                        {/* Target character — only journey party */}
                        <div>
-                         <label style={{ fontSize:8, fontWeight:700, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.1em', display:'block', marginBottom:5 }}>Personagem (jornada)</label>
+                         <label className="mp-jcard__faint" style={{ fontSize:8, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', display:'block', marginBottom:5 }}>Personagem (jornada)</label>
                          <select value={upgradeTargetCharId} onChange={e => setUpgradeTargetCharId(e.target.value)}
                            style={{ width:'100%', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:10, padding:'6px 10px', color:'#fff', fontSize:10, fontWeight:700, outline:'none' }}>
                            <option value="">— Personagem —</option>
@@ -932,7 +932,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:'60px 0', opacity:0.35 }}>
                        <ShoppingCart style={{ width:52, height:52, color:'#34d399' }} />
                        <p className="mp-jcard__white" style={{ fontSize:14, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.2em' }}>A loja está fechada</p>
-                       <p style={{ fontSize:11, color:'rgba(255,255,255,0.45)' }}>Configure as opções acima e clique em "Abrir Loja"</p>
+                       <p className="mp-jcard__muted" style={{ fontSize:11 }}>Configure as opções acima e clique em "Abrir Loja"</p>
                        {journeyParty.length === 0 && <p style={{ fontSize:11, color:'#f87171', fontWeight:700 }}>⚠ Marque personagens como "Em Jornada" para usar os upgrades</p>}
                      </div>
                    )}
@@ -976,13 +976,13 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                                </div>
 
                                {/* Description */}
-                               <p style={{ fontSize:10, color:'rgba(255,255,255,0.55)', lineHeight:1.5 }}>{offer.description}</p>
+                               <p className="mp-jcard__muted" style={{ fontSize:10, lineHeight:1.5 }}>{offer.description}</p>
 
                                {/* Price */}
                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:'auto', paddingTop:10, borderTop:`1px solid ${rc.border}66` }}>
                                  <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
                                    {hasDiscount && (
-                                     <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)', textDecoration:'line-through', fontFamily:"'JetBrains Mono',monospace" }}>{offer.basePrice}🪙</span>
+                                     <span className="mp-jcard__faint" style={{ fontSize:9, textDecoration:'line-through', fontFamily:"'JetBrains Mono',monospace" }}>{offer.basePrice}🪙</span>
                                    )}
                                    <span style={{ fontSize:18, fontWeight:900, color: hasDiscount ? '#34d399' : hasHike ? '#f87171' : '#fbbf24', fontFamily:"'JetBrains Mono',monospace", textShadow:`0 0 12px ${hasDiscount ? 'rgba(52,211,153,0.5)' : hasHike ? 'rgba(248,113,113,0.4)' : 'rgba(251,191,36,0.4)'}` }}>{offer.finalPrice}🪙</span>
                                  </div>
