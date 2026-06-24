@@ -91,7 +91,7 @@ import {
   Layers3,
   Zap as ZapIcon
 } from 'lucide-react';
-import { Card, CardLevel, CardBonus, Character, Combatant, CombatState, CardType, CommandType, CombatHistoryItem, Condition, FieldCondition, CustomPin, CombatantUnion, Item, OwnedItem, JourneyState, ActiveForma, ConditionEffect, ConditionEffectType, ConditionEffectMap, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, RecipeType, RecipeIngredient, CharacterStack, UpgradeOffer, UpgradeOfferType, UpgradeLuck, UpgradeShopState, StatPopup, GridInteractionMode } from './types';
+import { Card, CardLevel, CardBonus, Character, Combatant, CombatState, CardType, CommandType, CombatHistoryItem, Condition, FieldCondition, CustomPin, CombatantUnion, Item, OwnedItem, JourneyState, ActiveForma, ConditionEffect, ConditionEffectType, ConditionEffectMap, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, RecipeType, RecipeIngredient, CharacterStack, UpgradeOffer, UpgradeOfferType, UpgradeLuck, UpgradeShopState, StatPopup, GridInteractionMode, Weapon } from './types';
 import { DatabaseService } from './utils/database';
 import { rollDice, type RollResult } from './utils/dice';
 import DiceAnimation from './components/DiceAnimation';
@@ -358,14 +358,12 @@ function TabButton({ icon, active, onClick, children }: {
 }
 
 // Etapa B: metadados de cabeçalho por aba (kicker + título grande)
-type AppTab = 'combat' | 'cards' | 'items' | 'seals' | 'characters' | 'extras' | 'journey';
+type AppTab = 'combat' | 'arsenal' | 'characters' | 'extras' | 'journey';
 const TAB_META: Record<AppTab, { label: string; kicker: string }> = {
   combat:     { label: 'Combate',     kicker: 'Arena & Iniciativa' },
   journey:    { label: 'Jornada',     kicker: 'Exploração & Aventura' },
   characters: { label: 'Personagens', kicker: 'Receptáculos & Vínculos' },
-  cards:      { label: 'Habilidades', kicker: 'Grimório' },
-  items:      { label: 'Itens',       kicker: 'Inventário' },
-  seals:      { label: 'Selos',       kicker: 'Códigos Rituais' },
+  arsenal:    { label: 'Arsenal',     kicker: 'Habilidades, Itens & Selos' },
   extras:     { label: 'Extras',      kicker: 'Ferramentas do Mestre' },
 };
 
@@ -1816,6 +1814,99 @@ const ItemForm: React.FC<{ initialData?: Item; onSubmit: (item: Item) => void; o
   );
 };
 
+const WeaponForm: React.FC<{ initialData?: Weapon; onSubmit: (w: Weapon) => void; onDelete: (id: string) => void }> = ({ initialData, onSubmit, onDelete }) => {
+  const [formData, setFormData] = useState<Weapon>(initialData?.id ? initialData : {
+    id: '', name: '', description: '', image: '',
+  });
+  const set = (patch: Partial<Weapon>) => setFormData(prev => ({ ...prev, ...patch }));
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Nome da Arma</label>
+          <input value={formData.name} onChange={e => set({ name: e.target.value })}
+            className="bg-slate-900/80 border-slate-800 w-full border rounded-2xl px-6 py-4 text-white font-bold focus:border-amber-600 outline-none"
+            placeholder="Ex: Espada Longa" />
+        </div>
+        <ImagePickerButton value={formData.image} onUpdate={val => set({ image: val })} label="Imagem da Arma" buttonLabel="Imagem" showPreviewInline={!!formData.image} previewHeight={80} />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Descrição</label>
+        <textarea value={formData.description} onChange={e => set({ description: e.target.value })}
+          className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm focus:border-amber-600 outline-none min-h-[80px]"
+          placeholder="Habilidades e características..." />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Categoria</label>
+          <select value={formData.category || ''} onChange={e => set({ category: e.target.value || undefined })}
+            className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-4 text-white font-bold text-sm focus:border-amber-600 outline-none">
+            <option value="">—</option>
+            <option value="espada">⚔ Espada</option>
+            <option value="arco">🏹 Arco</option>
+            <option value="maça">🔨 Maça</option>
+            <option value="cajado">🪄 Cajado</option>
+            <option value="adaga">🗡 Adaga</option>
+            <option value="lança">⚡ Lança</option>
+            <option value="escudo">🛡 Escudo</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Alcance</label>
+          <select value={formData.range || ''} onChange={e => set({ range: (e.target.value as any) || undefined })}
+            className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-4 text-white font-bold text-sm focus:border-amber-600 outline-none">
+            <option value="">—</option>
+            <option value="melee">⚔ Corpo a corpo</option>
+            <option value="ranged">🏹 À distância</option>
+            <option value="thrown">🎯 Arremessável</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-[10px] font-extrabold uppercase text-rose-500/70 tracking-widest ml-2">⚔ Dano Base</label>
+          <input type="number" min="0" value={formData.damage ?? ''} onChange={e => set({ damage: e.target.value === '' ? undefined : Number(e.target.value) })}
+            className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-4 text-rose-300 font-black text-xl text-center focus:border-rose-600 outline-none" placeholder="0" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-extrabold uppercase text-emerald-500/70 tracking-widest ml-2">+ Bônus de Ataque</label>
+          <input type="number" value={formData.bonus ?? ''} onChange={e => set({ bonus: e.target.value === '' ? undefined : Number(e.target.value) })}
+            className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-4 text-emerald-300 font-black text-xl text-center focus:border-emerald-600 outline-none" placeholder="0" />
+        </div>
+      </div>
+
+      {(formData.damage ?? 0) > 0 && (
+        <div className="space-y-2">
+          <label className="text-[10px] font-extrabold uppercase text-rose-500/70 tracking-widest ml-2">Tipo de Dano</label>
+          <DamageTypeSelector value={formData.damageType || 'normal'} onChange={v => set({ damageType: v })} />
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Traços (separados por vírgula)</label>
+        <input value={formData.traits?.join(', ') || ''} onChange={e => set({ traits: e.target.value ? e.target.value.split(',').map(t => t.trim()).filter(Boolean) : [] })}
+          className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm focus:border-amber-600 outline-none"
+          placeholder="Ex: versátil, leve, pesada" />
+      </div>
+
+      <div className="flex gap-4 pt-4 border-t border-slate-800">
+        {initialData?.id && (
+          <button onClick={() => onDelete(initialData.id)} className="px-6 py-4 bg-rose-950/50 text-rose-500 hover:bg-rose-900/50 border border-rose-900/30 rounded-2xl font-extrabold uppercase text-xs tracking-widest transition-colors">
+            Excluir
+          </button>
+        )}
+        <button onClick={() => onSubmit(formData)} className="flex-1 py-4 bg-amber-600 hover:bg-amber-500 text-white rounded-2xl font-extrabold uppercase text-xs tracking-widest shadow-xl transition-all">
+          {initialData?.id ? 'Salvar Alterações' : 'Adicionar Arma'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // ImagePickerButton → extraído para components/ui/ImagePickerButton.tsx
 
 // BgImageButton agora é um alias do ImagePickerButton para compatibilidade
@@ -2965,13 +3056,13 @@ const SealComboModal: React.FC<{
 // --- Aplicação Principal ---
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'combat' | 'cards' | 'items' | 'seals' | 'characters' | 'extras' | 'journey'>('combat');
+  const [activeTab, setActiveTab] = useState<'combat' | 'arsenal' | 'characters' | 'extras' | 'journey'>('combat');
   const [reducedMotion, setReducedMotion] = React.useState(getUserReducedMotion());
   React.useEffect(() => {
-    applyAtmosphere(atmosphereForTab(activeTab as Parameters<typeof atmosphereForTab>[0]));
+    applyAtmosphere(atmosphereForTab(activeTab));
   }, [activeTab]);
-  // Navegação por teclado: 1-7 vão direto às abas; setas ciclam. (Sem UI de navegação visível.)
-  const kbNav = useKeyboardNav({ activeTab: activeTab as any, onSelect: (id) => setActiveTab(id as any) });
+  // Navegação por teclado: 1-5 vão direto às abas; setas ciclam. (Sem UI de navegação visível.)
+  const kbNav = useKeyboardNav({ activeTab, onSelect: setActiveTab });
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -2982,6 +3073,10 @@ const App: React.FC = () => {
     window.addEventListener('keydown', down);
     return () => { window.removeEventListener('keydown', down); };
   }, [kbNav]);
+  const [arsenalSubTab, setArsenalSubTab] = useState<'habilidades' | 'itens' | 'selos' | 'armas'>('habilidades');
+  const [weapons, setWeapons] = useState<Weapon[]>([]);
+  const [editingWeapon, setEditingWeapon] = useState<Weapon | null>(null);
+  const [weaponSearchTerm, setWeaponSearchTerm] = useState('');
   const [itemSearchTerm, setItemSearchTerm] = useState('');
   const [editingCatalogItem, setEditingCatalogItem] = useState<Item | null>(null);
   const [giveItemTarget, setGiveItemTarget] = useState<Item | null>(null);
@@ -3177,12 +3272,13 @@ const App: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
 
-    DatabaseService.initialize().then(({ characters: chars, cards: cds, items: its, seals: sls, combat: cbt, journey: jny, extras }) => {
+    DatabaseService.initialize().then(({ characters: chars, cards: cds, items: its, seals: sls, weapons: wps, combat: cbt, journey: jny, extras }) => {
       if (cancelled) return;
       setCharacters(chars);
       setCards(cds);
       setItems(its);
       setSeals(sls);
+      setWeapons(wps);
       setCombat(migrateCombatState(cbt));
       setJourney(jny);
       // Restore extras state
@@ -3205,6 +3301,7 @@ const App: React.FC = () => {
     const unsubCards = DatabaseService.syncCards((data) => { if (!cancelled) setCards(data); });
     const unsubItems = DatabaseService.syncItems((data) => { if (!cancelled) setItems(data); });
     const unsubSeals = DatabaseService.syncSeals((data) => { if (!cancelled) setSeals(data); });
+    const unsubWeapons = DatabaseService.syncWeapons((data) => { if (!cancelled) setWeapons(data); });
     const unsubCombat = DatabaseService.syncCombatState((data) => { if (!cancelled) setCombat(migrateCombatState(data)); });
     const unsubJourney = DatabaseService.syncJourneyState((data) => { if (!cancelled) setJourney(data); });
 
@@ -3215,7 +3312,7 @@ const App: React.FC = () => {
 
     return () => {
       cancelled = true;
-      unsubChars(); unsubCards(); unsubItems(); unsubSeals(); unsubCombat(); unsubJourney(); unsubReq();
+      unsubChars(); unsubCards(); unsubItems(); unsubSeals(); unsubWeapons(); unsubCombat(); unsubJourney(); unsubReq();
     };
   }, []);
 
@@ -3235,6 +3332,7 @@ const App: React.FC = () => {
           cards,
           items,
           seals,
+          weapons,
           combat: combat!,
           journey: journey!,
           extras: {
@@ -3383,6 +3481,10 @@ const App: React.FC = () => {
     s.code?.toLowerCase().includes(sealSearchTerm.toLowerCase()) ||
     s.description?.toLowerCase().includes(sealSearchTerm.toLowerCase())
   ), [seals, sealSearchTerm]);
+
+  const filteredWeapons = useMemo(() => weapons.filter(w =>
+    w.name.toLowerCase().includes(weaponSearchTerm.toLowerCase())
+  ), [weapons, weaponSearchTerm]);
   
   // Filtros de Personagens
   const filteredCharacters = useMemo(() => characters.filter(c => !!c.id), [characters]);
@@ -3481,6 +3583,7 @@ const App: React.FC = () => {
         cards,
         items,
         seals,
+        weapons,
         combat,
         journey,
         extras: { gmNotes, combatNotes, shopCurrency, characterCurrencies, progressBars, rollHistory, lootList, nameStyle },
@@ -5813,8 +5916,27 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Aba Habilidades */}
-        {activeTab === 'cards' && (
+        {/* Aba Arsenal */}
+        {activeTab === 'arsenal' && (
+          <div className="flex flex-col mp-darktab" style={{ height:'100%' }}>
+            <div className="flex gap-1 p-1 mb-4 rounded-2xl w-fit flex-shrink-0" style={{ background:'rgba(0,0,0,0.35)', border:'1px solid rgba(255,255,255,0.06)' }}>
+              {([
+                { id: 'habilidades', label: 'Habilidades', icon: <Layers className="w-3.5 h-3.5" /> },
+                { id: 'itens',       label: 'Itens',       icon: <Backpack className="w-3.5 h-3.5" /> },
+                { id: 'selos',       label: 'Selos',       icon: <Sparkles className="w-3.5 h-3.5" /> },
+                { id: 'armas',       label: 'Armas',       icon: <Swords className="w-3.5 h-3.5" /> },
+              ] as const).map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => setArsenalSubTab(sub.id as any)}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all ${arsenalSubTab === sub.id ? 'bg-amber-600 text-white shadow-[0_0_15px_rgba(201,152,58,0.4)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}
+                >
+                  {sub.icon} {sub.label}
+                </button>
+              ))}
+            </div>
+
+            {arsenalSubTab === 'habilidades' && (
           <div className="space-y-8 anim-fade-up mp-darktab" style={{ height:'100%', overflowY:'auto' }}>
             <div className="flex flex-col gap-6">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 anim-fade-up">
@@ -5978,8 +6100,7 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Aba Itens (catálogo) */}
-        {activeTab === 'items' && (
+            {arsenalSubTab === 'itens' && (
           <div className="space-y-8 anim-fade-up mp-darktab" style={{ height:'100%', overflowY:'auto' }}>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
@@ -6025,8 +6146,7 @@ const App: React.FC = () => {
         )}
 
 
-        {/* ─── ABA SELOS ─── */}
-        {activeTab === 'seals' && (
+            {arsenalSubTab === 'selos' && (
           <div className="space-y-8 anim-fade-up mp-darktab" style={{ height:'100%', overflowY:'auto' }}>
             <div className="flex flex-col gap-6">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 anim-fade-up">
@@ -6167,6 +6287,49 @@ const App: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+        )}
+            {arsenalSubTab === 'armas' && (
+              <div className="space-y-8 anim-fade-up mp-darktab" style={{ height:'100%', overflowY:'auto' }}>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h2 className="text-4xl font-black text-white uppercase italic tracking-tight">Armaria</h2>
+                    <p className="text-slate-600 font-bold uppercase tracking-[0.3em] text-xs mt-1">Catálogo de Armas</p>
+                  </div>
+                  <div className="flex gap-3 w-full md:w-auto">
+                    <div className="relative flex-1 md:flex-none">
+                      <Search className="w-4 h-4 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <input type="text" placeholder="Buscar..." className="w-full md:w-64 bg-slate-900/80 border border-slate-800 rounded-xl pl-10 pr-5 py-3 text-sm text-white focus:border-amber-600 outline-none" value={weaponSearchTerm} onChange={e => setWeaponSearchTerm(e.target.value)} />
+                    </div>
+                    <button onClick={() => setEditingWeapon({} as Weapon)} className="flex items-center gap-2 px-5 py-3 rounded-xl bg-amber-700 hover:bg-amber-600 text-white text-sm font-bold uppercase tracking-wider whitespace-nowrap">
+                      <Plus className="w-4 h-4" /> Nova Arma
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))', gap:14 }}>
+                  {filteredWeapons.map(w => (
+                    <div key={w.id} onClick={() => setEditingWeapon(w)} style={{ cursor:'pointer', borderRadius:16, overflow:'hidden', border:'1px solid var(--border-gold)', background:'linear-gradient(165deg, rgba(40,30,5,0.85), rgba(20,16,8,0.92))', position:'relative' }} className="hover:brightness-110 transition-all">
+                      <div style={{ height:120, background: w.image ? `url(${w.image}) center/cover` : 'linear-gradient(145deg,#1e180e,#100e08)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        {!w.image && <Swords style={{ width:36, height:36, opacity:0.15 }} />}
+                      </div>
+                      <div style={{ padding:'10px 12px' }}>
+                        <p style={{ fontSize:13, fontWeight:800, color:'var(--gold-pale)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{w.name}</p>
+                        <div style={{ display:'flex', gap:6, marginTop:4, flexWrap:'wrap' }}>
+                          {w.category && <span style={{ fontSize:9, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.1em' }}>{w.category}</span>}
+                          {(w.damage ?? 0) > 0 && <span style={{ fontSize:9, color:'#f87171' }}>{w.damage}⚔</span>}
+                          {(w.bonus ?? 0) !== 0 && <span style={{ fontSize:9, color:'#86efac' }}>{(w.bonus ?? 0) >= 0 ? '+' : ''}{w.bonus}</span>}
+                          {w.range && <span style={{ fontSize:9, color:'#94a3b8' }}>{w.range === 'melee' ? '⚔' : w.range === 'ranged' ? '🏹' : '🎯'}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {weapons.length === 0 && (
+                    <p style={{ gridColumn:'1/-1', textAlign:'center', color:'var(--text-muted)', padding:'40px 0' }}>Nenhuma arma no catálogo. Clique em "Nova Arma".</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -7308,6 +7471,21 @@ const App: React.FC = () => {
               setEditingCatalogItem(null);
             }}
             onDelete={(id) => { DatabaseService.deleteItem(id); setEditingCatalogItem(null); }}
+          />
+        </Modal>
+      )}
+
+      {/* MODAL EDITAR ARMA */}
+      {editingWeapon !== null && (
+        <Modal title={editingWeapon.id ? "Editar Arma" : "Nova Arma"} onClose={() => setEditingWeapon(null)}>
+          <WeaponForm
+            initialData={editingWeapon.id ? editingWeapon : undefined}
+            onSubmit={(weapon) => {
+              const toSave: Weapon = weapon.id ? weapon : { ...weapon, id: Math.random().toString(36).substr(2, 9) };
+              DatabaseService.saveWeapon(toSave);
+              setEditingWeapon(null);
+            }}
+            onDelete={(id) => { DatabaseService.deleteWeapon(id); setEditingWeapon(null); }}
           />
         </Modal>
       )}

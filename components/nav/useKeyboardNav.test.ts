@@ -19,7 +19,7 @@ describe('useKeyboardNav', () => {
   });
 
   it('"1" e "2" vão direto a combat e journey', () => {
-    const { result, onSelect } = setup('seals');
+    const { result, onSelect } = setup('arsenal');
     act(() => result.current.handleKey({ key: '1', preventDefault() {} } as any));
     expect(onSelect).toHaveBeenCalledWith('combat');
     act(() => result.current.handleKey({ key: '2', preventDefault() {} } as any));

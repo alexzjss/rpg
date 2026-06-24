@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Swords, Compass, Users, Layers, Backpack, Sparkles, LayoutGrid } from 'lucide-react';
+import { Swords, Compass, Users, Shield, LayoutGrid } from 'lucide-react';
 import type { TabId } from '../../utils/atmosphere';
 
 export type NavKind = 'mode' | 'satellite';
@@ -11,16 +11,14 @@ export interface NavDest {
 }
 
 export const MODES: TabId[] = ['combat', 'journey'];
-export const SATELLITES: TabId[] = ['characters', 'cards', 'items', 'seals', 'extras'];
-// Ordem das teclas 1..7
-export const NAV_ORDER: TabId[] = ['combat', 'journey', 'characters', 'cards', 'items', 'seals', 'extras'];
+export const SATELLITES: TabId[] = ['characters', 'arsenal', 'extras'];
+// Ordem das teclas 1..5
+export const NAV_ORDER: TabId[] = ['combat', 'journey', 'characters', 'arsenal', 'extras'];
 
 export const NAV_DESTS: Record<TabId, NavDest> = {
   combat:     { id: 'combat',     label: 'Combate',     kind: 'mode',      icon: Swords },
   journey:    { id: 'journey',    label: 'Jornada',     kind: 'mode',      icon: Compass },
   characters: { id: 'characters', label: 'Personagens', kind: 'satellite', icon: Users },
-  cards:      { id: 'cards',      label: 'Habilidades', kind: 'satellite', icon: Layers },
-  items:      { id: 'items',      label: 'Itens',       kind: 'satellite', icon: Backpack },
-  seals:      { id: 'seals',      label: 'Selos',       kind: 'satellite', icon: Sparkles },
+  arsenal:    { id: 'arsenal',    label: 'Arsenal',     kind: 'satellite', icon: Shield },
   extras:     { id: 'extras',     label: 'Extras',      kind: 'satellite', icon: LayoutGrid },
 };

@@ -1,8 +1,8 @@
-export type TabId = 'combat' | 'cards' | 'items' | 'seals' | 'characters' | 'extras' | 'journey';
+export type TabId = 'combat' | 'arsenal' | 'characters' | 'extras' | 'journey';
 export type Atmosphere = 'dark' | 'parchment';
 
 const TAB_ATMOSPHERE: Record<TabId, Atmosphere> = {
-  combat: 'dark', cards: 'dark', items: 'dark', seals: 'dark',
+  combat: 'dark', arsenal: 'dark',
   characters: 'dark', extras: 'dark', journey: 'parchment',
 };
 

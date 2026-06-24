@@ -16,7 +16,7 @@ export function useKeyboardNav({ activeTab, onSelect }: {
   onSelect: (id: TabId) => void;
 }): UseKeyboardNav {
   const handleKey = useCallback((e: KeyboardEvent) => {
-    if (e.key >= '1' && e.key <= '7') {
+    if (e.key >= '1' && e.key <= '5') {
       const id = NAV_ORDER[Number(e.key) - 1];
       if (id) { e.preventDefault(); onSelect(id); }
       return;

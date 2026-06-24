@@ -10,7 +10,7 @@
  *  - Sem dependência de localStorage para dados críticos
  */
 
-import { Card, Character, CombatState, Item, JourneyState, Seal } from '../types';
+import { Card, Character, CombatState, Item, JourneyState, Seal, Weapon } from '../types';
 
 // ─────────────────────────────────────────────────────────────────
 // AppExtras — dados do GM / ferramentas que antes ficavam de fora
@@ -48,6 +48,7 @@ export interface AppSnapshot {
   cards: Card[];
   items: Item[];
   seals: Seal[];
+  weapons: Weapon[];
   combat: CombatState;
   journey: JourneyState;
   extras: AppExtras;
@@ -90,10 +91,10 @@ export const DEFAULT_JOURNEY: JourneyState = {
 // IndexedDB internals
 // ─────────────────────────────────────────────────────────────────
 const IDB_NAME = 'rpg_master_db';
-// bump para 5 → cria o store 'items' (catálogo global)
-const IDB_VERSION = 5;
+// bump para 6 → cria o store 'weapons'
+const IDB_VERSION = 6;
 
-const ALL_STORES = ['characters', 'cards', 'seals', 'items', 'meta'] as const;
+const ALL_STORES = ['characters', 'cards', 'seals', 'items', 'weapons', 'meta'] as const;
 type Store = typeof ALL_STORES[number];
 
 let _idbPromise: Promise<IDBDatabase> | null = null;
@@ -219,9 +220,9 @@ function ensureExtras(raw: any): AppExtras {
 // ─────────────────────────────────────────────────────────────────
 // In-memory listener registry
 // ─────────────────────────────────────────────────────────────────
-type ListenerKey = 'characters' | 'cards' | 'items' | 'seals' | 'combat' | 'journey' | 'extras';
+type ListenerKey = 'characters' | 'cards' | 'items' | 'seals' | 'weapons' | 'combat' | 'journey' | 'extras';
 const _listeners: Record<ListenerKey, Function[]> = {
-  characters: [], cards: [], items: [], seals: [], combat: [], journey: [], extras: [],
+  characters: [], cards: [], items: [], seals: [], weapons: [], combat: [], journey: [], extras: [],
 };
 
 function _notify(key: ListenerKey, data: any) {
@@ -289,11 +290,12 @@ async function runMigrations() {
 // Load all from IDB
 // ─────────────────────────────────────────────────────────────────
 async function loadAll() {
-  const [chars, cards, items, seals, combatRec, journeyRec, extrasRec] = await Promise.all([
+  const [chars, cards, items, seals, weapons, combatRec, journeyRec, extrasRec] = await Promise.all([
     _getAll<any>('characters'),
     _getAll<any>('cards'),
     _getAll<any>('items'),
     _getAll<any>('seals'),
+    _getAll<any>('weapons'),
     _get<any>('meta', '__combat'),
     _get<any>('meta', '__journey'),
     _get<any>('meta', '__extras'),
@@ -303,6 +305,7 @@ async function loadAll() {
     cards: cards as Card[],
     items: items as Item[],
     seals: seals.map(ensureSeal) as Seal[],
+    weapons: weapons as Weapon[],
     combat: ensureCombat(combatRec?.value),
     journey: ensureJourney(journeyRec?.value),
     extras: ensureExtras(extrasRec?.value),
@@ -320,6 +323,7 @@ export const DatabaseService = {
     cards: Card[];
     items: Item[];
     seals: Seal[];
+    weapons: Weapon[];
     combat: CombatState;
     journey: JourneyState;
     extras: AppExtras;
@@ -344,6 +348,10 @@ export const DatabaseService = {
   syncSeals: (cb: (d: Seal[]) => void) => {
     _getAll<Seal>('seals').then(d => cb(d.map(ensureSeal))).catch(() => cb([]));
     return _subscribe<Seal[]>('seals', cb);
+  },
+  syncWeapons: (cb: (d: Weapon[]) => void) => {
+    _getAll<Weapon>('weapons').then(d => cb(d)).catch(() => cb([]));
+    return _subscribe<Weapon[]>('weapons', cb);
   },
   syncCombatState: (cb: (d: CombatState) => void) => {
     _get<any>('meta', '__combat').then(r => cb(ensureCombat(r?.value))).catch(() => cb({ ...DEFAULT_COMBAT }));
@@ -396,6 +404,15 @@ export const DatabaseService = {
     _notify('seals', (await _getAll<Seal>('seals')).map(ensureSeal));
   },
 
+  saveWeapon: async (weapon: Weapon) => {
+    await _put('weapons', weapon);
+    _notify('weapons', await _getAll<Weapon>('weapons'));
+  },
+  deleteWeapon: async (id: string) => {
+    await _delete('weapons', id);
+    _notify('weapons', await _getAll<Weapon>('weapons'));
+  },
+
   updateCombat: async (state: CombatState) => {
     await _put('meta', { id: '__combat', value: state });
     _notify('combat', state);
@@ -443,6 +460,7 @@ export const DatabaseService = {
       _replaceAll('cards', snapshot.cards),
       _replaceAll('items', snapshot.items),
       _replaceAll('seals', snapshot.seals.map(ensureSeal)),
+      _replaceAll('weapons', snapshot.weapons ?? []),
       _put('meta', { id: '__combat', value: snapshot.combat }),
       _put('meta', { id: '__journey', value: snapshot.journey }),
       _put('meta', { id: '__extras', value: snapshot.extras }),
@@ -453,6 +471,7 @@ export const DatabaseService = {
     _notify('cards', snapshot.cards);
     _notify('items', snapshot.items);
     _notify('seals', snapshot.seals.map(ensureSeal));
+    _notify('weapons', snapshot.weapons ?? []);
     _notify('combat', snapshot.combat);
     _publishCombat(snapshot.combat);
     _notify('journey', snapshot.journey);
@@ -481,6 +500,7 @@ export const DatabaseService = {
         cards: Array.isArray(raw.cards) ? raw.cards : [],
         items: Array.isArray(raw.items) ? raw.items : [],
         seals: Array.isArray(raw.seals) ? raw.seals : [],
+        weapons: Array.isArray(raw.weapons) ? raw.weapons : [],
         combat: ensureCombat(raw.combat),
         journey: ensureJourney(raw.journey),
         // Suporte a formato antigo (sem extras encapsulado)

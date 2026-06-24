@@ -109,6 +109,20 @@ export interface Card {
   conditionEffects?: ConditionEffectMap; // per-condition round effects
 }
 
+export interface Weapon {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  category?: string;
+  damage?: number;
+  damageType?: DamageType;
+  range?: 'melee' | 'ranged' | 'thrown';
+  bonus?: number;
+  traits?: string[];
+  isHidden?: boolean;
+}
+
 /** Posse referenciada de um item do catálogo global. */
 export interface OwnedItem {
   itemId: string;
