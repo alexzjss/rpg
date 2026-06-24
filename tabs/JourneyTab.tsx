@@ -952,12 +952,11 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                          const canBuy = upgradeTargetCharId && charCurr >= offer.finalPrice;
                          return (
                            <div key={offer.id}
-                             className="mp-jcard"
-                             style={{ border:`1px solid ${rc.border}`, borderRadius:18, overflow:'hidden',
+                             className="mp-jcard mp-upgrade-card"
+                             style={{ '--deal-delay': `${idx * 0.07}s`, border:`1px solid ${rc.border}`, borderRadius:18, overflow:'hidden',
                                boxShadow:`0 4px 24px rgba(0,0,0,0.6), 0 0 30px ${rc.glow}`,
-                               animation:`cardDealIn 0.4s cubic-bezier(0.22,1,0.36,1) ${idx * 0.07}s both`,
                                display:'flex', flexDirection:'column',
-                             }}
+                             } as React.CSSProperties}
                            >
                              {/* Top accent */}
                              <div style={{ height:3, background:`linear-gradient(90deg, transparent, ${rc.label}, transparent)` }} />
