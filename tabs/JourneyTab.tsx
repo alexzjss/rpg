@@ -998,7 +998,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                                      </span>
                                    )}
                                    {!hasDiscount && !hasHike && (
-                                     <span style={{ fontSize:8, fontWeight:700, color:'rgba(255,255,255,0.25)', padding:'2px 6px' }}>preço normal</span>
+                                     <span className="mp-jcard__faint" style={{ fontSize:8, fontWeight:700, padding:'2px 6px' }}>preço normal</span>
                                    )}
                                  </div>
                                </div>
@@ -1025,7 +1025,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                    {/* Rarities legend */}
                    {upgradeShopGenerated && (
                      <div style={{ display:'flex', gap:8, flexWrap:'wrap', opacity:0.55 }}>
-                       <span style={{ fontSize:8, fontWeight:700, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.12em', alignSelf:'center' }}>Raridades:</span>
+                       <span className="mp-jcard__faint" style={{ fontSize:8, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', alignSelf:'center' }}>Raridades:</span>
                        {Object.entries(rarityConf).map(([k,v]) => (
                          <span key={k} style={{ fontSize:8, fontWeight:700, color:v.label, background:`${v.label}12`, border:`1px solid ${v.border}`, borderRadius:5, padding:'2px 7px', textTransform:'uppercase' }}>{v.badge}</span>
                        ))}
