@@ -6289,8 +6289,8 @@ const App: React.FC = () => {
                          });
                        });
                        return (
-                         <div key={recipe.id} style={{ background:'rgba(22,27,38,0.95)', border:'1px solid rgba(234,88,12,0.3)', borderRadius:20, overflow:'hidden', transition:'border-color 0.2s' }}
-                           className="hover:border-orange-500/60">
+                         <div key={recipe.id} style={{ border:'1px solid rgba(234,88,12,0.3)', borderRadius:20, overflow:'hidden', transition:'border-color 0.2s' }}
+                           className="mp-jcard hover:border-orange-500/60">
                            {/* Header */}
                            <div style={{ background:'linear-gradient(135deg,rgba(234,88,12,0.2),rgba(180,60,5,0.3))', borderBottom:'1px solid rgba(234,88,12,0.2)', padding:'14px 16px', display:'flex', alignItems:'center', gap:10 }}>
                              <div style={{ width:44, height:44, borderRadius:12, background: recipe.resultImage ? 'transparent' : 'rgba(234,88,12,0.2)', border:'1px solid rgba(234,88,12,0.3)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', flexShrink:0 }}>
@@ -6298,7 +6298,7 @@ const App: React.FC = () => {
                              </div>
                              <div style={{ flex:1, minWidth:0 }}>
                                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
-                                 <p style={{ fontSize:13, fontWeight:800, color:'#fff', textTransform:'uppercase', letterSpacing:'0.04em', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{recipe.name}</p>
+                                 <p className="mp-jcard__white" style={{ fontSize:13, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.04em', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{recipe.name}</p>
                                  {recipe.difficulty && <span style={{ fontSize:8, fontWeight:700, color: recipe.difficulty==='fácil'?'#86efac':recipe.difficulty==='médio'?'#fcd34d':'#f87171', background: recipe.difficulty==='fácil'?'rgba(34,197,94,0.12)':recipe.difficulty==='médio'?'rgba(234,179,8,0.12)':'rgba(239,68,68,0.12)', border:`1px solid ${recipe.difficulty==='fácil'?'rgba(34,197,94,0.3)':recipe.difficulty==='médio'?'rgba(234,179,8,0.3)':'rgba(239,68,68,0.3)'}`, borderRadius:6, padding:'2px 6px', textTransform:'uppercase', letterSpacing:'0.06em', flexShrink:0 }}>{recipe.difficulty}</span>}
                                </div>
                                <p style={{ fontSize:10, color:'rgba(251,146,60,0.7)', fontWeight:600 }}>Cria: <span style={{ color:'#fb923c', fontWeight:700 }}>{recipe.resultQuantity}x {recipe.resultItemName}</span>{recipe.craftingTime ? ` · ${recipe.craftingTime}` : ''}</p>
@@ -6348,7 +6348,7 @@ const App: React.FC = () => {
                      {cookRecipes.length === 0 && (
                        <div style={{ gridColumn:'1/-1', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, padding:'60px 0', opacity:0.3 }}>
                          <ChefHat style={{ width:48, height:48, color:'#fb923c' }} />
-                         <p style={{ fontSize:13, fontWeight:700, color:'#fff', textTransform:'uppercase', letterSpacing:'0.2em' }}>Nenhuma receita cadastrada</p>
+                         <p className="mp-jcard__white" style={{ fontSize:13, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.2em' }}>Nenhuma receita cadastrada</p>
                          <p style={{ fontSize:11, color:'rgba(255,255,255,0.5)' }}>Clique em "Nova Receita" para adicionar</p>
                        </div>
                      )}
@@ -6371,8 +6371,8 @@ const App: React.FC = () => {
                          });
                        });
                        return (
-                         <div key={recipe.id} style={{ background:'rgba(22,27,38,0.95)', border:'1px solid rgba(168,85,247,0.3)', borderRadius:20, overflow:'hidden', transition:'border-color 0.2s' }}
-                           className="hover:border-purple-500/60">
+                         <div key={recipe.id} style={{ border:'1px solid rgba(168,85,247,0.3)', borderRadius:20, overflow:'hidden', transition:'border-color 0.2s' }}
+                           className="mp-jcard hover:border-purple-500/60">
                            {/* Header */}
                            <div style={{ background:'linear-gradient(135deg,rgba(168,85,247,0.2),rgba(109,40,217,0.3))', borderBottom:'1px solid rgba(168,85,247,0.2)', padding:'14px 16px', display:'flex', alignItems:'center', gap:10 }}>
                              <div style={{ width:44, height:44, borderRadius:12, background: recipe.resultImage ? 'transparent' : 'rgba(168,85,247,0.2)', border:'1px solid rgba(168,85,247,0.3)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', flexShrink:0 }}>
@@ -6380,7 +6380,7 @@ const App: React.FC = () => {
                              </div>
                              <div style={{ flex:1, minWidth:0 }}>
                                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
-                                 <p style={{ fontSize:13, fontWeight:800, color:'#fff', textTransform:'uppercase', letterSpacing:'0.04em', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{recipe.name}</p>
+                                 <p className="mp-jcard__white" style={{ fontSize:13, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.04em', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{recipe.name}</p>
                                  {recipe.difficulty && <span style={{ fontSize:8, fontWeight:700, color: recipe.difficulty==='fácil'?'#86efac':recipe.difficulty==='médio'?'#fcd34d':'#f87171', background: recipe.difficulty==='fácil'?'rgba(34,197,94,0.12)':recipe.difficulty==='médio'?'rgba(234,179,8,0.12)':'rgba(239,68,68,0.12)', border:`1px solid ${recipe.difficulty==='fácil'?'rgba(34,197,94,0.3)':recipe.difficulty==='médio'?'rgba(234,179,8,0.3)':'rgba(239,68,68,0.3)'}`, borderRadius:6, padding:'2px 6px', textTransform:'uppercase', letterSpacing:'0.06em', flexShrink:0 }}>{recipe.difficulty}</span>}
                                </div>
                                <p style={{ fontSize:10, color:'rgba(192,132,252,0.7)', fontWeight:600 }}>Forja: <span style={{ color:'#c084fc', fontWeight:700 }}>{recipe.resultQuantity}x {recipe.resultItemName}</span>{recipe.craftingTime ? ` · ${recipe.craftingTime}` : ''}</p>
@@ -6426,7 +6426,7 @@ const App: React.FC = () => {
                      {forgeRecipes.length === 0 && (
                        <div style={{ gridColumn:'1/-1', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, padding:'60px 0', opacity:0.3 }}>
                          <Hammer style={{ width:48, height:48, color:'#c084fc' }} />
-                         <p style={{ fontSize:13, fontWeight:700, color:'#fff', textTransform:'uppercase', letterSpacing:'0.2em' }}>Nenhuma forja cadastrada</p>
+                         <p className="mp-jcard__white" style={{ fontSize:13, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.2em' }}>Nenhuma forja cadastrada</p>
                          <p style={{ fontSize:11, color:'rgba(255,255,255,0.5)' }}>Clique em "Nova Receita de Forja" para adicionar</p>
                        </div>
                      )}
@@ -6446,7 +6446,7 @@ const App: React.FC = () => {
                    {/* Shop header */}
                    <div style={{ display:'flex', gap:16, alignItems:'stretch', flexWrap:'wrap' }}>
                      {/* Config panel */}
-                     <div style={{ flex:'1 1 320px', background:'rgba(15,23,42,0.9)', border:'1px solid rgba(16,185,129,0.2)', borderRadius:20, padding:'18px 20px', display:'flex', flexDirection:'column', gap:14, boxShadow:'0 0 30px rgba(16,185,129,0.05)' }}>
+                     <div className="mp-jcard__panel" style={{ flex:'1 1 320px', border:'1px solid rgba(16,185,129,0.2)', borderRadius:20, padding:'18px 20px', display:'flex', flexDirection:'column', gap:14, boxShadow:'0 0 30px rgba(16,185,129,0.05)' }}>
                        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
                          <ShoppingCart style={{ width:16, height:16, color:'#34d399' }} />
                          <span style={{ fontSize:11, fontWeight:800, color:'#34d399', textTransform:'uppercase', letterSpacing:'0.2em' }}>Configurar Loja</span>
@@ -6512,7 +6512,7 @@ const App: React.FC = () => {
                      </div>
 
                      {/* Currency panel */}
-                     <div style={{ flex:'0 0 220px', background:'rgba(15,23,42,0.9)', border:'1px solid rgba(251,191,36,0.2)', borderRadius:20, padding:'18px 20px', display:'flex', flexDirection:'column', gap:12, boxShadow:'0 0 20px rgba(251,191,36,0.04)' }}>
+                     <div className="mp-jcard__panel" style={{ flex:'0 0 220px', border:'1px solid rgba(251,191,36,0.2)', borderRadius:20, padding:'18px 20px', display:'flex', flexDirection:'column', gap:12, boxShadow:'0 0 20px rgba(251,191,36,0.04)' }}>
                        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                          <Coins style={{ width:16, height:16, color:'#fbbf24' }} />
                          <span style={{ fontSize:11, fontWeight:800, color:'#fbbf24', textTransform:'uppercase', letterSpacing:'0.2em' }}>Moedas do Personagem</span>
@@ -6554,7 +6554,7 @@ const App: React.FC = () => {
                    {!upgradeShopGenerated && (
                      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:'60px 0', opacity:0.35 }}>
                        <ShoppingCart style={{ width:52, height:52, color:'#34d399' }} />
-                       <p style={{ fontSize:14, fontWeight:700, color:'#fff', textTransform:'uppercase', letterSpacing:'0.2em' }}>A loja está fechada</p>
+                       <p className="mp-jcard__white" style={{ fontSize:14, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.2em' }}>A loja está fechada</p>
                        <p style={{ fontSize:11, color:'rgba(255,255,255,0.45)' }}>Configure as opções acima e clique em "Abrir Loja"</p>
                        {journeyParty.length === 0 && <p style={{ fontSize:11, color:'#f87171', fontWeight:700 }}>⚠ Marque personagens como "Em Jornada" para usar os upgrades</p>}
                      </div>
@@ -6575,7 +6575,8 @@ const App: React.FC = () => {
                          const canBuy = upgradeTargetCharId && charCurr >= offer.finalPrice;
                          return (
                            <div key={offer.id}
-                             style={{ background:rc.bg, border:`1px solid ${rc.border}`, borderRadius:18, overflow:'hidden',
+                             className="mp-jcard"
+                             style={{ border:`1px solid ${rc.border}`, borderRadius:18, overflow:'hidden',
                                boxShadow:`0 4px 24px rgba(0,0,0,0.6), 0 0 30px ${rc.glow}`,
                                animation:`cardDealIn 0.4s cubic-bezier(0.22,1,0.36,1) ${idx * 0.07}s both`,
                                display:'flex', flexDirection:'column',
@@ -6591,7 +6592,7 @@ const App: React.FC = () => {
                                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                                    <div style={{ width:38, height:38, borderRadius:10, background:`${rc.label}18`, border:`1px solid ${rc.border}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>{icon}</div>
                                    <div>
-                                     <p style={{ fontSize:13, fontWeight:800, color:'#fff', textTransform:'uppercase', letterSpacing:'0.04em', lineHeight:1 }}>{offer.label}</p>
+                                     <p className="mp-jcard__white" style={{ fontSize:13, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.04em', lineHeight:1 }}>{offer.label}</p>
                                      <span style={{ fontSize:7, fontWeight:700, color:rc.label, background:`${rc.label}14`, border:`1px solid ${rc.border}`, borderRadius:4, padding:'1px 5px', textTransform:'uppercase', letterSpacing:'0.1em' }}>{rc.badge}</span>
                                    </div>
                                  </div>

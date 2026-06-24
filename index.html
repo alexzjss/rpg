@@ -3532,19 +3532,10 @@
             text-shadow: 0 2px 6px rgba(180,71,15,0.25);
         }
 
-        /* ── Cozinhar / Forjar / Upgrades: cards inline escuros -> pergaminho ──
-           Escopado a .mp-journey-cards (exclui a miniatura emoldurada do Mapa).
-           Usa serialização do navegador (rgba com espaços, color: rgb(...)). */
-        .mp-journey-cards [style*="rgba(22, 27, 38"],
-        .mp-journey-cards [style*="rgba(15, 23, 42"],
-        .mp-journey-cards [style*="rgba(15, 18, 24"],
-        .mp-journey-cards [style*="rgba(30, 32, 40"],
-        .mp-journey-cards [style*="rgba(5, 25, 20"],
-        .mp-journey-cards [style*="rgba(8, 8, 30"],
-        .mp-journey-cards [style*="rgba(20, 14, 2"] {
-            background: linear-gradient(135deg, var(--jp-paper-raised), var(--jp-paper)) !important;
-        }
-        .mp-journey-cards [style*="color: rgb(255, 255, 255)"] { color: var(--jp-ink) !important; }
+        /* ── Cozinhar / Forjar / Upgrades: cards → pergaminho ── */
+        .mp-jcard { background: linear-gradient(135deg, var(--jp-paper-raised), var(--jp-paper)) !important; }
+        .mp-jcard__panel { background: var(--jp-paper-raised) !important; }
+        .mp-jcard__white { color: var(--jp-ink) !important; }
         /* selects/inputs escuros -> pergaminho */
         .mp-journey-cards select,
         .mp-journey-cards input:not([type=range]),
