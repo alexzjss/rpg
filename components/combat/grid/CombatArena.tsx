@@ -315,7 +315,7 @@ const CombatArena: React.FC<CombatArenaProps> = ({
         flex: isFullscreen ? undefined : 1,
         width: isFullscreen ? '100vw' : '100%',
         height: isFullscreen ? '100vh' : '100%',
-        background: 'radial-gradient(ellipse 78% 60% at 50% 6%, rgba(92,42,12,0.55) 0%, rgba(46,26,12,0.72) 30%, rgba(24,16,9,0.97) 64%, rgba(14,10,6,1) 100%)',
+        background: 'radial-gradient(ellipse 78% 60% at 50% 6%, rgba(13,40,46,0.55) 0%, rgba(10,28,33,0.72) 30%, rgba(9,16,18,0.97) 64%, rgba(8,12,13,1) 100%)',
         overflow: 'hidden',
       }}
       onPointerMove={handleArenaPointerMove}
@@ -324,7 +324,7 @@ const CombatArena: React.FC<CombatArenaProps> = ({
       {/* Atmospheric overlays — registro ardente */}
       <div className="mp-battle-forge-glow" />
       <div className="mp-battle-canvas" />
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.05, backgroundImage: 'radial-gradient(rgba(240,192,96,1) 1px, transparent 1px)', backgroundSize: '26px 26px', zIndex: 1 }} />
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.05, backgroundImage: 'radial-gradient(rgba(47,212,196,1) 1px, transparent 1px)', backgroundSize: '26px 26px', zIndex: 1 }} />
       <div className="mp-battle-ghost mp-battle-ghost--arena mp-battle-ghost--ardent" style={{ zIndex: 1 }}>COMBATE</div>
       <div className="mp-battle-stripes" />
       <div className="mp-battle-vignette" />
@@ -339,14 +339,14 @@ const CombatArena: React.FC<CombatArenaProps> = ({
             <path d="M10 10 L48 10 M10 10 L10 48" stroke="url(#cg)" strokeWidth="2.5" strokeLinecap="round" />
             <path d="M10 10 Q40 14 46 40 Q52 22 70 18" stroke="url(#cg)" strokeWidth="1.6" fill="none" opacity="0.85" />
             <circle cx="10" cy="10" r="4.5" fill="url(#cg)" />
-            <circle cx="50" cy="10" r="2.2" fill="#f0c060" opacity="0.7" />
-            <circle cx="10" cy="50" r="2.2" fill="#f0c060" opacity="0.7" />
-            <path d="M18 18 Q30 20 34 32" stroke="#f97316" strokeWidth="1" fill="none" opacity="0.55" />
+            <circle cx="50" cy="10" r="2.2" fill="#2fd4c4" opacity="0.7" />
+            <circle cx="10" cy="50" r="2.2" fill="#2fd4c4" opacity="0.7" />
+            <path d="M18 18 Q30 20 34 32" stroke="#d11f3f" strokeWidth="1" fill="none" opacity="0.55" />
             <defs>
               <linearGradient id="cg" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stopColor="#f0c060" />
-                <stop offset="0.55" stopColor="#f97316" />
-                <stop offset="1" stopColor="#c2410c" />
+                <stop offset="0" stopColor="#2fd4c4" />
+                <stop offset="0.55" stopColor="#d11f3f" />
+                <stop offset="1" stopColor="#a3122e" />
               </linearGradient>
             </defs>
           </svg>
@@ -389,13 +389,13 @@ const CombatArena: React.FC<CombatArenaProps> = ({
             backgroundSize: '100% 100%',
             backgroundPosition: 'center',
             borderRadius: 16,
-            boxShadow: '0 0 0 1.5px rgba(240,192,96,0.32), 0 0 0 3px rgba(124,45,18,0.35), 0 0 70px rgba(0,0,0,0.92), inset 0 0 90px rgba(124,45,18,0.18), inset 0 0 0 1px rgba(255,221,150,0.06)',
+            boxShadow: '0 0 0 1.5px rgba(47,212,196,0.32), 0 0 0 3px rgba(120,20,40,0.35), 0 0 70px rgba(0,0,0,0.92), inset 0 0 90px rgba(120,20,40,0.18), inset 0 0 0 1px rgba(244,240,232,0.06)',
             overflow: 'hidden',
           }}
         >
           {/* Default bg when no image — pedra-brasa pintada */}
           {!combat.backgroundImage && (
-            <div style={{ position: 'absolute', inset: 0, borderRadius: 16, background: 'radial-gradient(ellipse 90% 70% at 50% 20%, #2a1d10 0%, #1c1409 48%, #120d07 100%)' }} />
+            <div style={{ position: 'absolute', inset: 0, borderRadius: 16, background: 'radial-gradient(ellipse 90% 70% at 50% 20%, #0e2a30 0%, #0a1d22 48%, #081316 100%)' }} />
           )}
 
           {/* SVG layer (grid, AoE, range, rulers, fog) */}
