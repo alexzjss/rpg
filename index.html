@@ -3621,6 +3621,55 @@
         }
         .mp-utils__btn:hover { color: var(--text-primary); border-color: var(--brass); background: rgba(32,25,14,0.92); }
         .mp-utils__btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ═══════════════════════════════════════════════════════════
+   IDENTIDADES POR SEÇÃO — base + primitivas (Metaphor combat)
+   Só tem efeito sob :root[data-section='...'] — sem regra global.
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --sec-accent:   #c9983a;
+  --sec-accent-2: #67e8f9;
+  --sec-accent-3: #ec4899;
+  --sec-ink:      #f3ecdd;
+  --sec-mp:       #5a8ad8;
+  --sec-gold:     #e6b84e;
+}
+
+/* Splatter de tinta (carmesim/teal/magenta) — leve, via radial-gradient */
+.mph-splatter { position: relative; }
+.mph-splatter::before {
+  content: ''; position: absolute; inset: -8px; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 30%, rgba(209,31,63,0.85), transparent 30%),
+    radial-gradient(circle at 78% 60%, rgba(47,212,196,0.7), transparent 26%),
+    radial-gradient(circle at 40% 85%, rgba(230,51,110,0.7), transparent 26%);
+  opacity: 0.5;
+}
+
+/* Tag em paralelogramo magenta com serif branca */
+.mph-banner {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--sec-accent-3, #e6336e); color: #fff;
+  font-family: Georgia, 'Times New Roman', serif;
+  padding: 6px 22px 6px 16px;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+.mph-banner__accent { width: 4px; align-self: stretch; background: var(--sec-accent-2, #2fd4c4); }
+
+/* Token de botão circular preto (atalho) */
+.mph-token {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #0e0a0b; border: 1px solid var(--sec-ink, #f4f0e8);
+  font-family: Arial, sans-serif; font-weight: 700; font-size: 11px; color: var(--sec-ink, #f4f0e8);
+}
+
+/* Line-art: círculos concêntricos brancos finos */
+.mph-lineart {
+  background:
+    repeating-radial-gradient(circle at center, transparent 0 14px,
+      rgba(244,240,232,0.5) 14px 15px, transparent 15px 28px);
+}
     </style>
 <script type="importmap">
 {
