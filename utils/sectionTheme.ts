@@ -13,6 +13,14 @@ const COMBAT_VARS: Record<string, string> = {
   '--sec-ink':      '#f4f0e8', // branco-creme
   '--sec-mp':       '#5a8ad8', // azul MP
   '--sec-gold':     '#e6b84e', // ouro (acento menor)
+  '--gold-dim':    '#155055',
+  '--gold-mid':    '#2fd4c4',
+  '--gold-bright': '#7fe9dd',
+  '--gold-pale':   '#eafff9',
+  '--border-gold': 'rgba(47,212,196,0.30)',
+  '--team-cast':   '#2fd4c4',
+  '--ember':       '#d11f3f',
+  '--ember-deep':  '#a3122e',
 };
 
 export const SECTION_THEMES: Record<TabId, SectionThemeDef> = {

@@ -37,8 +37,10 @@ describe('applySectionTheme', () => {
   it('remove as vars de combat ao trocar para uma seção sem overrides', () => {
     applySectionTheme('combat');
     expect(document.documentElement.style.getPropertyValue('--sec-accent')).toBe('#d11f3f');
+    expect(document.documentElement.style.getPropertyValue('--gold-mid')).toBe('#2fd4c4');
     applySectionTheme('extras');
     expect(document.documentElement.dataset.section).toBe('extras');
     expect(document.documentElement.style.getPropertyValue('--sec-accent')).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--gold-mid')).toBe('');
   });
 });
