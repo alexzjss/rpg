@@ -107,7 +107,7 @@ import CombatControlPanel from './components/combat/CombatControlPanel';
 import CardFusionPanel from './components/combat/CardFusionPanel';
 import CombatArena from './components/combat/grid/CombatArena';
 import { migrateCombatState } from './utils/combatMigration';
-import { applyAtmosphere, atmosphereForTab } from './utils/atmosphere';
+import { applySectionTheme } from './utils/sectionTheme';
 import { TabSweep, Title, ImagePickerButton } from './components/ui';
 import { useKeyboardNav } from './components/nav';
 import JourneyTab from './tabs/JourneyTab';
@@ -3290,7 +3290,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'combat' | 'arsenal' | 'characters' | 'extras' | 'journey'>('combat');
   const [reducedMotion, setReducedMotion] = React.useState(getUserReducedMotion());
   React.useEffect(() => {
-    applyAtmosphere(atmosphereForTab(activeTab));
+    applySectionTheme(activeTab);
   }, [activeTab]);
   // Navegação por teclado: 1-5 vão direto às abas; setas ciclam. (Sem UI de navegação visível.)
   const kbNav = useKeyboardNav({ activeTab, onSelect: setActiveTab });
