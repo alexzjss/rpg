@@ -818,8 +818,8 @@
             filter: brightness(1.08);
         }
         .mp-targeting-button--confirm {
-            background: linear-gradient(105deg, rgba(240,192,96,0.72), rgba(236,72,153,0.46)) !important;
-            border-color: rgba(240,192,96,0.68) !important;
+            background: linear-gradient(105deg, rgba(127,233,221,0.72), rgba(236,72,153,0.46)) !important;
+            border-color: rgba(127,233,221,0.68) !important;
             color: #fff7dc !important;
             box-shadow: 0 0 22px rgba(236,72,153,0.24), 0 10px 26px rgba(0,0,0,0.34) !important;
         }
@@ -1037,30 +1037,30 @@
             transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease !important;
         }
         .mp-control-primary {
-            background: linear-gradient(105deg, #c2410c 0%, #f59e0b 34%, #ffe0a3 52%, #f0c060 68%, #c2410c 100%) !important;
+            background: linear-gradient(105deg, #a3122e 0%, #d11f3f 34%, #cfeff0 52%, #7fe9dd 68%, #a3122e 100%) !important;
             color: #1a0f06 !important;
             border: 1px solid rgba(255,205,130,0.78) !important;
-            box-shadow: 0 8px 22px rgba(0,0,0,0.42), 0 0 22px rgba(249,115,22,0.5), inset 0 1px 0 rgba(255,255,255,0.4) !important;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.42), 0 0 22px rgba(209,31,63,0.5), inset 0 1px 0 rgba(255,255,255,0.4) !important;
             text-shadow: 0 1px 0 rgba(255,231,170,0.45);
         }
         .mp-control-primary:hover {
             transform: translateY(-1px);
             filter: brightness(1.1) saturate(1.08);
-            box-shadow: 0 10px 28px rgba(0,0,0,0.5), 0 0 30px rgba(249,115,22,0.7), inset 0 1px 0 rgba(255,255,255,0.45) !important;
+            box-shadow: 0 10px 28px rgba(0,0,0,0.5), 0 0 30px rgba(209,31,63,0.7), inset 0 1px 0 rgba(255,255,255,0.45) !important;
         }
         /* Variante pequena (ex: Adicionar) — selo sutil, não ritual */
         .mp-control-primary--small {
             min-height: 31px;
-            background: linear-gradient(180deg, rgba(122,94,26,0.22), rgba(122,94,26,0.10)) !important;
+            background: linear-gradient(180deg, rgba(16,52,56,0.22), rgba(16,52,56,0.10)) !important;
             color: var(--gold-bright) !important;
-            border: 1px solid rgba(201,152,58,0.34) !important;
+            border: 1px solid rgba(47,212,196,0.34) !important;
             box-shadow: none !important;
             text-shadow: none;
         }
         .mp-control-primary--small:hover {
-            background: linear-gradient(180deg, rgba(201,152,58,0.30), rgba(122,94,26,0.16)) !important;
-            border-color: rgba(240,192,96,0.5) !important;
-            box-shadow: 0 0 14px rgba(201,152,58,0.22) !important;
+            background: linear-gradient(180deg, rgba(47,212,196,0.30), rgba(16,52,56,0.16)) !important;
+            border-color: rgba(127,233,221,0.5) !important;
+            box-shadow: 0 0 14px rgba(47,212,196,0.22) !important;
         }
         .mp-control-secondary {
             background: rgba(19,16,11,0.54) !important;
@@ -1070,7 +1070,7 @@
         }
         .mp-control-secondary:hover {
             color: var(--gold-pale) !important;
-            border-color: rgba(201,152,58,0.34) !important;
+            border-color: rgba(47,212,196,0.34) !important;
             background: rgba(255,255,255,0.07) !important;
         }
         .mp-control-danger {
@@ -1658,7 +1658,7 @@
         .mp-skill-row__brush {
             position: absolute;
             inset: 3px 0 2px 0;
-            background: linear-gradient(90deg, color-mix(in srgb, var(--skill-color) 85%, transparent), color-mix(in srgb, var(--skill-color) 50%, transparent) 58%, rgba(249,115,22,0.28));
+            background: linear-gradient(90deg, color-mix(in srgb, var(--skill-color) 85%, transparent), color-mix(in srgb, var(--skill-color) 50%, transparent) 58%, rgba(209,31,63,0.28));
             opacity: 0;
             transform: translateX(-18px) skewX(-8deg);
             clip-path: polygon(0 18%, 92% 0, 100% 42%, 94% 100%, 4% 86%);
@@ -3715,6 +3715,20 @@
   background:
     linear-gradient(135deg, rgba(255,255,255,0.06), transparent 28%),
     radial-gradient(ellipse at 30% 0%, rgba(47,212,196,0.12), transparent 58%);
+}
+
+/* ── COMBATE: comandos em serif ── */
+:root[data-section='combat'] .mp-control-primary,
+:root[data-section='combat'] .mp-control-secondary,
+:root[data-section='combat'] .mp-action-button,
+:root[data-section='combat'] .mp-skill-row {
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.4px;
+}
+:root[data-section='combat'] .mp-action-button:hover:not(:disabled),
+:root[data-section='combat'] .mp-skill-row:hover:not(:disabled) {
+  border-color: var(--sec-accent-2, #2fd4c4);
+  box-shadow: 0 0 0 1px rgba(47,212,196,0.45), 0 6px 18px rgba(0,0,0,0.5);
 }
     </style>
 <script type="importmap">
