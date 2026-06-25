@@ -26,6 +26,7 @@ describe('SECTION_THEMES', () => {
 describe('applySectionTheme', () => {
   beforeEach(() => {
     document.documentElement.removeAttribute('data-section');
+    document.documentElement.removeAttribute('data-atmosphere');
     for (const k of ALL_SEC_VAR_KEYS) document.documentElement.style.removeProperty(k);
   });
   it('marca data-section e aplica a atmosfera correta da aba', () => {
@@ -33,7 +34,7 @@ describe('applySectionTheme', () => {
     expect(document.documentElement.dataset.section).toBe('combat');
     expect(document.documentElement.dataset.atmosphere).toBe(atmosphereForTab('combat'));
   });
-  it('injeta as vars de combat e as limpa ao trocar para uma seção neutra', () => {
+  it('remove as vars de combat ao trocar para uma seção sem overrides', () => {
     applySectionTheme('combat');
     expect(document.documentElement.style.getPropertyValue('--sec-accent')).toBe('#d11f3f');
     applySectionTheme('extras');

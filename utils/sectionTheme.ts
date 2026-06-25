@@ -16,7 +16,7 @@ const COMBAT_VARS: Record<string, string> = {
 };
 
 export const SECTION_THEMES: Record<TabId, SectionThemeDef> = {
-  combat:     { atmosphere: 'dark',                        vars: COMBAT_VARS },
+  combat:     { atmosphere: atmosphereForTab('combat'),     vars: COMBAT_VARS },
   journey:    { atmosphere: atmosphereForTab('journey'),    vars: {} },
   characters: { atmosphere: atmosphereForTab('characters'), vars: {} },
   arsenal:    { atmosphere: atmosphereForTab('arsenal'),    vars: {} },
@@ -24,7 +24,7 @@ export const SECTION_THEMES: Record<TabId, SectionThemeDef> = {
 };
 
 // União de todas as chaves --sec-* declaradas por qualquer seção (para limpeza ao trocar).
-export const ALL_SEC_VAR_KEYS: string[] = Array.from(
+export const ALL_SEC_VAR_KEYS: readonly string[] = Array.from(
   new Set(Object.values(SECTION_THEMES).flatMap(def => Object.keys(def.vars)))
 );
 
