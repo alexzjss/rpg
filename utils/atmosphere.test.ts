@@ -4,7 +4,7 @@ import { atmosphereForTab, ATMOSPHERE_VARS, applyAtmosphere } from './atmosphere
 describe('atmosphereForTab', () => {
   it('jornada é pergaminho; o resto é escuro', () => {
     expect(atmosphereForTab('journey')).toBe('parchment');
-    for (const t of ['combat','cards','items','seals','characters','extras'] as const) {
+    for (const t of ['combat','arsenal','characters','extras'] as const) {
       expect(atmosphereForTab(t)).toBe('dark');
     }
   });
