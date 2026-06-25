@@ -3697,6 +3697,35 @@
             radial-gradient(60% 50% at 18% 12%, rgba(209,31,63,0.12), transparent 60%),
             radial-gradient(55% 50% at 85% 80%, rgba(47,212,196,0.10), transparent 60%);
         }
+
+/* ── COMBATE: paleta de painéis (gold -> Metaphor) ── */
+:root[data-section='combat'] {
+  --gold-dim:    #155055;
+  --gold-mid:    #2fd4c4;
+  --gold-bright: #7fe9dd;
+  --gold-pale:   #eafff9;
+  --border-gold: rgba(47,212,196,0.30);
+  --team-cast:   #2fd4c4;
+}
+
+/* superfície dos painéis flutuantes + acento de respingo magenta no canto */
+:root[data-section='combat'] .mp-combat-panel-shell {
+  border: 1px solid rgba(47,212,196,0.26);
+  box-shadow: 0 10px 34px rgba(0,0,0,0.5), inset 0 1px 0 rgba(244,240,232,0.05);
+  position: relative;
+}
+:root[data-section='combat'] .mp-combat-panel-shell::after {
+  content: ''; position: absolute; left: -5px; top: -5px; width: 58px; height: 26px; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle at 40% 50%, rgba(230,51,110,0.75), transparent 62%);
+  opacity: 0.5;
+}
+
+/* recolora o brilho dourado dos painéis para teal */
+:root[data-section='combat'] .mp-floating-panel::after {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.06), transparent 28%),
+    radial-gradient(ellipse at 30% 0%, rgba(47,212,196,0.12), transparent 58%);
+}
     </style>
 <script type="importmap">
 {
