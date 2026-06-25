@@ -91,7 +91,7 @@ import {
   Layers3,
   Zap as ZapIcon
 } from 'lucide-react';
-import { Card, CardLevel, CardBonus, Character, Combatant, CombatState, CardType, CommandType, CombatHistoryItem, Condition, FieldCondition, CustomPin, CombatantUnion, Item, OwnedItem, JourneyState, ActiveForma, ConditionEffect, ConditionEffectType, ConditionEffectMap, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, RecipeType, RecipeIngredient, CharacterStack, UpgradeOffer, UpgradeOfferType, UpgradeLuck, UpgradeShopState, StatPopup, GridInteractionMode, Weapon } from './types';
+import { Card, CardLevel, CardBonus, Character, Combatant, CombatState, CardType, CombatHistoryItem, Condition, FieldCondition, CustomPin, CombatantUnion, Item, OwnedItem, JourneyState, ActiveForma, ConditionEffect, ConditionEffectType, ConditionEffectMap, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, RecipeType, RecipeIngredient, CharacterStack, UpgradeOffer, UpgradeOfferType, UpgradeLuck, UpgradeShopState, StatPopup, GridInteractionMode, Weapon } from './types';
 import { DatabaseService } from './utils/database';
 import { rollDice, type RollResult } from './utils/dice';
 import DiceAnimation from './components/DiceAnimation';
@@ -552,15 +552,29 @@ const QuickEditCharacter: React.FC<{ character: Character; onSave: (hp: number, 
     );
 };
 
-const CharacterForm: React.FC<{ cards: Card[]; initialData?: Character; onSubmit: (c: Character) => void; onDelete: (id: string) => void }> = ({ cards, initialData, onSubmit, onDelete }) => {
+const CharacterForm: React.FC<{ cards: Card[]; weapons: Weapon[]; seals: Seal[]; initialData?: Character; onSubmit: (c: Character) => void; onDelete: (id: string) => void }> = ({ cards, weapons, seals, initialData, onSubmit, onDelete }) => {
   const [formData, setFormData] = useState<Character>(initialData?.id ? initialData : {
-    id: '', name: '', icon: '', maxHp: 10, currentHp: 10, maxAura: 10, currentAura: 10, maxAmmo: 0, currentAmmo: 0, baseInitiative: 0, cardIds: [], conditions: [], items: [], role: 'npc', code: ''
+    id: '', name: '', icon: '', maxHp: 10, currentHp: 10, maxAura: 10, currentAura: 10, maxAmmo: 0, currentAmmo: 0, baseInitiative: 0, cardIds: [], weaponIds: [], sealIds: [], conditions: [], items: [], role: 'npc', code: ''
   });
 
   const toggleCard = (id: string) => {
     setFormData(prev => ({
       ...prev,
       cardIds: prev.cardIds.includes(id) ? prev.cardIds.filter(cid => cid !== id) : [...prev.cardIds, id]
+    }));
+  };
+
+  const toggleWeapon = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      weaponIds: (prev.weaponIds ?? []).includes(id) ? (prev.weaponIds ?? []).filter(wid => wid !== id) : [...(prev.weaponIds ?? []), id]
+    }));
+  };
+
+  const toggleSeal = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      sealIds: (prev.sealIds ?? []).includes(id) ? (prev.sealIds ?? []).filter(sid => sid !== id) : [...(prev.sealIds ?? []), id]
     }));
   };
 
@@ -697,6 +711,48 @@ const CharacterForm: React.FC<{ cards: Card[]; initialData?: Character; onSubmit
             </div>
           ))}
           {cards.length === 0 && <p className="text-slate-500 text-xs p-4 text-center col-span-full">Nenhuma carta disponível no grimório.</p>}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Armas Equipadas</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto custom-scroll p-2 border border-slate-800 rounded-2xl bg-slate-900/30">
+          {weapons.map(w => (
+            <div
+              key={w.id}
+              onClick={() => toggleWeapon(w.id)}
+              className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${(formData.weaponIds ?? []).includes(w.id) ? 'bg-amber-950/60 border-amber-500' : 'bg-slate-900/80 border-slate-800 opacity-60 hover:opacity-100'}`}
+            >
+              {w.image ? <img src={w.image} className="w-10 h-10 rounded-lg object-cover" /> : <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-lg">⚔</div>}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-extrabold uppercase text-white truncate">{w.name}</p>
+                <p className="text-[9px] text-slate-400 uppercase">{w.category || w.range || '—'}</p>
+              </div>
+              {(formData.weaponIds ?? []).includes(w.id) && <Check className="w-4 h-4 text-amber-400" />}
+            </div>
+          ))}
+          {weapons.length === 0 && <p className="text-slate-500 text-xs p-4 text-center col-span-full">Nenhuma arma no catálogo.</p>}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Selos Conhecidos</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto custom-scroll p-2 border border-slate-800 rounded-2xl bg-slate-900/30">
+          {seals.map(s => (
+            <div
+              key={s.id}
+              onClick={() => toggleSeal(s.id)}
+              className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${(formData.sealIds ?? []).includes(s.id) ? 'bg-orange-950/60 border-orange-500' : 'bg-slate-900/80 border-slate-800 opacity-60 hover:opacity-100'}`}
+            >
+              {s.image ? <img src={s.image} className="w-10 h-10 rounded-lg object-cover" /> : <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-lg">🔯</div>}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-extrabold uppercase text-white truncate">{s.name}</p>
+                <p className="text-[9px] text-orange-400 font-mono">#{s.code}</p>
+              </div>
+              {(formData.sealIds ?? []).includes(s.id) && <Check className="w-4 h-4 text-orange-400" />}
+            </div>
+          ))}
+          {seals.length === 0 && <p className="text-slate-500 text-xs p-4 text-center col-span-full">Nenhum selo no catálogo.</p>}
         </div>
       </div>
 
@@ -1194,27 +1250,6 @@ const CardForm: React.FC<{ initialData?: Card; onSubmit: (c: Card) => void; onDe
             </div>
           </div>
           <ImagePickerButton value={formData.image} onUpdate={val => setFormData({ ...formData, image: val })} label="Imagem da Habilidade" buttonLabel="Imagem" showPreviewInline={!!formData.image} previewHeight={80} />
-          <div className="space-y-2">
-            <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Comando</label>
-            <div className="grid grid-cols-4 gap-2">
-              {([
-                { id: 'ataque', label: 'Ataque', icon: ATTACK_ICON_B64, color: 'bg-red-700 border-red-400' },
-                { id: 'vínculo', label: 'Vínculo', icon: VINCULO_ICON_B64, color: 'bg-purple-700 border-purple-400' },
-                { id: 'item', label: 'Item', icon: ITEMS_ICON_B64, color: 'bg-green-700 border-green-400' },
-                { id: 'foco', label: 'Foco', icon: FOCO_ICON_B64, color: 'bg-cyan-700 border-cyan-400' },
-              ] as { id: CommandType; label: string; icon: string; color: string }[]).map(cmd => (
-                <button
-                  key={cmd.id}
-                  onClick={() => setFormData({ ...formData, command: formData.command === cmd.id ? undefined : cmd.id })}
-                  className={`px-2 py-2 rounded-xl text-[9px] font-extrabold uppercase border transition-all flex flex-col items-center gap-1 ${formData.command === cmd.id ? cmd.color + ' text-white' : 'bg-slate-900/80 text-slate-500 border-slate-800 hover:bg-slate-900'}`}
-                >
-                  <img src={cmd.icon} style={{ width: 18, height: 18, objectFit: 'contain', opacity: formData.command === cmd.id ? 1 : 0.4 }} />
-                  {cmd.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-[9px] text-slate-600 ml-2">Deixe em branco para mostrar em todos os comandos.</p>
-          </div>
         </div>
 
         <div className="space-y-4">
@@ -1893,6 +1928,118 @@ const WeaponForm: React.FC<{ initialData?: Weapon; onSubmit: (w: Weapon) => void
           placeholder="Ex: versátil, leve, pesada" />
       </div>
 
+      {/* ── COMBAT USAGE SECTION ── */}
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={() => set({ usableInCombat: !formData.usableInCombat })}
+          className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl border transition-all ${formData.usableInCombat ? 'bg-emerald-950/40 border-emerald-600/60' : 'bg-slate-900/80 border-slate-800 hover:border-slate-600'}`}
+        >
+          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${formData.usableInCombat ? 'bg-emerald-600 border-emerald-500' : 'border-slate-600'}`}>
+            {formData.usableInCombat && <svg viewBox="0 0 10 8" className="w-3 h-3" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          </div>
+          <div className="flex-1 text-left">
+            <p className={`text-[11px] font-extrabold uppercase tracking-widest ${formData.usableInCombat ? 'text-emerald-300' : 'text-slate-500'}`}>⚔ Usável em Combate</p>
+            <p className={`text-[9px] mt-0.5 ${formData.usableInCombat ? 'text-emerald-500/60' : 'text-slate-600'}`}>Aparece no menu de Itens durante o combate</p>
+          </div>
+          <span className="text-lg">{formData.usableInCombat ? '🟢' : '⚪'}</span>
+        </button>
+
+        {formData.usableInCombat && (
+          <div className="space-y-4 p-5 rounded-2xl border border-emerald-800/40 bg-emerald-950/10 anim-fade">
+            <p className="text-[10px] font-extrabold uppercase text-emerald-400 tracking-widest flex items-center gap-2">⚔ Efeitos em Combate <span className="text-slate-600 font-normal normal-case tracking-normal">(todos opcionais)</span></p>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-[9px] font-extrabold uppercase text-emerald-500/70 tracking-widest ml-1">💚 Cura (HP)</label>
+                <input type="number" min="0" value={formData.combatHeal ?? ''} onChange={e => set({ combatHeal: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  className="w-full bg-slate-900/60 border border-emerald-800/40 rounded-xl px-3 py-2.5 text-emerald-300 text-sm font-black text-center focus:border-emerald-500 outline-none" placeholder="0" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-extrabold uppercase text-rose-500/70 tracking-widest ml-1">⚔ Dano</label>
+                <input type="number" min="0" value={formData.combatDamage ?? ''} onChange={e => set({ combatDamage: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  className="w-full bg-slate-900/60 border border-rose-800/40 rounded-xl px-3 py-2.5 text-rose-300 text-sm font-black text-center focus:border-rose-500 outline-none" placeholder="0" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-extrabold uppercase text-amber-500/70 tracking-widest ml-1">🎲 Dado</label>
+                <input type="text" value={formData.combatDiceRoll ?? ''} onChange={e => set({ combatDiceRoll: e.target.value || undefined })}
+                  className="w-full bg-slate-900/60 border border-amber-800/40 rounded-xl px-3 py-2.5 text-amber-200 text-sm font-mono text-center focus:border-amber-500 outline-none" placeholder="1d6" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-[9px] font-extrabold uppercase text-cyan-500/70 tracking-widest ml-1">⚡ Rec. Aura</label>
+                <input type="number" min="0" value={formData.combatAuraRecover ?? ''} onChange={e => set({ combatAuraRecover: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  className="w-full bg-slate-900/60 border border-cyan-800/40 rounded-xl px-3 py-2.5 text-cyan-300 text-sm font-black text-center focus:border-cyan-500 outline-none" placeholder="0" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-extrabold uppercase text-orange-500/70 tracking-widest ml-1">🎯 Rec. Munição</label>
+                <input type="number" min="0" value={formData.combatAmmoRecover ?? ''} onChange={e => set({ combatAmmoRecover: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  className="w-full bg-slate-900/60 border border-orange-800/40 rounded-xl px-3 py-2.5 text-orange-300 text-sm font-black text-center focus:border-orange-500 outline-none" placeholder="0" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-extrabold uppercase text-slate-500/70 tracking-widest ml-1">◎ CD</label>
+                <input type="number" min="0" value={formData.combatDc ?? ''} onChange={e => set({ combatDc: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  className="w-full bg-slate-900/60 border border-slate-700/40 rounded-xl px-3 py-2.5 text-slate-300 text-sm font-black text-center focus:border-slate-500 outline-none" placeholder="0" />
+              </div>
+            </div>
+
+            {(formData.combatDamage || 0) > 0 && (
+              <div className="space-y-1">
+                <label className="text-[9px] font-extrabold uppercase text-rose-500/70 tracking-widest ml-1">Tipo de Dano</label>
+                <DamageTypeSelector small value={formData.combatDamageType || 'normal'} onChange={v => set({ combatDamageType: v })} />
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <label className="text-[9px] font-extrabold uppercase text-purple-500/70 tracking-widest ml-1">✦ Condição Aplicada</label>
+              <div className="flex gap-2 items-center mb-1">
+                <PresetConditionPicker onSelect={(name, dur) => set({ combatConditionEffect: name, combatConditionDuration: dur })} />
+              </div>
+              <div className="flex gap-2">
+                <input type="text" value={formData.combatConditionEffect ?? ''} onChange={e => set({ combatConditionEffect: e.target.value || undefined })}
+                  className="flex-1 bg-slate-900/60 border border-purple-800/40 rounded-xl px-3 py-2.5 text-purple-200 text-sm focus:border-purple-500 outline-none" placeholder="Nome da condição..." />
+                <input type="number" min="1" value={formData.combatConditionDuration ?? ''} onChange={e => set({ combatConditionDuration: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  className="w-20 bg-slate-900/60 border border-purple-800/40 rounded-xl px-3 py-2.5 text-purple-300 text-sm font-black text-center focus:border-purple-500 outline-none" placeholder="Dur." />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[9px] font-extrabold uppercase text-orange-500/70 tracking-widest ml-1">🎯 Consome Munição</label>
+                <input type="number" min="0" value={formData.combatAmmoCost ?? ''} onChange={e => set({ combatAmmoCost: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  className="w-full bg-slate-900/60 border border-orange-800/40 rounded-xl px-3 py-2.5 text-orange-300 text-sm font-black text-center focus:border-orange-500 outline-none" placeholder="0" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-extrabold uppercase text-sky-500/70 tracking-widest ml-1">🎯 Alvo</label>
+                <select value={formData.combatTargeting ?? 'self'} onChange={e => set({ combatTargeting: e.target.value as any })}
+                  className="w-full bg-slate-900/60 border border-sky-800/40 rounded-xl px-3 py-2.5 text-sky-200 text-sm font-bold focus:border-sky-500 outline-none">
+                  <option value="self">A si mesmo</option>
+                  <option value="other">Outro personagem</option>
+                  <option value="area">Área (todos)</option>
+                  <option value="choice">Escolher ao usar</option>
+                </select>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => set({ consumeOnUse: !formData.consumeOnUse })}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${formData.consumeOnUse ? 'bg-rose-950/30 border-rose-700/50' : 'bg-slate-900/50 border-slate-800 hover:border-slate-600'}`}
+            >
+              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all flex-shrink-0 ${formData.consumeOnUse ? 'bg-rose-600 border-rose-500' : 'border-slate-600'}`}>
+                {formData.consumeOnUse && <svg viewBox="0 0 10 8" className="w-2.5 h-2.5" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              </div>
+              <div className="flex-1 text-left">
+                <p className={`text-[10px] font-extrabold uppercase tracking-widest ${formData.consumeOnUse ? 'text-rose-400' : 'text-slate-500'}`}>Consumir ao usar</p>
+                <p className="text-[9px] text-slate-600 mt-0.5">Reduz a quantidade em 1 quando utilizado em combate</p>
+              </div>
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="flex gap-4 pt-4 border-t border-slate-800">
         {initialData?.id && (
           <button onClick={() => onDelete(initialData.id)} className="px-6 py-4 bg-rose-950/50 text-rose-500 hover:bg-rose-900/50 border border-rose-900/30 rounded-2xl font-extrabold uppercase text-xs tracking-widest transition-colors">
@@ -2109,6 +2256,90 @@ const AssignCardModal: React.FC<{
           {filtered.length === 0 && (
             <p className="text-slate-500 uppercase font-black text-center py-8 opacity-40">Nenhum personagem do Cast encontrado</p>
           )}
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+const AssignWeaponModal: React.FC<{
+  weapon: Weapon;
+  characters: Character[];
+  onAssign: (charId: string, add: boolean) => void;
+  onClose: () => void;
+}> = ({ weapon, characters, onAssign, onClose }) => {
+  const [search, setSearch] = React.useState('');
+  const castChars = characters.filter(c => (c.role ?? 'npc') === 'cast');
+  const filtered = castChars.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <Modal title={`Atribuir "${weapon.name}" a Personagem`} onClose={onClose}>
+      <div className="space-y-5">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+          <input type="text" placeholder="Buscar personagem..." value={search} onChange={e => setSearch(e.target.value)}
+            className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl pl-11 pr-5 py-4 text-white font-bold focus:border-amber-600 outline-none placeholder-slate-600 text-sm" autoFocus />
+        </div>
+        <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scroll">
+          {filtered.map(char => {
+            const hasWeapon = (char.weaponIds ?? []).includes(weapon.id);
+            return (
+              <div key={char.id} className={`p-4 rounded-2xl border-2 flex items-center gap-4 transition-all ${hasWeapon ? 'bg-emerald-950/30 border-emerald-700/50' : 'bg-slate-900/50 border-slate-700'}`}>
+                {char.icon ? <img src={char.icon} className="w-12 h-12 rounded-2xl object-cover flex-shrink-0" /> : <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center flex-shrink-0"><Users className="w-5 h-5 text-slate-500" /></div>}
+                <div className="flex-1 min-w-0">
+                  <p className="font-extrabold uppercase text-white italic text-sm truncate">{char.name}</p>
+                  <p className="text-[9px] text-slate-500 mt-0.5">{(char.weaponIds ?? []).length} armas</p>
+                </div>
+                <button onClick={() => onAssign(char.id, !hasWeapon)}
+                  className={`px-4 py-2 rounded-xl font-extrabold uppercase text-xs tracking-widest border transition-all ${hasWeapon ? 'bg-rose-900/40 border-rose-700/50 text-rose-400 hover:bg-rose-800/50' : 'bg-emerald-900/40 border-emerald-700/50 text-emerald-400 hover:bg-emerald-800/50'}`}>
+                  {hasWeapon ? <><X className="w-3.5 h-3.5 inline mr-1" />Remover</> : <><Check className="w-3.5 h-3.5 inline mr-1" />Atribuir</>}
+                </button>
+              </div>
+            );
+          })}
+          {filtered.length === 0 && <p className="text-slate-500 uppercase font-black text-center py-8 opacity-40">Nenhum personagem do Cast encontrado</p>}
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+const AssignSealModal: React.FC<{
+  seal: Seal;
+  characters: Character[];
+  onAssign: (charId: string, add: boolean) => void;
+  onClose: () => void;
+}> = ({ seal, characters, onAssign, onClose }) => {
+  const [search, setSearch] = React.useState('');
+  const castChars = characters.filter(c => (c.role ?? 'npc') === 'cast');
+  const filtered = castChars.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <Modal title={`Atribuir "${seal.name}" a Personagem`} onClose={onClose}>
+      <div className="space-y-5">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+          <input type="text" placeholder="Buscar personagem..." value={search} onChange={e => setSearch(e.target.value)}
+            className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl pl-11 pr-5 py-4 text-white font-bold focus:border-amber-600 outline-none placeholder-slate-600 text-sm" autoFocus />
+        </div>
+        <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scroll">
+          {filtered.map(char => {
+            const hasSeal = (char.sealIds ?? []).includes(seal.id);
+            return (
+              <div key={char.id} className={`p-4 rounded-2xl border-2 flex items-center gap-4 transition-all ${hasSeal ? 'bg-orange-950/30 border-orange-700/50' : 'bg-slate-900/50 border-slate-700'}`}>
+                {char.icon ? <img src={char.icon} className="w-12 h-12 rounded-2xl object-cover flex-shrink-0" /> : <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center flex-shrink-0"><Users className="w-5 h-5 text-slate-500" /></div>}
+                <div className="flex-1 min-w-0">
+                  <p className="font-extrabold uppercase text-white italic text-sm truncate">{char.name}</p>
+                  <p className="text-[9px] text-slate-500 mt-0.5">{(char.sealIds ?? []).length} selos</p>
+                </div>
+                <button onClick={() => onAssign(char.id, !hasSeal)}
+                  className={`px-4 py-2 rounded-xl font-extrabold uppercase text-xs tracking-widest border transition-all ${hasSeal ? 'bg-rose-900/40 border-rose-700/50 text-rose-400 hover:bg-rose-800/50' : 'bg-orange-900/40 border-orange-700/50 text-orange-400 hover:bg-orange-800/50'}`}>
+                  {hasSeal ? <><X className="w-3.5 h-3.5 inline mr-1" />Remover</> : <><Check className="w-3.5 h-3.5 inline mr-1" />Atribuir</>}
+                </button>
+              </div>
+            );
+          })}
+          {filtered.length === 0 && <p className="text-slate-500 uppercase font-black text-center py-8 opacity-40">Nenhum personagem do Cast encontrado</p>}
         </div>
       </div>
     </Modal>
@@ -3412,6 +3643,8 @@ const App: React.FC = () => {
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
   const [setupCombatant, setSetupCombatant] = useState<Character | null>(null);
   const [assignCardModal, setAssignCardModal] = useState<Card | null>(null);
+  const [assignWeaponModal, setAssignWeaponModal] = useState<Weapon | null>(null);
+  const [assignSealModal, setAssignSealModal] = useState<Seal | null>(null);
   const [itemTargetPickerItem, setItemTargetPickerItem] = useState<{ actor: any; item: any } | null>(null);
   const [showHideNpcs, setShowHideNpcs] = useState(false);
   // Initiative drag-to-reorder
@@ -4251,6 +4484,18 @@ const App: React.FC = () => {
     setSelectedAction(null);
   };
 
+
+  // ─── Activate Seal (from combat panel) ──────────────────────
+  const handleActivateSeal = (seal: Seal, actorCombatId: string) => {
+    if (!combat) return;
+    const modes = seal.executionModes ?? (seal.executionMode ? [seal.executionMode] : ['immediate']);
+    if (modes.includes('combo')) {
+      const actor = combat.combatants.find(c => c.combatId === actorCombatId);
+      if (actor) setSealComboSelectModal({ seal, actor });
+    } else {
+      executeSeal(seal, actorCombatId, [actorCombatId]);
+    }
+  };
 
   // ─── Execute Seal ────────────────────────────────────────────
   const executeSeal = (seal: Seal, actorCombatId: string, participantIds: string[]) => {
@@ -5727,6 +5972,8 @@ const App: React.FC = () => {
             cards={cards}
             seals={seals}
             items={items}
+            weapons={weapons}
+            onActivateSeal={handleActivateSeal}
             selectedCombatantId={selectedCombatantId}
             setSelectedCombatantId={setSelectedCombatantId}
             currentActor={currentActor}
@@ -6232,6 +6479,7 @@ const App: React.FC = () => {
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
                         <button onClick={() => setEditingSeal(seal)} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl"><Edit3 className="w-4 h-4" /></button>
                         <button onClick={() => deleteSeal(seal.id)} className="p-2 text-slate-400 hover:text-white hover:bg-rose-600/30 rounded-xl"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => setAssignSealModal(seal)} className="p-2 text-slate-400 hover:text-white hover:bg-emerald-600/30 rounded-xl" title="Atribuir a Personagem"><UserPlus className="w-4 h-4" /></button>
                       </div>
                     </div>
 
@@ -6309,7 +6557,7 @@ const App: React.FC = () => {
 
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))', gap:14 }}>
                   {filteredWeapons.map(w => (
-                    <div key={w.id} onClick={() => setEditingWeapon(w)} style={{ cursor:'pointer', borderRadius:16, overflow:'hidden', border:'1px solid var(--border-gold)', background:'linear-gradient(165deg, rgba(40,30,5,0.85), rgba(20,16,8,0.92))', position:'relative' }} className="hover:brightness-110 transition-all">
+                    <div key={w.id} onClick={() => setEditingWeapon(w)} style={{ cursor:'pointer', borderRadius:16, overflow:'hidden', border:'1px solid var(--border-gold)', background:'linear-gradient(165deg, rgba(40,30,5,0.85), rgba(20,16,8,0.92))', position:'relative' }} className="group hover:brightness-110 transition-all">
                       <div style={{ height:120, background: w.image ? `url(${w.image}) center/cover` : 'linear-gradient(145deg,#1e180e,#100e08)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                         {!w.image && <Swords style={{ width:36, height:36, opacity:0.15 }} />}
                       </div>
@@ -6322,6 +6570,13 @@ const App: React.FC = () => {
                           {w.range && <span style={{ fontSize:9, color:'#94a3b8' }}>{w.range === 'melee' ? '⚔' : w.range === 'ranged' ? '🏹' : '🎯'}</span>}
                         </div>
                       </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setAssignWeaponModal(w); }}
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg bg-emerald-900/70 hover:bg-emerald-700/80 text-emerald-300"
+                        title="Atribuir a Personagem"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   ))}
                   {weapons.length === 0 && (
@@ -7572,6 +7827,42 @@ const App: React.FC = () => {
         />
       )}
 
+      {/* MODAL ATRIBUIR ARMA A PERSONAGEM */}
+      {assignWeaponModal && (
+        <AssignWeaponModal
+          weapon={assignWeaponModal}
+          characters={characters}
+          onAssign={(charId, add) => {
+            const char = characters.find(c => c.id === charId);
+            if (!char) return;
+            const cur = char.weaponIds ?? [];
+            const newWeaponIds = add
+              ? (cur.includes(assignWeaponModal.id) ? cur : [...cur, assignWeaponModal.id])
+              : cur.filter(id => id !== assignWeaponModal.id);
+            DatabaseService.saveCharacter({ ...char, weaponIds: newWeaponIds });
+          }}
+          onClose={() => setAssignWeaponModal(null)}
+        />
+      )}
+
+      {/* MODAL ATRIBUIR SELO A PERSONAGEM */}
+      {assignSealModal && (
+        <AssignSealModal
+          seal={assignSealModal}
+          characters={characters}
+          onAssign={(charId, add) => {
+            const char = characters.find(c => c.id === charId);
+            if (!char) return;
+            const cur = char.sealIds ?? [];
+            const newSealIds = add
+              ? (cur.includes(assignSealModal.id) ? cur : [...cur, assignSealModal.id])
+              : cur.filter(id => id !== assignSealModal.id);
+            DatabaseService.saveCharacter({ ...char, sealIds: newSealIds });
+          }}
+          onClose={() => setAssignSealModal(null)}
+        />
+      )}
+
       {/* MODAL HISTÓRICO DE COMBATE */}
       {showHistoryModal && (
         <Modal title="Registros de Combate" onClose={() => setShowHistoryModal(false)}>
@@ -7873,7 +8164,7 @@ const App: React.FC = () => {
       {/* MODAIS E PROMPTS */}
       {editingCharacter && (
         <Modal title={editingCharacter.id ? "Editar Receptáculo" : "Criar Receptáculo"} onClose={() => setEditingCharacter(null)}>
-           <CharacterForm cards={cards} initialData={editingCharacter} onSubmit={(char) => { saveCharacter(char); setEditingCharacter(null); }} onDelete={deleteCharacter} />
+           <CharacterForm cards={cards} weapons={weapons} seals={seals} initialData={editingCharacter} onSubmit={(char) => { saveCharacter(char); setEditingCharacter(null); }} onDelete={deleteCharacter} />
         </Modal>
       )}
 

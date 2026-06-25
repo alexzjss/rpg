@@ -1,4 +1,4 @@
-import { Character, Item, OwnedItem } from '../types';
+import { Character, Item, OwnedItem, Weapon } from '../types';
 
 /** Item do catálogo com a quantidade possuída anexada. */
 export interface ResolvedItem extends Item {
@@ -51,4 +51,11 @@ export function setOwnedQuantity(char: Character, itemId: string, qty: number): 
 /** Remove totalmente a posse de um item. */
 export function removeOwned(char: Character, itemId: string): OwnedItem[] {
   return (char.ownedItems ?? []).filter(o => o.itemId !== itemId);
+}
+
+/** Reconstrói as armas que um personagem possui, a partir do catálogo. */
+export function resolveWeapons(char: Character, catalogue: Weapon[]): Weapon[] {
+  return (char.weaponIds ?? [])
+    .map(id => catalogue.find(w => w.id === id))
+    .filter(Boolean) as Weapon[];
 }

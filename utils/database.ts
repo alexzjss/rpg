@@ -182,7 +182,7 @@ async function _replaceAll(store: Store, items: any[]): Promise<void> {
 // Sanitizers / coercions
 // ─────────────────────────────────────────────────────────────────
 function ensureChar(c: any): Character {
-  return { ...c, items: c.items ?? [], ownedItems: c.ownedItems ?? [], conditions: c.conditions ?? [], cardIds: c.cardIds ?? [] };
+  return { ...c, items: c.items ?? [], ownedItems: c.ownedItems ?? [], conditions: c.conditions ?? [], cardIds: c.cardIds ?? [], weaponIds: c.weaponIds ?? [], sealIds: c.sealIds ?? [] };
 }
 
 function ensureSeal(s: any): Seal {

@@ -20,6 +20,7 @@ import type {
   Combatant,
   Item,
   Seal,
+  Weapon,
   StatPopup,
   CharacterStack,
   CardType,
@@ -42,6 +43,8 @@ export interface CombatTabProps {
   cards: Card[];
   seals: Seal[];
   items: Item[];
+  weapons: Weapon[];
+  onActivateSeal: (seal: Seal, actorCombatId: string) => void;
 
   // Combatant selection
   selectedCombatantId: string | null;
@@ -180,6 +183,8 @@ const CombatTab: React.FC<CombatTabProps> = ({
   cards,
   seals,
   items,
+  weapons,
+  onActivateSeal,
   selectedCombatantId,
   setSelectedCombatantId,
   currentActor,
@@ -476,9 +481,17 @@ const CombatTab: React.FC<CombatTabProps> = ({
                 combat={combat}
                 cards={cards}
                 items={items}
+                weapons={weapons}
+                seals={seals}
                 onCardClick={(card) => initiateCardUsage(card)}
                 onItemClick={(item) => {
                   if (currentActor) handleUseItem(currentActor, item);
+                }}
+                onWeaponClick={(weapon) => {
+                  if (currentActor) handleUseItem(currentActor, weapon);
+                }}
+                onSealClick={(seal) => {
+                  if (currentActor) onActivateSeal(seal, currentActor.combatId);
                 }}
               />
             </div>

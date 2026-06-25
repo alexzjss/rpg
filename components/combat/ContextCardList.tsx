@@ -1,7 +1,7 @@
 import React from 'react';
-import { Pin, Zap, Crosshair, PackageOpen, Hexagon, Sparkles, Link } from 'lucide-react';
-import { CombatState, Card, Item, CardType } from '../../types';
-import { resolveOwnedItems, ResolvedItem } from '../../utils/items';
+import { Pin, Zap, Crosshair, PackageOpen, Hexagon, Sparkles, Link, Swords } from 'lucide-react';
+import { CombatState, Card, Item, CardType, Weapon, Seal } from '../../types';
+import { resolveOwnedItems, resolveWeapons, ResolvedItem } from '../../utils/items';
 import { CARD_TYPE_THEME, PALETTE } from '../../utils/theme';
 import type { ActionCategory } from './ActionIconRail';
 
@@ -28,7 +28,7 @@ const AO_TYPES: CardType[] = ['ação', 'reação', 'reforço', 'combinação'];
 const normalizeLabel = (value: unknown) =>
   String(value ?? '')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .trim()
     .toLowerCase();
 
@@ -42,14 +42,18 @@ interface ContextCardListProps {
   combat: CombatState;
   cards: Card[];
   items: Item[];
+  weapons: Weapon[];
+  seals: Seal[];
   onCardClick?: (card: Card) => void;
   onItemClick?: (item: ResolvedItem) => void;
+  onWeaponClick?: (weapon: Weapon) => void;
+  onSealClick?: (seal: Seal) => void;
   floating?: boolean;
 }
 
 type SkillEntry = {
   id: string;
-  kind: 'card' | 'item' | 'bond';
+  kind: 'card' | 'item' | 'weapon' | 'seal' | 'bond';
   name: string;
   description?: string;
   typeLabel: string;
@@ -61,6 +65,8 @@ type SkillEntry = {
   disabledReason?: string;
   card?: Card;
   item?: ResolvedItem;
+  weapon?: Weapon;
+  seal?: Seal;
 };
 
 function canAffordCard(
@@ -110,6 +116,8 @@ function filterCardForCategory(category: ActionCategory, card: Card): boolean {
 }
 
 const SkillIcon: React.FC<{ entry: SkillEntry }> = ({ entry }) => {
+  if (entry.kind === 'weapon') return <Swords size={17} />;
+  if (entry.kind === 'seal') return <Hexagon size={17} />;
   if (entry.kind === 'item') return <PackageOpen size={17} />;
   if (entry.kind === 'bond' || (entry.card && isVinculoCard(entry.card))) return <Link size={17} />;
   if (entry.card?.type === 'forma') return <Sparkles size={17} />;
@@ -123,8 +131,12 @@ const ContextCardList: React.FC<ContextCardListProps> = ({
   combat,
   cards,
   items,
+  weapons,
+  seals,
   onCardClick,
   onItemClick,
+  onWeaponClick,
+  onSealClick,
   floating = false,
 }) => {
   const [highlightedEntryId, setHighlightedEntryId] = React.useState<string | null>(null);
@@ -148,8 +160,12 @@ const ContextCardList: React.FC<ContextCardListProps> = ({
     const resolvedItems = resolveOwnedItems(combatant, items)
       .filter(it => it.usableInCombat && it.quantity > 0);
 
-    emptyMessage = 'Nenhum item de combate';
-    entries = resolvedItems.map(item => ({
+    const resolvedWeapons = resolveWeapons(combatant, weapons)
+      .filter(w => w.usableInCombat);
+
+    emptyMessage = 'Nenhum item ou arma de combate';
+
+    const itemEntries: SkillEntry[] = resolvedItems.map(item => ({
       id: `item-${item.id}`,
       kind: 'item',
       name: item.name,
@@ -159,7 +175,37 @@ const ContextCardList: React.FC<ContextCardListProps> = ({
       sideLabel: `x${item.quantity}`,
       item,
     }));
-  } else if (category !== 'selo') {
+
+    const weaponEntries: SkillEntry[] = resolvedWeapons.map(w => ({
+      id: `weapon-${w.id}`,
+      kind: 'weapon',
+      name: w.name,
+      description: w.description,
+      typeLabel: 'AR',
+      accent: '#f87171',
+      sideLabel: (w.damage ?? 0) > 0 ? `${w.damage} dmg` : '—',
+      weapon: w,
+    }));
+
+    entries = [...itemEntries, ...weaponEntries];
+  } else if (category === 'selo') {
+    const ownedSealIds = combatant.sealIds ?? [];
+    const visibleSeals = ownedSealIds.length > 0
+      ? seals.filter(s => ownedSealIds.includes(s.id))
+      : seals;
+
+    emptyMessage = 'Nenhum selo disponivel';
+    entries = visibleSeals.map(s => ({
+      id: `seal-${s.id}`,
+      kind: 'seal',
+      name: s.name,
+      description: s.description,
+      typeLabel: 'SE',
+      accent: '#fb923c',
+      sideLabel: (s.executionModes ?? (s.executionMode ? [s.executionMode] : ['immediate']))[0] ?? 'ritual',
+      seal: s,
+    }));
+  } else {
     const seen = new Set<string>();
     let uniqueCards = allCardIds
       .map(id => cards.find(c => c.id === id))
@@ -246,6 +292,8 @@ const ContextCardList: React.FC<ContextCardListProps> = ({
     if (entry.disabled) return;
     if (entry.kind === 'card' && entry.card && onCardClick) onCardClick(entry.card);
     if (entry.kind === 'item' && entry.item && onItemClick) onItemClick(entry.item);
+    if (entry.kind === 'weapon' && entry.weapon && onWeaponClick) onWeaponClick(entry.weapon);
+    if (entry.kind === 'seal' && entry.seal && onSealClick) onSealClick(entry.seal);
   };
 
   return (
@@ -275,13 +323,7 @@ const ContextCardList: React.FC<ContextCardListProps> = ({
         <div className="mp-skill-actor" style={{ position: 'relative', zIndex: 1 }}>{combatant.name}</div>
       </div>
 
-      {category === 'selo' ? (
-        <div className="mp-skill-empty">
-          <Hexagon size={26} />
-          <strong>Selos por codigo</strong>
-          <span>Use o painel de combate para ativar rituais e comandos de selo.</span>
-        </div>
-      ) : entries.length === 0 ? (
+      {entries.length === 0 ? (
         <div className="mp-skill-empty">
           <Sparkles size={26} />
           <strong>{emptyMessage}</strong>

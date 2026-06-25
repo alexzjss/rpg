@@ -2,7 +2,13 @@ export type CardType = 'ataque' | 'reação' | 'ação' | 'reforço' | 'vínculo
 
 export type DamageType = 'normal' | 'fogo' | 'raio' | 'água' | 'terra' | 'vento' | 'escuridão' | 'luminoso' | 'sangue' | 'aura';
 
-export type CommandType = 'ataque' | 'vínculo' | 'item' | 'foco' | 'fusão' | 'selo';
+export interface ArsenalBase {
+  id: string;
+  name: string;
+  image: string;
+  description: string;
+  isHidden?: boolean;
+}
 
 export interface CardLevel {
   level: number;
@@ -74,6 +80,7 @@ export interface Item {
   consumeOnUse?: boolean;
   combatAmmoCost?: number;
   combatTargeting?: "self" | "other" | "area" | "choice";
+  combatDiceRoll?: string;
 }
 
 export interface Card {
@@ -104,7 +111,7 @@ export interface Card {
   formaDuration?: number; // 0 = permanent
   formaHpBonus?: number;  // max HP increase while active
   formaAuraBonus?: number; // max Aura increase while active
-  command?: CommandType; // which command menu this card belongs to
+  diceRoll?: string;
   code?: string;
   conditionEffects?: ConditionEffectMap; // per-condition round effects
 }
@@ -121,6 +128,20 @@ export interface Weapon {
   bonus?: number;
   traits?: string[];
   isHidden?: boolean;
+  // Combat usage (same fields as Item)
+  usableInCombat?: boolean;
+  combatHeal?: number;
+  combatDamage?: number;
+  combatDamageType?: DamageType;
+  combatAuraRecover?: number;
+  combatAmmoRecover?: number;
+  combatConditionEffect?: string;
+  combatConditionDuration?: number;
+  combatDc?: number;
+  consumeOnUse?: boolean;
+  combatAmmoCost?: number;
+  combatTargeting?: "self" | "other" | "area" | "choice";
+  combatDiceRoll?: string;
 }
 
 /** Posse referenciada de um item do catálogo global. */
@@ -214,6 +235,8 @@ export interface Character {
   deslocamento?: number;   // unidades de movimento (padrão: 6)
   cardIds: string[];
   pinnedCardIds?: string[];
+  weaponIds?: string[];
+  sealIds?: string[];
   conditions: Condition[];
   isInJourney?: boolean;
   items: Item[];
@@ -401,6 +424,7 @@ export interface Seal {
   damage?: number;
   damageType?: DamageType;
   healAura?: number;
+  healHp?: number;
   conditionEffect?: string;
   conditionDuration?: number;
   duration?: number;
