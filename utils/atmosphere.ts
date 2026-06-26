@@ -37,6 +37,7 @@ export const ATMOSPHERE_VARS: Record<Atmosphere, Record<string, string>> = {
   },
 };
 
+/** Atualiza apenas as vars de atmosfera (não mexe em data-section). Para troca de aba use applySectionTheme, que também atualiza data-section e a paleta da seção. */
 export function applyAtmosphere(atmo: Atmosphere, root: HTMLElement = document.documentElement): void {
   root.dataset.atmosphere = atmo;
   const vars = ATMOSPHERE_VARS[atmo];

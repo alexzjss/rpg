@@ -1039,20 +1039,20 @@
             clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
             transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease !important;
         }
-        .mp-control-primary {
+        :root[data-section='combat'] .mp-control-primary {
             background: linear-gradient(105deg, #a3122e 0%, #d11f3f 34%, #cfeff0 52%, #7fe9dd 68%, #a3122e 100%) !important;
             color: #1a0f06 !important;
             border: 1px solid rgba(255,205,130,0.78) !important;
             box-shadow: 0 8px 22px rgba(0,0,0,0.42), 0 0 22px rgba(209,31,63,0.5), inset 0 1px 0 rgba(255,255,255,0.4) !important;
             text-shadow: 0 1px 0 rgba(255,231,170,0.45);
         }
-        .mp-control-primary:hover {
+        :root[data-section='combat'] .mp-control-primary:hover {
             transform: translateY(-1px);
             filter: brightness(1.1) saturate(1.08);
             box-shadow: 0 10px 28px rgba(0,0,0,0.5), 0 0 30px rgba(209,31,63,0.7), inset 0 1px 0 rgba(255,255,255,0.45) !important;
         }
         /* Variante pequena (ex: Adicionar) — selo sutil, não ritual */
-        .mp-control-primary--small {
+        :root[data-section='combat'] .mp-control-primary--small {
             min-height: 31px;
             background: linear-gradient(180deg, rgba(16,52,56,0.22), rgba(16,52,56,0.10)) !important;
             color: var(--gold-bright) !important;
@@ -1060,7 +1060,7 @@
             box-shadow: none !important;
             text-shadow: none;
         }
-        .mp-control-primary--small:hover {
+        :root[data-section='combat'] .mp-control-primary--small:hover {
             background: linear-gradient(180deg, rgba(47,212,196,0.30), rgba(16,52,56,0.16)) !important;
             border-color: rgba(127,233,221,0.5) !important;
             box-shadow: 0 0 14px rgba(47,212,196,0.22) !important;
@@ -1071,7 +1071,7 @@
             color: rgba(238,242,255,0.72) !important;
             box-shadow: none !important;
         }
-        .mp-control-secondary:hover {
+        :root[data-section='combat'] .mp-control-secondary:hover {
             color: var(--gold-pale) !important;
             border-color: rgba(47,212,196,0.34) !important;
             background: rgba(255,255,255,0.07) !important;
@@ -3627,7 +3627,7 @@
 
 /* ═══════════════════════════════════════════════════════════
    IDENTIDADES POR SEÇÃO — base + primitivas (Metaphor combat)
-   Só tem efeito sob :root[data-section='...'] — sem regra global.
+   Defaults globais p/ tabs sem override; combat sobrescreve via applySectionTheme. Os blocos .mph-* e [data-section='combat'] abaixo é que são escopados.
    ═══════════════════════════════════════════════════════════ */
 :root {
   --sec-accent:   #c9983a;
