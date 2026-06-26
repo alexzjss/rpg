@@ -29,7 +29,7 @@ const TokenRing: React.FC<TokenRingProps> = ({
         </div>
         <div className="mp-token-runes mp-token-runes--rev" style={{ ['--rune-color' as string]: teamColor }}>
           <svg viewBox="0 0 100 100" fill="none">
-            <circle cx="50" cy="50" r="47" stroke="#f0c060" strokeWidth="0.8"
+            <circle cx="50" cy="50" r="47" stroke="#7fe9dd" strokeWidth="0.8"
               strokeDasharray="0.5 11" strokeLinecap="round" opacity="0.8" />
           </svg>
         </div>
@@ -83,8 +83,8 @@ const TokenRing: React.FC<TokenRingProps> = ({
     {isAreaSelected && (
       <div style={{
         position: 'absolute', inset: -10, borderRadius: '50%',
-        border: '2.5px solid #fb923c',
-        boxShadow: '0 0 20px rgba(234,88,12,0.8)',
+        border: '2.5px solid #d11f3f',
+        boxShadow: '0 0 20px rgba(209,31,63,0.8)',
         animation: 'turn-pulse 1.4s ease-in-out infinite',
         pointerEvents: 'none',
       }} />
