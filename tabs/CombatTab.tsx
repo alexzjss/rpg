@@ -921,7 +921,7 @@ const CombatTab: React.FC<CombatTabProps> = ({
                     <BookOpen style={{ width:18, height:18, color:'#c084fc' }} />
                   </div>
                   <div>
-                    <h3 style={{ fontSize:16, fontWeight:700, color:'#fdf0cc', textTransform:'uppercase', fontStyle:'italic', letterSpacing:'0.04em' }}>Baralho Completo</h3>
+                    <h3 style={{ fontSize:16, fontWeight:700, color:'#eafff9', textTransform:'uppercase', fontStyle:'italic', letterSpacing:'0.04em' }}>Baralho Completo</h3>
                     <p style={{ fontSize:9, color:'rgba(168,85,247,0.6)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.25em', marginTop:1 }}>{actor.name} — {allActorCards.length} habilidades</p>
                   </div>
                 </div>
@@ -955,7 +955,7 @@ const CombatTab: React.FC<CombatTabProps> = ({
               {/* Type filter pills */}
               <div style={{ padding:'10px 24px', borderBottom:'1px solid rgba(255,255,255,0.04)', display:'flex', gap:6, flexShrink:0, overflowX:'auto' }}>
                 {[
-                  { id:'all', label:'Todos', color:'#c9983a', bg:'rgba(201,152,58,0.15)', border:'rgba(201,152,58,0.4)', count: allActorCards.length },
+                  { id:'all', label:'Todos', color:'#2fd4c4', bg:'rgba(47,212,196,0.15)', border:'rgba(47,212,196,0.4)', count: allActorCards.length },
                   { id:'ataque', label:'Ataque', color:'#ef4444', bg:'rgba(239,68,68,0.12)', border:'rgba(239,68,68,0.35)', count: allActorCards.filter(c=>c.type==='ataque').length },
                   { id:'ação', label:'Ação', color:'#eab308', bg:'rgba(234,179,8,0.12)', border:'rgba(234,179,8,0.35)', count: allActorCards.filter(c=>c.type==='ação').length },
                   { id:'reação', label:'Reação', color:'#3b82f6', bg:'rgba(59,130,246,0.12)', border:'rgba(59,130,246,0.35)', count: allActorCards.filter(c=>c.type==='reação').length },
@@ -1071,7 +1071,7 @@ const CombatTab: React.FC<CombatTabProps> = ({
                   {filtered.length} de {allActorCards.length} habilidades
                 </span>
                 {deckSearchTerm && (
-                  <button onClick={() => setDeckSearchTerm('')} style={{ fontSize:9, color:'#c9983a', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>
+                  <button onClick={() => setDeckSearchTerm('')} style={{ fontSize:9, color:'#2fd4c4', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>
                     <X style={{width:9,height:9}}/> Limpar busca
                   </button>
                 )}
