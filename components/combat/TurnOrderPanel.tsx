@@ -44,7 +44,7 @@ const TurnOrderPanel: React.FC<TurnOrderPanelProps> = ({
           <div className="mp-battle-round-ghost">{combat.isActive ? combat.round : '—'}</div>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
             <div>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.38em', color: 'rgba(201,152,58,0.62)', textTransform: 'uppercase', marginBottom: 2 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.38em', color: 'rgba(47,212,196,0.62)', textTransform: 'uppercase', marginBottom: 2 }}>
                 Ordem de
               </div>
               <div className="mp-battle-panel-title">TURNO</div>
@@ -56,7 +56,7 @@ const TurnOrderPanel: React.FC<TurnOrderPanelProps> = ({
                 fontWeight: 900,
                 color: 'var(--gold-bright)',
                 background: 'rgba(0,0,0,0.52)',
-                border: '1px solid rgba(240,192,96,0.42)',
+                border: '1px solid rgba(47,212,196,0.42)',
                 borderRadius: 3,
                 padding: '2px 9px',
                 position: 'relative',
