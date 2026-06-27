@@ -1,9 +1,9 @@
 export type TabId = 'combat' | 'arsenal' | 'characters' | 'extras' | 'journey';
-export type Atmosphere = 'dark' | 'parchment';
+export type Atmosphere = 'dark' | 'parchment' | 'dusk';
 
 const TAB_ATMOSPHERE: Record<TabId, Atmosphere> = {
   combat: 'dark', arsenal: 'dark',
-  characters: 'dark', extras: 'dark', journey: 'parchment',
+  characters: 'dark', extras: 'dark', journey: 'dusk',
 };
 
 export function atmosphereForTab(tab: TabId): Atmosphere {
@@ -34,6 +34,18 @@ export const ATMOSPHERE_VARS: Record<Atmosphere, Record<string, string>> = {
     '--border-faint': 'rgba(34,26,15,0.12)',
     '--border-mid': 'rgba(34,26,15,0.24)',
     '--surface-ink': '#221a0f',
+  },
+  dusk: {
+    '--bg-base': '#150f2c',
+    '--bg-surface': '#1d1640',
+    '--bg-raised': '#2a1f55',
+    '--bg-overlay': '#342861',
+    '--text-primary': '#ece3ff',
+    '--text-secondary': '#c4b3e8',
+    '--text-muted': '#8f7fc0',
+    '--border-faint': 'rgba(200,180,255,0.10)',
+    '--border-mid': 'rgba(200,180,255,0.20)',
+    '--surface-ink': '#ece3ff',
   },
 };
 

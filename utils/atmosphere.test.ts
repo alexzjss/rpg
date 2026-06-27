@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { atmosphereForTab, ATMOSPHERE_VARS, applyAtmosphere } from './atmosphere';
 
 describe('atmosphereForTab', () => {
-  it('jornada é pergaminho; o resto é escuro', () => {
-    expect(atmosphereForTab('journey')).toBe('parchment');
+  it('jornada é dusk; o resto é escuro', () => {
+    expect(atmosphereForTab('journey')).toBe('dusk');
     for (const t of ['combat','arsenal','characters','extras'] as const) {
       expect(atmosphereForTab(t)).toBe('dark');
     }
@@ -11,10 +11,11 @@ describe('atmosphereForTab', () => {
 });
 
 describe('ATMOSPHERE_VARS', () => {
-  it('os dois climas definem exatamente o mesmo conjunto de vars', () => {
+  it('os três climas definem exatamente o mesmo conjunto de vars', () => {
     const d = Object.keys(ATMOSPHERE_VARS.dark).sort();
-    const p = Object.keys(ATMOSPHERE_VARS.parchment).sort();
-    expect(p).toEqual(d);
+    for (const climate of ['parchment','dusk'] as const) {
+      expect(Object.keys(ATMOSPHERE_VARS[climate]).sort()).toEqual(d);
+    }
   });
 });
 
