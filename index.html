@@ -3445,16 +3445,15 @@
            ═══════════════════════════════════════════════════════════ */
         .mp-journey {
             position: relative;
-            color: var(--parchment-ink);
-            --jp-ink: #221a0f;
-            --jp-ink-soft: #5a4a30;
-            --jp-paper: #ece0c2;
-            --jp-paper-raised: #f4ead2;
-            --jp-paper-deep: #ddcca6;
-            --jp-edge: rgba(74,54,24,0.34);
-            --jp-edge-soft: rgba(74,54,24,0.18);
-            --jp-gold: #9a7322;
-            --jp-ember: #b4470f;
+            color: var(--text-primary);
+            --ct-win-from: #3a48b8;
+            --ct-win-to:   #201a62;
+            --ct-border:   #e8ecff;
+            --ct-ink:      #ece3ff;
+            --ct-ink-soft: #cdbef0;
+            --ct-lav:      #b9a3e8;
+            --ct-star:     #f0e2a0;
+            --ct-portal:   #bfe9ff;
         }
         /* textura de papel sobre o fundo da página enquanto na Jornada */
         :root[data-atmosphere='parchment'] .mp-page-bg::after {
@@ -3466,40 +3465,6 @@
                 radial-gradient(ellipse at 50% 0%, rgba(154,115,34,0.12), transparent 60%);
             background-size: 200px 200px, cover;
         }
-
-        /* ── Overrides de classes Tailwind escuras dentro da Jornada ── */
-        .mp-journey .text-white { color: var(--jp-ink) !important; }
-        .mp-journey .text-slate-300 { color: #43361f !important; }
-        .mp-journey .text-slate-400 { color: #5a4a30 !important; }
-        .mp-journey .text-slate-500 { color: #6b5a3c !important; }
-        .mp-journey .text-slate-600 { color: #7a6a48 !important; }
-        .mp-journey .bg-slate-900,
-        .mp-journey .bg-slate-900\/80,
-        .mp-journey .bg-slate-900\/80\/50,
-        .mp-journey .bg-slate-800,
-        .mp-journey .bg-black\/50 {
-            background: var(--jp-paper-raised) !important;
-            color: var(--jp-ink) !important;
-        }
-        .mp-journey .border-slate-800,
-        .mp-journey .border-slate-700,
-        .mp-journey .border-amber-900\/20 { border-color: var(--jp-edge) !important; }
-        .mp-journey .glass-panel {
-            background: linear-gradient(135deg, var(--jp-paper-raised), var(--jp-paper)) !important;
-            border: 1px solid var(--jp-edge) !important;
-            color: var(--jp-ink) !important;
-            box-shadow: 0 10px 30px rgba(60,40,10,0.18), inset 0 1px 0 rgba(255,255,255,0.5) !important;
-            backdrop-filter: none !important;
-        }
-        /* botões escuros viram pergaminho gravado */
-        .mp-journey .bg-slate-900.hover\:bg-slate-800,
-        .mp-journey button.bg-slate-900 {
-            background: linear-gradient(180deg, var(--jp-paper-raised), var(--jp-paper-deep)) !important;
-            color: var(--jp-ink) !important;
-            border-color: var(--jp-edge) !important;
-        }
-        .mp-journey textarea::placeholder,
-        .mp-journey input::placeholder { color: rgba(74,54,24,0.45) !important; }
 
         /* ── Header iluminado da Jornada ── */
         .mp-journey-title {
