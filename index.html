@@ -3747,6 +3747,11 @@
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(ellipse at 100% 100%, rgba(212,20,42,0.10), transparent 40%);
 }
+:root[data-section='arsenal'] .p5-subtab {
+  border-radius: 0 !important;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  font-style: italic;
+}
         /* Combat-scoped glaze override — Metaphor cool palette */
         :root[data-section='combat'] .mp-glaze {
           background:
