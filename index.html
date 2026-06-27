@@ -3417,6 +3417,29 @@
         .mp-page-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bg-base); }
         :root[data-atmosphere='parchment'] .mp-page-bg { background: var(--parchment-bg); }
 
+        /* ── JORNADA dusk: crepúsculo + estrelas + lua ── */
+        :root[data-atmosphere='dusk'] .mp-page-bg {
+          background:
+            radial-gradient(ellipse 130% 80% at 50% 100%, #4a2356 0%, transparent 62%),
+            linear-gradient(180deg, #150f2c 0%, #2a1a4e 55%, #3a2356 100%);
+        }
+        :root[data-atmosphere='dusk'] .mp-page-bg::before {
+          content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.9;
+          background-image:
+            radial-gradient(1.2px 1.2px at 14% 18%, rgba(233,226,255,0.9), transparent),
+            radial-gradient(1px 1px at 32% 30%, rgba(233,226,255,0.7), transparent),
+            radial-gradient(1.4px 1.4px at 56% 13%, #ffffff, transparent),
+            radial-gradient(1px 1px at 72% 26%, rgba(201,180,255,0.8), transparent),
+            radial-gradient(1.2px 1.2px at 84% 11%, rgba(233,226,255,0.85), transparent),
+            radial-gradient(1px 1px at 24% 44%, rgba(233,226,255,0.6), transparent),
+            radial-gradient(1px 1px at 46% 39%, rgba(201,180,255,0.7), transparent),
+            radial-gradient(1.2px 1.2px at 64% 48%, rgba(233,226,255,0.6), transparent);
+        }
+        :root[data-atmosphere='dusk'] .mp-page-bg::after {
+          content: ''; position: absolute; top: 7%; right: 8%; width: 44px; height: 44px; border-radius: 50%;
+          background: #ece3ff; box-shadow: -12px 7px 0 -2px #20153f; opacity: 0.82; pointer-events: none;
+        }
+
         /* ═══════════════════════════════════════════════════════════
            JORNADA — clima pergaminho / manuscrito de viagem
            ═══════════════════════════════════════════════════════════ */
