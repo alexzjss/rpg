@@ -162,10 +162,10 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                    >
                         Próximo <ChevronRight className="w-4 h-4" />
                    </button>
-                   <button onClick={handleNewWaypoint} className="flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-500 rounded-2xl text-white font-extrabold uppercase text-xs tracking-widest transition-all shadow-lg">
+                   <button onClick={handleNewWaypoint} className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-extrabold uppercase text-xs tracking-widest transition-all shadow-lg" style={{ background:'linear-gradient(180deg,#5a4ab8,#3a2a8a)', border:'1px solid rgba(200,180,255,0.4)' }}>
                       <MapPin className="w-4 h-4" /> Novo Local
                    </button>
-                   <button onClick={() => setIsPartyModalOpen(true)} className="flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-amber-600 rounded-2xl text-white font-extrabold uppercase text-xs tracking-widest transition-all border border-slate-800">
+                   <button onClick={() => setIsPartyModalOpen(true)} className="flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-indigo-900 rounded-2xl text-white font-extrabold uppercase text-xs tracking-widest transition-all border border-slate-800">
                       <Users className="w-4 h-4" /> Gerenciar Grupo
                    </button>
                    </>)}
@@ -173,7 +173,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                    {journeySubTab === 'cozinhar' && (
                      <button onClick={() => { setEditRecipeData({ type: 'cozinhar', ingredients: [] }); setRecipeModal({ mode:'new', type:'cozinhar' }); }}
                        className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-extrabold uppercase text-xs tracking-widest transition-all shadow-lg"
-                       style={{ background:'linear-gradient(135deg,rgba(234,88,12,0.6),rgba(180,60,5,0.8))', border:'1px solid rgba(234,88,12,0.5)', boxShadow:'0 0 16px rgba(234,88,12,0.3)' }}>
+                       style={{ background:'linear-gradient(180deg,rgba(201,86,143,0.7),rgba(150,40,100,0.9))', border:'1px solid rgba(201,86,143,0.5)', boxShadow:'0 0 16px rgba(201,86,143,0.3)' }}>
                        <Plus className="w-4 h-4" /> Nova Receita
                      </button>
                    )}
@@ -516,7 +516,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                             </div>
 
                             {/* Random Event Button */}
-                            <button onClick={() => handleManualRoll(20, "Evento Aleatório")} className="flex items-center gap-2 px-6 py-4 bg-amber-600 hover:bg-amber-500 rounded-2xl text-white font-extrabold uppercase text-xs shadow-lg">
+                            <button onClick={() => handleManualRoll(20, "Evento Aleatório")} className="flex items-center gap-2 px-6 py-4 rounded-2xl text-white font-extrabold uppercase text-xs shadow-lg" style={{ background:'linear-gradient(180deg,rgba(201,86,143,0.7),rgba(150,40,100,0.9))', border:'1px solid rgba(201,86,143,0.5)' }}>
                                 <Dices className="w-4 h-4" /> Checar Evento
                             </button>
                          </div>
@@ -532,7 +532,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                 {/* Right: Party Status & Notes */}
                 <div className="flex flex-col gap-6 min-h-0">
                    {/* Party List */}
-                   <div className="flex-1 glass-panel rounded-[2.5rem] p-6 overflow-y-auto custom-scroll flex flex-col border border-amber-900/20">
+                   <div className="flex-1 glass-panel rounded-[2.5rem] p-6 overflow-y-auto custom-scroll flex flex-col border border-indigo-900/30">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-sm font-extrabold uppercase text-slate-500 tracking-widest flex items-center gap-2"><Tent className="w-4 h-4" /> Grupo Ativo</h3>
                         <span className="text-xs font-bold bg-slate-900 px-2 py-1 rounded text-slate-400">{journeyCharacters.length} membros</span>
@@ -540,7 +540,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
 
                       <div className="space-y-3">
                          {journeyCharacters.map(char => (
-                            <div key={char.id} className="bg-slate-900/80/50 p-3 rounded-[1.5rem] border border-slate-800 flex items-center gap-4 hover:border-amber-600/50 transition-colors group">
+                            <div key={char.id} className="bg-slate-900/80/50 p-3 rounded-[1.5rem] border border-slate-800 flex items-center gap-4 hover:border-indigo-500/50 transition-colors group">
                                 <div className="relative cursor-pointer" onClick={() => setQuickEditChar(char)}>
                                    <img src={char.icon || undefined} className="w-14 h-14 rounded-2xl object-cover bg-slate-900" />
                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-2xl transition-opacity">
@@ -623,7 +623,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                                     <button onClick={() => setManagingConditionsCharId(char.id)} className="p-2 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors" title="Gerenciar Condições">
                                         <Activity className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => setOpenInventoryCharId(char.id)} className="p-2 hover:bg-amber-900/40 rounded-lg text-slate-500 hover:text-amber-400 transition-colors" title="Abrir Inventário">
+                                    <button onClick={() => setOpenInventoryCharId(char.id)} className="p-2 hover:bg-indigo-900/40 rounded-lg text-slate-500 hover:text-indigo-300 transition-colors" title="Abrir Inventário">
                                         <Briefcase className="w-4 h-4" />
                                     </button>
                                 </div>
@@ -860,7 +860,7 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                        </div>
 
                        {/* Luck description */}
-                       <div className="mp-jcard__faint" style={{ fontSize:9, lineHeight:1.5, background:'rgba(0,0,0,0.04)', border:'1px solid rgba(34,26,15,0.1)', borderRadius:10, padding:'8px 12px' }}>
+                       <div className="mp-jcard__faint" style={{ fontSize:9, lineHeight:1.5, background:'rgba(20,16,52,0.3)', border:'1px solid rgba(200,180,255,0.1)', borderRadius:10, padding:'8px 12px' }}>
                          {upgradeShopLuck === 'sorte' && '🍀 Itens raros têm mais chance de aparecer e recebem descontos frequentes. Sorte favorece os corajosos!'}
                          {upgradeShopLuck === 'neutro' && '⚖ Sorteio totalmente aleatório. Qualquer item pode aparecer com variação leve de preço (±20%).'}
                          {upgradeShopLuck === 'azar' && '💀 Itens comuns dominam as ofertas e os preços sobem. Só para quem aguenta o tranco.'}
