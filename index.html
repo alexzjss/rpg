@@ -3521,30 +3521,32 @@
 
         /* ── Diário de Bordo como crônica em pergaminho ── */
         .mp-journey-chronicle {
-            background: linear-gradient(135deg, #f4ead2, #e8dab6) !important;
-            border: 1px solid var(--jp-edge) !important;
-            border-left: 5px solid var(--jp-ember) !important;
-            box-shadow: 0 10px 30px rgba(60,40,10,0.2), inset 0 0 40px rgba(154,115,34,0.06) !important;
+            background: linear-gradient(180deg, var(--ct-win-from), var(--ct-win-to)) !important;
+            border: 2px solid var(--ct-border) !important;
+            border-left: 5px solid var(--ct-lav) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 8px 30px rgba(10,6,30,0.5), inset 0 0 40px rgba(120,90,220,0.12) !important;
         }
         .mp-journey-chronicle__title {
-            font-family: 'Cinzel', serif !important;
-            color: var(--jp-ember) !important;
+            font-family: 'Cinzel', Georgia, serif !important;
+            color: var(--ct-lav) !important;
             letter-spacing: 0.22em !important;
         }
         .mp-journey-chronicle textarea {
             background: transparent !important;
             border: none !important;
-            color: var(--jp-ink) !important;
+            color: var(--ct-ink-soft) !important;
             font-family: 'Inter', sans-serif;
             font-style: italic;
             line-height: 1.7 !important;
         }
         .mp-journey-dropcap::first-letter {
-            float: left; font-family: 'Playfair Display', serif; font-style: italic;
+            float: left; font-family: 'Playfair Display', Georgia, serif; font-style: italic;
             font-weight: 900; font-size: 3.1em; line-height: 0.78;
-            padding: 6px 10px 0 0; color: var(--jp-ember);
-            text-shadow: 0 2px 6px rgba(180,71,15,0.25);
+            padding: 6px 10px 0 0; color: var(--ct-star);
+            text-shadow: 0 2px 10px rgba(240,226,160,0.4);
         }
+        .mp-journey-chronicle textarea::placeholder { color: rgba(205,190,242,0.5) !important; }
 
         /* ── Cozinhar / Forjar / Upgrades: cards → pergaminho ── */
         .mp-jcard { background: linear-gradient(135deg, var(--jp-paper-raised), var(--jp-paper)) !important; }
