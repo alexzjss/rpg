@@ -3455,6 +3455,15 @@
             --ct-star:     #f0e2a0;
             --ct-portal:   #bfe9ff;
         }
+        /* janela estilo SNES (borda clara nítida + gradiente azul-roxo) */
+        .mp-journey .glass-panel {
+          background: linear-gradient(180deg, var(--ct-win-from), var(--ct-win-to)) !important;
+          border: 2px solid var(--ct-border) !important;
+          border-radius: 14px !important;
+          color: var(--ct-ink) !important;
+          box-shadow: 0 8px 30px rgba(10,6,30,0.5), inset 0 1px 0 rgba(255,255,255,0.18) !important;
+          backdrop-filter: none !important;
+        }
         /* textura de papel sobre o fundo da página enquanto na Jornada */
         :root[data-atmosphere='parchment'] .mp-page-bg::after {
             content: '';
