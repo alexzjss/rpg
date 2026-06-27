@@ -3651,6 +3651,21 @@
           background: linear-gradient(90deg, #f01030, transparent);
         }
 
+        /* ── ARSENAL: card shell Persona (recorte + skew + slash vermelho) ── */
+        :root[data-section='arsenal'] .mp-darktab .group.rounded-\[2\.5rem\] {
+          border-radius: 4px !important;
+          clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%);
+          transform: rotate(-1.2deg);
+          background-color: #141014 !important;
+          border-width: 1.5px !important;
+        }
+        :root[data-section='arsenal'] .mp-darktab .group.rounded-\[2\.5rem\]:nth-child(even) { transform: rotate(0.8deg); }
+        :root[data-section='arsenal'] .mp-darktab .group.rounded-\[2\.5rem\]::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px; z-index: 2;
+          background: linear-gradient(90deg, #f01030, #8a0a18); pointer-events: none;
+        }
+        :root[data-section='arsenal'] .mp-darktab .group.rounded-\[2\.5rem\] h3 { font-style: italic; }
+
         /* ===== A Forja do Mestre — Fundação "brasa disciplinada" ===== */
         :root {
           /* acento único de ação */
