@@ -22,6 +22,10 @@ describe('SECTION_THEMES', () => {
     expect(SECTION_THEMES.arsenal.vars['--sec-accent']).toBe('#d4142a');
     expect(SECTION_THEMES.arsenal.vars['--ember']).toBe('#d4142a');
   });
+  it('characters usa acento azul FF e override de ember', () => {
+    expect(SECTION_THEMES.characters.vars['--sec-accent']).toBe('#5a9ae8');
+    expect(SECTION_THEMES.characters.vars['--ember']).toBe('#5a9ae8');
+  });
   it('ALL_SEC_VAR_KEYS cobre todas as chaves usadas por qualquer seção', () => {
     for (const t of ALL_TABS) {
       for (const k of Object.keys(SECTION_THEMES[t].vars)) {

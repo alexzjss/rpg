@@ -44,10 +44,24 @@ const JOURNEY_VARS: Record<string, string> = {
   '--sec-ink':      '#ece3ff',
 };
 
+const CHARACTERS_VARS: Record<string, string> = {
+  '--sec-accent':   '#5a9ae8',
+  '--sec-accent-2': '#7fe0ff',
+  '--sec-accent-3': '#a8c8ff',
+  '--sec-ink':      '#eaf2ff',
+  '--gold-dim':    '#1a3866',
+  '--gold-mid':    '#5a9ae8',
+  '--gold-bright': '#7fe0ff',
+  '--gold-pale':   '#dceaff',
+  '--border-gold': 'rgba(120,170,255,0.34)',
+  '--ember':       '#5a9ae8',
+  '--ember-deep':  '#1e4e9a',
+};
+
 export const SECTION_THEMES: Record<TabId, SectionThemeDef> = {
   combat:     { atmosphere: atmosphereForTab('combat'),     vars: COMBAT_VARS },
   journey:    { atmosphere: atmosphereForTab('journey'),    vars: JOURNEY_VARS },
-  characters: { atmosphere: atmosphereForTab('characters'), vars: {} },
+  characters: { atmosphere: atmosphereForTab('characters'), vars: CHARACTERS_VARS },
   arsenal:    { atmosphere: atmosphereForTab('arsenal'),    vars: ARSENAL_VARS },
   extras:     { atmosphere: atmosphereForTab('extras'),     vars: {} },
 };
