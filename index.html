@@ -3636,6 +3636,21 @@
         :root[data-section='arsenal'] .border-amber-600 { border-color: rgba(212,20,42,0.5) !important; }
         :root[data-section='arsenal'] .focus\:border-amber-600:focus { border-color: #f01030 !important; }
 
+        /* ── ARSENAL: banner diagonal Persona nos h2 de seção ── */
+        :root[data-section='arsenal'] .mp-darktab h2 {
+          position: relative; display: inline-block;
+          padding: 6px 22px 6px 16px;
+          background: #0a0506;
+          color: #f4f0e8 !important;
+          clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+          border-left: 5px solid #d4142a;
+          text-shadow: 0 2px 0 rgba(212,20,42,0.6);
+        }
+        :root[data-section='arsenal'] .mp-darktab h2::after {
+          content: ''; position: absolute; left: -5px; bottom: -7px; width: 70%; height: 4px;
+          background: linear-gradient(90deg, #f01030, transparent);
+        }
+
         /* ===== A Forja do Mestre — Fundação "brasa disciplinada" ===== */
         :root {
           /* acento único de ação */
