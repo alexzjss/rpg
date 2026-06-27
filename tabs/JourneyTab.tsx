@@ -128,19 +128,19 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                          className="flex items-center gap-2 px-4 py-2 rounded-xl font-extrabold uppercase text-xs tracking-widest transition-all"
                          style={{
                            background: journeySubTab === tab.key
-                             ? (tab.key === 'cozinhar' ? 'rgba(234,88,12,0.25)'
-                               : tab.key === 'forjar' ? 'rgba(168,85,247,0.25)'
-                               : tab.key === 'upgrades' ? 'rgba(16,185,129,0.2)'
-                               : 'rgba(201,152,58,0.25)')
+                             ? (tab.key === 'cozinhar' ? 'rgba(234,138,60,0.22)'
+                               : tab.key === 'forjar' ? 'rgba(168,120,247,0.28)'
+                               : tab.key === 'upgrades' ? 'rgba(52,200,180,0.20)'
+                               : 'rgba(120,140,255,0.25)')
                              : 'transparent',
                            color: journeySubTab === tab.key
-                             ? (tab.key === 'cozinhar' ? '#b4470f'
-                               : tab.key === 'forjar' ? '#7e22ce'
-                               : tab.key === 'upgrades' ? '#0f766e'
-                               : '#9a7322')
-                             : 'rgba(74,54,24,0.5)',
+                             ? (tab.key === 'cozinhar' ? '#f0b070'
+                               : tab.key === 'forjar' ? '#d2b8ff'
+                               : tab.key === 'upgrades' ? '#7fe0d0'
+                               : '#cdd6ff')
+                             : 'rgba(185,163,232,0.6)',
                            border: journeySubTab === tab.key
-                             ? `1px solid ${tab.key === 'cozinhar' ? 'rgba(234,88,12,0.4)' : tab.key === 'forjar' ? 'rgba(168,85,247,0.4)' : tab.key === 'upgrades' ? 'rgba(16,185,129,0.35)' : 'rgba(201,152,58,0.4)'}`
+                             ? `1px solid ${tab.key === 'cozinhar' ? 'rgba(234,138,60,0.4)' : tab.key === 'forjar' ? 'rgba(168,120,247,0.5)' : tab.key === 'upgrades' ? 'rgba(52,200,180,0.4)' : 'rgba(200,180,255,0.45)'}`
                              : '1px solid transparent',
                          }}
                        >{tab.icon}{tab.label}</button>
