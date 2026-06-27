@@ -6367,7 +6367,7 @@ const App: React.FC = () => {
 
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))', gap:14 }}>
               {items.filter(it => it.name.toLowerCase().includes(itemSearchTerm.toLowerCase())).map(it => (
-                <div key={it.id} onClick={() => setEditingCatalogItem(it)} style={{ cursor:'pointer', borderRadius:16, overflow:'hidden', border:'1px solid var(--border-gold)', background:'linear-gradient(165deg, rgba(40,30,5,0.85), rgba(20,16,8,0.92))', position:'relative' }} className="hover:brightness-110 transition-all">
+                <div key={it.id} onClick={() => setEditingCatalogItem(it)} style={{ cursor:'pointer', borderRadius:4, overflow:'hidden', border:'1px solid var(--border-gold)', background:'linear-gradient(165deg, #1a1218, #100a0c)', position:'relative', clipPath:'polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%)', transform:'rotate(-1deg)' }} className="hover:brightness-110 transition-all">
                   <div style={{ height:120, background: it.image ? `url(${it.image}) center/cover` : 'linear-gradient(145deg,#1e180e,#100e08)' }} />
                   <div style={{ padding:'10px 12px' }}>
                     <p style={{ fontSize:13, fontWeight:800, color:'var(--gold-pale)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{it.name}</p>
@@ -6557,7 +6557,7 @@ const App: React.FC = () => {
 
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))', gap:14 }}>
                   {filteredWeapons.map(w => (
-                    <div key={w.id} onClick={() => setEditingWeapon(w)} style={{ cursor:'pointer', borderRadius:16, overflow:'hidden', border:'1px solid var(--border-gold)', background:'linear-gradient(165deg, rgba(40,30,5,0.85), rgba(20,16,8,0.92))', position:'relative' }} className="group hover:brightness-110 transition-all">
+                    <div key={w.id} onClick={() => setEditingWeapon(w)} style={{ cursor:'pointer', borderRadius:4, overflow:'hidden', border:'1px solid var(--border-gold)', background:'linear-gradient(165deg, #1a1218, #100a0c)', position:'relative', clipPath:'polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%)', transform:'rotate(-1deg)' }} className="group hover:brightness-110 transition-all">
                       <div style={{ height:120, background: w.image ? `url(${w.image}) center/cover` : 'linear-gradient(145deg,#1e180e,#100e08)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                         {!w.image && <Swords style={{ width:36, height:36, opacity:0.15 }} />}
                       </div>
