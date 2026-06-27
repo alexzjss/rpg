@@ -3784,6 +3784,19 @@
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(ellipse at 100% 100%, rgba(212,20,42,0.10), transparent 40%);
 }
+/* ── PERSONAGENS Final Fantasy: azul profundo + cristais ── */
+:root[data-section='characters'] .mp-page-bg {
+  background: linear-gradient(180deg, #081428 0%, #0e2a52 100%);
+}
+:root[data-section='characters'] .mp-page-bg::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.4;
+  background-image:
+    linear-gradient(135deg, transparent 0 49.6%, rgba(127,224,255,0.5) 49.7% 50%, transparent 50.1%),
+    linear-gradient(45deg, transparent 0 49.6%, rgba(90,154,232,0.4) 49.7% 50%, transparent 50.1%);
+  background-size: 64px 64px, 96px 96px;
+  -webkit-mask-image: radial-gradient(ellipse at 80% 0%, #000 0 30%, transparent 60%);
+          mask-image: radial-gradient(ellipse at 80% 0%, #000 0 30%, transparent 60%);
+}
 :root[data-section='arsenal'] .p5-subtab {
   border-radius: 0 !important;
   clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
