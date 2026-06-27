@@ -3475,6 +3475,16 @@
             background-size: 200px 200px, cover;
         }
 
+        /* ── EXTRAS cinza neutro: fundo plano, sem calor ── */
+        :root[data-section='extras'] .mp-page-bg {
+          background: linear-gradient(180deg, #16181c 0%, #1c2026 100%);
+        }
+        :root[data-section='extras'] .mp-glaze {
+          background:
+            radial-gradient(60% 50% at 18% 12%, rgba(160,170,185,0.05), transparent 60%),
+            radial-gradient(55% 50% at 85% 80%, rgba(160,170,185,0.04), transparent 60%);
+        }
+
         /* ── Header iluminado da Jornada ── */
         .mp-journey-title {
             font-family: 'Playfair Display', Georgia, serif !important;
