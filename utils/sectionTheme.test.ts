@@ -18,6 +18,10 @@ describe('SECTION_THEMES', () => {
     expect(SECTION_THEMES.journey.atmosphere).toBe('dusk');
     expect(SECTION_THEMES.journey.vars['--sec-accent']).toBe('#b9a3e8');
   });
+  it('arsenal usa acento carmesim e override de ember', () => {
+    expect(SECTION_THEMES.arsenal.vars['--sec-accent']).toBe('#d4142a');
+    expect(SECTION_THEMES.arsenal.vars['--ember']).toBe('#d4142a');
+  });
   it('ALL_SEC_VAR_KEYS cobre todas as chaves usadas por qualquer seção', () => {
     for (const t of ALL_TABS) {
       for (const k of Object.keys(SECTION_THEMES[t].vars)) {

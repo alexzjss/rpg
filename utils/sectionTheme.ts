@@ -23,6 +23,20 @@ const COMBAT_VARS: Record<string, string> = {
   '--ember-deep':  '#a3122e',
 };
 
+const ARSENAL_VARS: Record<string, string> = {
+  '--sec-accent':   '#d4142a', // carmesim
+  '--sec-accent-2': '#f01030', // vermelho vivo
+  '--sec-accent-3': '#ff3a5e', // rosa-vermelho
+  '--sec-ink':      '#f4f0e8', // branco-osso
+  '--gold-dim':    '#5a0a14',
+  '--gold-mid':    '#d4142a',
+  '--gold-bright': '#f01030',
+  '--gold-pale':   '#ffd9de',
+  '--border-gold': 'rgba(212,20,42,0.34)',
+  '--ember':       '#d4142a',
+  '--ember-deep':  '#8a0a18',
+};
+
 const JOURNEY_VARS: Record<string, string> = {
   '--sec-accent':   '#b9a3e8', // lavanda
   '--sec-accent-2': '#3a48b8', // azul-roxo da janela SNES
@@ -34,7 +48,7 @@ export const SECTION_THEMES: Record<TabId, SectionThemeDef> = {
   combat:     { atmosphere: atmosphereForTab('combat'),     vars: COMBAT_VARS },
   journey:    { atmosphere: atmosphereForTab('journey'),    vars: JOURNEY_VARS },
   characters: { atmosphere: atmosphereForTab('characters'), vars: {} },
-  arsenal:    { atmosphere: atmosphereForTab('arsenal'),    vars: {} },
+  arsenal:    { atmosphere: atmosphereForTab('arsenal'),    vars: ARSENAL_VARS },
   extras:     { atmosphere: atmosphereForTab('extras'),     vars: {} },
 };
 
