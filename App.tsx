@@ -2356,7 +2356,7 @@ const CharacterCard: React.FC<{
   setSetupCombatant: (c: Character) => void;
 }> = ({ char, idx, isCharInCombat, setEditingCharacter, deleteCharacter, setSetupCombatant }) => {
   const isNpc = (char.role ?? 'npc') === 'npc';
-  const accentColor = isNpc ? 'rgba(100,116,139,0.9)' : '#c9983a';
+  const accentColor = isNpc ? 'rgba(120,150,200,0.85)' : '#5a9ae8';
   const inCombat = isCharInCombat(char.id);
 
   return (
@@ -2395,16 +2395,16 @@ const CharacterCard: React.FC<{
         <div className="mp-character-stat-strip">
           <div className="mp-character-stat">
             <span className="mp-character-stat__label">❤ HP</span>
-            <span className="mp-character-stat__value" style={{ '--stat-color': '#f87171' } as React.CSSProperties}>{char.maxHp}</span>
+            <span className="mp-character-stat__value" style={{ '--stat-color': '#4ad08a' } as React.CSSProperties}>{char.maxHp}</span>
           </div>
           <div className="mp-character-stat">
             <span className="mp-character-stat__label">⚡ Aura</span>
-            <span className="mp-character-stat__value" style={{ '--stat-color': '#fbbf24' } as React.CSSProperties}>{char.maxAura}</span>
+            <span className="mp-character-stat__value" style={{ '--stat-color': '#5a9ae8' } as React.CSSProperties}>{char.maxAura}</span>
           </div>
           {char.maxAmmo > 0 && (
             <div className="mp-character-stat">
               <span className="mp-character-stat__label">🎯 Mun.</span>
-              <span className="mp-character-stat__value" style={{ '--stat-color': '#fb923c' } as React.CSSProperties}>{char.maxAmmo}</span>
+              <span className="mp-character-stat__value" style={{ '--stat-color': '#7fe0ff' } as React.CSSProperties}>{char.maxAmmo}</span>
             </div>
           )}
         </div>
