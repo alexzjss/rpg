@@ -6112,7 +6112,7 @@ const App: React.FC = () => {
               {filteredCharacters.filter(c => (c.role ?? 'npc') === 'cast').length > 0 && (
                 <>
                   <div className="mp-section-divider col-span-full"
-                    style={{ '--divider-color': 'rgba(201,152,58,0.75)', '--divider-bg': 'rgba(120,90,20,0.22)' } as React.CSSProperties}>
+                    style={{ '--divider-color': 'rgba(127,224,255,0.8)', '--divider-bg': 'rgba(20,54,110,0.3)' } as React.CSSProperties}>
                     <div className="mp-section-divider__label">
                       <Star style={{ width:9, height:9 }} /> Cast
                     </div>

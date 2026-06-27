@@ -3844,6 +3844,22 @@
             radial-gradient(60% 50% at 18% 12%, rgba(209,31,63,0.12), transparent 60%),
             radial-gradient(55% 50% at 85% 80%, rgba(47,212,196,0.10), transparent 60%);
         }
+        /* neutraliza o glaze quente sobre o fundo azul */
+        :root[data-section='characters'] .mp-glaze {
+          background:
+            radial-gradient(60% 50% at 18% 12%, rgba(90,154,232,0.10), transparent 60%),
+            radial-gradient(55% 50% at 85% 80%, rgba(127,224,255,0.08), transparent 60%);
+        }
+        /* CTA primário (Novo) ouro -> azul FF */
+        :root[data-section='characters'] .mp-cta {
+          background: linear-gradient(105deg, #5a9ae8, #2e6ad0 48%, #1e4e9a) !important;
+          border-color: rgba(168,200,255,0.7) !important;
+          color: #06122a !important;
+          box-shadow: 0 10px 26px rgba(0,0,0,0.36), 0 0 22px rgba(90,154,232,0.3) !important;
+        }
+        :root[data-section='characters'] .mp-section-kicker { color: #7fe0ff !important; }
+        :root[data-section='characters'] .mp-empty strong { color: #cfe2ff !important; }
+        :root[data-section='characters'] .mp-empty { border-color: rgba(120,170,255,0.2) !important; }
 
 /* superfície dos painéis flutuantes + acento de respingo magenta no canto */
 :root[data-section='combat'] .mp-combat-panel-shell {
