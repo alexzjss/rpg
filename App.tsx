@@ -6250,7 +6250,7 @@ const App: React.FC = () => {
                   <div
                     key={card.id}
                     className={`group relative border rounded-[2.5rem] overflow-hidden ${colors.border} ${typeClass} anim-fade-up`}
-                    style={{ animationDelay: `${idx * 40}ms`, background: "#1c1810" }}
+                    style={{ animationDelay: `${idx * 40}ms`, background: "#141014" }}
                   >
                     {/* Type color tint */}
                     <div className={`absolute inset-0 bg-gradient-to-br ${colors.bg} opacity-15 pointer-events-none transition-opacity duration-300 group-hover:opacity-30`} />
@@ -6421,8 +6421,8 @@ const App: React.FC = () => {
                 <div key={seal.id}
                   className="group relative border rounded-[2.5rem] overflow-hidden card-seal anim-fade-up"
                   style={{
-                    background:'linear-gradient(145deg,rgba(20,10,5,0.95),rgba(30,15,5,0.9))',
-                    border:'1.5px solid rgba(234,88,12,0.35)',
+                    background:'linear-gradient(145deg,#1a1218,#100a0c)',
+                    border:'1.5px solid rgba(212,20,42,0.45)',
                     animationDelay: `${idx * 0.04}s`,
                   }}>
                   {/* Top accent */}
