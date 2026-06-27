@@ -208,11 +208,11 @@ const JourneyTab: React.FC<JourneyTabProps> = ({
                       {(['tl','tr','bl','br'] as const).map(pos => (
                         <div key={pos} className={`mp-journey-frame-corner mp-journey-frame-corner--${pos}`}>
                           <svg viewBox="0 0 58 58" fill="none">
-                            <path d="M6 6 L30 6 M6 6 L6 30" stroke="#caa44e" strokeWidth="2.5" strokeLinecap="round" />
-                            <path d="M6 6 Q22 9 26 24 Q30 13 42 11" stroke="#9a7322" strokeWidth="1.4" fill="none" opacity="0.9" />
-                            <circle cx="6" cy="6" r="3.6" fill="#caa44e" />
-                            <circle cx="30" cy="6" r="1.8" fill="#9a7322" opacity="0.8" />
-                            <circle cx="6" cy="30" r="1.8" fill="#9a7322" opacity="0.8" />
+                            <path d="M6 6 L30 6 M6 6 L6 30" stroke="#e8ecff" strokeWidth="2.5" strokeLinecap="round" />
+                            <path d="M6 6 Q22 9 26 24 Q30 13 42 11" stroke="#bfe9ff" strokeWidth="1.4" fill="none" opacity="0.9" />
+                            <circle cx="6" cy="6" r="3.6" fill="#e8ecff" />
+                            <circle cx="30" cy="6" r="1.8" fill="#bfe9ff" opacity="0.8" />
+                            <circle cx="6" cy="30" r="1.8" fill="#bfe9ff" opacity="0.8" />
                           </svg>
                         </div>
                       ))}
