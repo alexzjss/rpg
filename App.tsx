@@ -107,7 +107,7 @@ import CombatControlPanel from './components/combat/CombatControlPanel';
 import CardFusionPanel from './components/combat/CardFusionPanel';
 import CombatArena from './components/combat/grid/CombatArena';
 import { migrateCombatState } from './utils/combatMigration';
-import { applyAtmosphere, atmosphereForTab } from './utils/atmosphere';
+import { applySectionTheme } from './utils/sectionTheme';
 import { TabSweep, Title, ImagePickerButton } from './components/ui';
 import { useKeyboardNav } from './components/nav';
 import JourneyTab from './tabs/JourneyTab';
@@ -3290,7 +3290,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'combat' | 'arsenal' | 'characters' | 'extras' | 'journey'>('combat');
   const [reducedMotion, setReducedMotion] = React.useState(getUserReducedMotion());
   React.useEffect(() => {
-    applyAtmosphere(atmosphereForTab(activeTab));
+    applySectionTheme(activeTab);
   }, [activeTab]);
   // Navegação por teclado: 1-5 vão direto às abas; setas ciclam. (Sem UI de navegação visível.)
   const kbNav = useKeyboardNav({ activeTab, onSelect: setActiveTab });
@@ -5847,35 +5847,35 @@ const App: React.FC = () => {
             ) : (
               /* Normal Turn Banner — theatrical JRPG style */
               <div style={{
-                background:'linear-gradient(102deg, rgba(4,6,14,0.98) 0%, rgba(38,26,8,0.97) 42%, rgba(60,20,40,0.96) 68%, rgba(4,6,14,0.98) 100%)',
+                background:'linear-gradient(102deg, rgba(4,6,14,0.98) 0%, rgba(8,26,30,0.97) 42%, rgba(60,20,40,0.96) 68%, rgba(4,6,14,0.98) 100%)',
                 border:'none',
-                borderTop:'1px solid rgba(212,168,83,0.38)',
-                borderBottom:'1px solid rgba(212,168,83,0.38)',
+                borderTop:'1px solid rgba(47,212,196,0.38)',
+                borderBottom:'1px solid rgba(47,212,196,0.38)',
                 clipPath:'polygon(22px 0,calc(100% - 22px) 0,100% 50%,calc(100% - 22px) 100%,22px 100%,0 50%)',
                 padding:'22px 88px',
                 display:'flex', alignItems:'center', gap:28,
-                boxShadow:'0 0 100px rgba(201,152,58,0.38), 0 0 40px rgba(236,72,153,0.18)',
+                boxShadow:'0 0 100px rgba(230,51,110,0.42), 0 0 40px rgba(236,72,153,0.18)',
                 position:'relative', overflow:'hidden', minWidth:520, justifyContent:'center',
               }}>
                 {/* Top accent slash */}
-                <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:'linear-gradient(90deg,transparent,rgba(201,152,58,0.9),rgba(236,72,153,0.7),transparent)', pointerEvents:'none' }} />
+                <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:'linear-gradient(90deg,transparent,rgba(47,212,196,0.9),rgba(236,72,153,0.7),transparent)', pointerEvents:'none' }} />
                 {/* Bottom accent slash */}
-                <div style={{ position:'absolute', bottom:0, left:0, right:0, height:2, background:'linear-gradient(90deg,transparent,rgba(236,72,153,0.7),rgba(201,152,58,0.9),transparent)', pointerEvents:'none' }} />
+                <div style={{ position:'absolute', bottom:0, left:0, right:0, height:2, background:'linear-gradient(90deg,transparent,rgba(236,72,153,0.7),rgba(47,212,196,0.9),transparent)', pointerEvents:'none' }} />
                 {/* Ghost text behind */}
-                <div style={{ position:'absolute', right:-8, top:'50%', transform:'translateY(-50%)', fontSize:88, fontWeight:900, fontStyle:'italic', color:'rgba(201,152,58,0.05)', letterSpacing:'-0.06em', pointerEvents:'none', userSelect:'none' }}>TURNO</div>
+                <div style={{ position:'absolute', right:-8, top:'50%', transform:'translateY(-50%)', fontSize:88, fontWeight:900, fontStyle:'italic', color:'rgba(47,212,196,0.06)', letterSpacing:'-0.06em', pointerEvents:'none', userSelect:'none' }}>TURNO</div>
                 {/* Kicker */}
                 <div style={{ position:'absolute', top:8, left:'50%', transform:'translateX(-50%)', fontSize:7, fontWeight:900, color:'rgba(236,72,153,0.6)', textTransform:'uppercase', letterSpacing:'0.55em', whiteSpace:'nowrap' }}>Ordem de Combate</div>
                 {/* Portrait */}
                 {turnBanner.icon && (
                   <div style={{ position:'relative', flexShrink:0 }}>
-                    <img src={turnBanner.icon} style={{ width:58, height:58, borderRadius:0, objectFit:'cover', clipPath:'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)', border:'none', boxShadow:'0 0 28px rgba(201,152,58,0.7), 0 0 8px rgba(201,152,58,0.4)' }} />
+                    <img src={turnBanner.icon} style={{ width:58, height:58, borderRadius:0, objectFit:'cover', clipPath:'polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)', border:'none', boxShadow:'0 0 28px rgba(47,212,196,0.7), 0 0 8px rgba(47,212,196,0.4)' }} />
                   </div>
                 )}
                 <div style={{ textAlign:'center', position:'relative', zIndex:1 }}>
-                  <div style={{ fontSize:8, fontWeight:900, color:'rgba(201,152,58,0.72)', textTransform:'uppercase', letterSpacing:'0.52em', marginBottom:3 }}>É a vez de</div>
-                  <div style={{ fontSize:34, fontWeight:900, color:'white', textTransform:'uppercase', fontStyle:'italic', letterSpacing:'0.04em', textShadow:'0 0 40px rgba(212,168,83,0.9), 0 4px 0 rgba(236,72,153,0.4)', lineHeight:1 }}>{turnBanner.name}</div>
+                  <div style={{ fontSize:8, fontWeight:900, color:'rgba(47,212,196,0.85)', textTransform:'uppercase', letterSpacing:'0.52em', marginBottom:3 }}>É a vez de</div>
+                  <div style={{ fontSize:34, fontWeight:900, color:'white', textTransform:'uppercase', fontStyle:'italic', letterSpacing:'0.04em', textShadow:'0 0 40px rgba(230,51,110,0.9), 0 4px 0 rgba(236,72,153,0.4)', lineHeight:1 }}>{turnBanner.name}</div>
                 </div>
-                <Swords style={{ width:30, height:30, color:'#d4a853', filter:'drop-shadow(0 0 10px rgba(212,168,83,0.9))', flexShrink:0, position:'relative', zIndex:1 }} />
+                <Swords style={{ width:30, height:30, color:'#2fd4c4', filter:'drop-shadow(0 0 10px rgba(47,212,196,0.9))', flexShrink:0, position:'relative', zIndex:1 }} />
               </div>
             )}
           </div>

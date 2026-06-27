@@ -15,7 +15,7 @@ const TokenBase: React.FC<TokenBaseProps> = ({ teamColor }) => (
       width: '96%',
       height: 12,
       borderRadius: '50%',
-      background: `radial-gradient(ellipse, ${teamColor} 0%, rgba(124,45,18,0.6) 45%, transparent 72%)`,
+      background: `radial-gradient(ellipse, ${teamColor} 0%, rgba(120,20,40,0.6) 45%, transparent 72%)`,
       filter: 'blur(5px)',
       opacity: 0.5,
       pointerEvents: 'none',

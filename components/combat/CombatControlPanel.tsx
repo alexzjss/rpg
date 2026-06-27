@@ -240,11 +240,11 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
         flexShrink: 0,
         height: '100%',
         background: floating ? 'rgba(6,8,16,0.78)' : 'var(--bg-surface)',
-        border: floating ? '1px solid rgba(201,152,58,0.24)' : undefined,
+        border: floating ? '1px solid rgba(47,212,196,0.26)' : undefined,
         borderLeft: floating ? undefined : '1px solid var(--border-faint)',
         borderRadius: floating ? 0 : undefined,
         overflow: 'hidden',
-        boxShadow: floating ? '0 18px 60px rgba(0,0,0,0.58), 0 0 26px rgba(201,152,58,0.10)' : undefined,
+        boxShadow: floating ? '0 18px 60px rgba(0,0,0,0.58), 0 0 26px rgba(47,212,196,0.10)' : undefined,
         backdropFilter: floating ? 'blur(18px) saturate(1.25)' : undefined,
       }}
     >

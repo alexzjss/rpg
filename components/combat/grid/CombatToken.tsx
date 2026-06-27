@@ -36,7 +36,7 @@ const CombatToken: React.FC<CombatTokenProps> = ({
   displayPos, onPointerDown, onClick,
 }) => {
   const isDefeated = c.currentHp <= 0;
-  const teamColor = c.role === 'npc' ? '#dc2626' : '#c9983a';
+  const teamColor = c.role === 'npc' ? '#d11f3f' : '#2fd4c4';
   const formaColor = activeForma?.color ?? null;
   const hpPct = c.maxHp > 0 ? (c.currentHp / c.maxHp) * 100 : 0;
 

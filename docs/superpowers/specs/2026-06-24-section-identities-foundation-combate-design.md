@@ -55,7 +55,7 @@ interface SectionThemeDef {
 ```
 
 Bundles iniciais:
-- **combat** — accent `#f0c95a` (ouro), accent-2 `#46cfe6` (cyan), ink `#f4ecd6` (creme), surface teal-navy translúcido, border `#1c4a52`, glow ouro, font-display serif itálica. Atmosfera `dark`.
+- **combat** — tríade Metaphor: accent **carmesim `#d11f3f`**, accent-2 **teal `#2fd4c4`**, accent-3 **magenta `#e6336e`**, ink **branco-creme `#f4f0e8`**, tinta preta `#0e0a0b`, ouro `#e6b84e` só como acento menor. Surface escura pintada (grunge), border carmesim/teal, glow magenta, `--sec-font-display` serif decorativa condensada caixa-alta. Atmosfera `dark`. **A tipografia diagonal e o splatter são os protagonistas — não molduras douradas.**
 - **journey / characters / arsenal / extras** — bundles **neutros** que reproduzem o visual atual (sem mudança perceptível). Suas identidades reais entram nos specs próprios. Jornada mantém atmosfera `parchment` por enquanto (o dusk-purple vem no spec de Jornada).
 
 ### 2.3 CSS com escopo
@@ -71,9 +71,11 @@ Isso permite restyling profundo dos elementos compartilhados (`mp-*`) sem afetar
 ### 2.4 Kit de primitivas de arte
 Pequeno conjunto de utilitários CSS/elementos reaproveitáveis. A Fundação entrega **apenas o que Combate precisa**; cada seção futura adiciona as suas (starfield, window-frame, shard).
 
-- `.sec-filigree-corner` — cantos em "L" dourados (4 por painel).
-- `.sec-slash` — faixa/realce diagonal.
-- `.sec-glass` — superfície de vidro escura com borda e top-accent.
+- `.mph-splatter` — respingo/pincelada de tinta (carmesim/teal/magenta) atrás de títulos e nas bordas dos painéis.
+- `.mph-banner` — tag em **paralelogramo inclinado magenta** com serif branca (missão, inimigo, turno).
+- `.mph-command` — comando em serif decorativa com **drop-cap gigante** + token de botão circular preto ao lado.
+- `.mph-lineart` — círculos concêntricos finos / radial (motivo "archetype tree", relógio "turn back the clock").
+- `.mph-panel` — superfície escura pintada com borda inclinada e respingo, **sem filigrana**.
 
 Implementadas com escopo em combat agora; generalizadas quando uma segunda seção precisar.
 
@@ -86,53 +88,60 @@ Implementadas com escopo em combat agora; generalizadas quando uma segunda seç�
 
 ---
 
-## 3. Combate — tratamento Metaphor completo
+## 3. Combate — linguagem real do Metaphor (refs anexadas)
 
-Mantém **funções e posições** dos painéis (arena central; painéis flutuantes esquerda/contexto/direita; banner de turno no topo; HUD inferior; modal de deck). "Ground-up" aqui = elevar **cada superfície** à fidelidade teatral Metaphor.
+As telas reais do jogo (batalha, menu, level-up) definem a linguagem — **não** é JRPG genérico de moldura dourada. Protagonistas visuais: **tipografia serif decorativa empilhada em diagonal**, **respingos de tinta (splatter)**, **tags em paralelogramo magenta**, **line-art branca de círculos** e a tríade **carmesim + teal + magenta** sobre preto/branco-creme. Ouro é acento menor.
+
+Mantém **funções e posições** dos painéis (arena central; painéis flutuantes; banners no topo; HUD/lista de party; modal de deck). "Ground-up" = trocar a linguagem visual de cada superfície pela do Metaphor.
+
+### 3.0 Paleta e tipografia
+- Tríade: carmesim `#d11f3f`, teal `#2fd4c4`, magenta `#e6336e`; preto `#0e0a0b`, branco-creme `#f4f0e8`; ouro `#e6b84e` (menor).
+- Display: serif decorativa condensada, caixa-alta, com **drop-cap gigante** na 1ª letra de cada comando.
+- HP em teal/verde, MP em azul (`#5a8ad8`), como na lista de party do jogo.
 
 ### 3.1 Stage / fundo da seção
-- Fundo teal-navy com **sweep de luz diagonal** + textura pintada sutil, substituindo o `mp-page-bg` plano só nesta seção (via `[data-section='combat'] .mp-page-bg`).
-- Vinheta mais quente nas bordas; leves linhas diagonais cyan/ouro em baixa opacidade.
+- Substitui `mp-page-bg` (via `[data-section='combat']`) por **canvas pintado**: base escura + textura grunge/halftone sutil + **respingos** carmesim/teal/magenta nas bordas.
+- **Line-art branca** de círculos concêntricos / radial ("archetype tree") em baixa opacidade ao fundo.
 
-### 3.2 Banner de turno
-- Forma com **corte diagonal** (não retângulo), moldura dourada filigranada.
-- Chip carmesim "é a vez de" à esquerda; nome em serif itálica creme; floреio cyan (losango) à direita.
-- Componente atual do banner em [App.tsx](../../../App.tsx) (`turnBanner`, ~5860-5880) re-estilizado.
+### 3.2 Banners (missão / inimigo / turno)
+- `.mph-banner` — **paralelogramo inclinado magenta** com serif branca. Usado no banner "é a vez de" (turno), no nome do alvo e em rótulos de missão.
+- Acento/barra teal curto ao lado do texto (como o marcador de alvo do jogo).
+- Componente do banner em [App.tsx](../../../App.tsx) (`turnBanner`, ~5860-5880) re-estilizado.
 
 ### 3.3 Painéis flutuantes (turn order / context / control)
-- Classe `mp-combat-panel-shell` → **vidro teal escuro** (`.sec-glass`) com **top-slash dourado** e **4 cantos filigranados** (`.sec-filigree-corner`).
-- Cabeçalhos em serif itálica dourada, com filete divisor.
+- `mp-combat-panel-shell` → `.mph-panel`: superfície escura pintada, **borda inclinada** com respingo, cabeçalho em serif decorativa com splatter atrás; **sem** filigrana dourada.
 - Componentes: `TurnOrderPanel`, `ContextCardList`, `CombatControlPanel` ([components/combat/](../../../components/combat/)).
 
-### 3.4 Arena / tokens
-- Stage com elipse de palco sutil e moldura fina.
-- Tokens de combatente com **anel de seleção em losango** (ouro = aliados, carmesim = inimigos), retrato circular dentro.
-- `CombatArena` ([components/combat/grid/CombatArena](../../../components/combat/grid/)) — anel/base dos tokens re-estilizado; layout do grid preservado.
+### 3.4 Menu de comando / ações — peça central
+- `mp-control-primary` / `mp-action-button` / `mp-skill-row` → estilo **comando diagonal empilhado** (`.mph-command`): primeira letra gigante estilizada, palavra em serif, respingo de tinta atrás, **token de botão circular preto** (atalho) ao lado. Acentos alternando teal/carmesim/magenta entre comandos.
+- Leve rotação/escalonamento diagonal entre itens (composição assimétrica, como nas telas de batalha).
 
-### 3.5 Botões de ação / controle
-- `mp-control-primary` / `mp-action-button` / `mp-skill-row` → botões **ornados, levemente assimétricos** (corte diagonal), borda dourada, energia cyan no hover; "perigo" em carmesim.
+### 3.5 Arena / tokens
+- Tokens com **anel de seleção angular/losango** recolorido — teal = aliados, carmesim = inimigos — com respingo de tinta na base; retrato circular dentro.
+- `CombatArena` ([components/combat/grid/CombatArena](../../../components/combat/grid/)) — só o anel/base muda; lógica de grid/hit preservada.
 
-### 3.6 HUD inferior
-- Medalhão de **HP circular** (arco) com avatar central.
-- Barra de **aura** pintada (cyan) com brilho.
-- **Condições** como joias em losango (ouro/carmesim/cyan).
-- Bloco atual do bottom HUD em `CombatTab` (~645-878) re-estilizado.
+### 3.6 HUD / lista de party (estilo Metaphor)
+- Linhas de combatente como no jogo: **moldura de retrato angular/inclinada**, nome em serif caixa-alta, **barra HP teal + barra MP azul**, numeral de ordem de turno, tag **"FRONT/F1"** em paralelogramo magenta.
+- HP do ativo pode manter medalhão circular, integrado à linha angular. Bloco do bottom HUD em `CombatTab` (~645-878).
 
-### 3.7 Modal de deck
-- Moldura de **códice ornamentado**: cantos filigranados, cabeçalho serif, pílulas de filtro douradas, rodapé com filete. Bloco em `CombatTab` (~878+).
+### 3.7 Motivos line-art
+- `.mph-lineart` — círculos concêntricos finos + radial; ao fundo, no marcador "RETRY / turn back the clock" (relógio) e detalhes de canto. Brancos, finos, baixa opacidade.
 
-### 3.8 Arquivos de Combate
-- `tabs/CombatTab.tsx` — banner, HUD, modal de deck, shells de painel.
-- `components/combat/TurnOrderPanel.tsx`, `ContextCardList.tsx`, `CombatControlPanel.tsx` — cabeçalhos, linhas, botões.
-- `components/combat/grid/CombatArena.tsx` (+ filhos do grid) — anéis de token.
-- `index.html` — blocos `[data-section='combat']` para `.mp-page-bg`, `.mp-combat-panel-shell`, `.mp-control-*`, `.mp-action-button`, `.mp-skill-row`, etc.
+### 3.8 Modal de deck
+- Mesmo idioma: cabeçalho serif com splatter, pílulas de filtro em paralelogramo (magenta/teal), line-art de canto, fundo grunge. Bloco em `CombatTab` (~878+).
+
+### 3.9 Arquivos de Combate
+- `tabs/CombatTab.tsx` — banners, HUD/lista de party, modal de deck, shells de painel, menu de comando.
+- `components/combat/TurnOrderPanel.tsx`, `ContextCardList.tsx`, `CombatControlPanel.tsx` — cabeçalhos, linhas, comandos.
+- `components/combat/grid/CombatArena.tsx` (+ filhos) — anéis de token.
+- `index.html` — blocos `[data-section='combat']` + utilitários `.mph-*` (splatter, banner, command, panel, lineart); precisam vir **depois** das regras `mp-*` base.
 
 ---
 
 ## 4. Verificação
 - `npm test` verde (inclui novo `sectionTheme.test.ts` e o `atmosphere.test.ts` existente).
 - Preview no navegador: trocar entre abas confirma que **só Combate** mudou; as outras quatro permanecem idênticas ao estado atual.
-- Combate: banner, painéis (cantos filigranados + top-slash), tokens em losango, botões ornados, HUD circular e modal de deck conferem com o mockup aprovado.
+- Combate: banners magenta inclinados, painéis pintados com splatter, menu de comando diagonal com drop-caps, tokens angulares teal/carmesim, lista de party com HP teal/MP azul, line-art branca e modal de deck conferem com as referências reais do Metaphor.
 - `prefers-reduced-motion` respeitado (sem novas animações que ignorem o toggle existente).
 
 ## 5. Fora de escopo (specs futuros)
@@ -145,3 +154,5 @@ Mantém **funções e posições** dos painéis (arena central; painéis flutuan
 - `index.html` tem um `<style>` grande e único; blocos com escopo `[data-section='combat']` precisam vir **depois** das regras `mp-*` base para vencer especificidade sem `!important`.
 - Re-estilizar o token do `CombatArena` não pode interferir na lógica de hit/seleção do grid — mudança só visual (anel/base).
 - Garantir que os bundles neutros das outras seções reproduzem o pixel atual (evitar regressão).
+- Splatter/halftone/line-art como **SVG/CSS leve** (não imagens raster pesadas); respeitar `prefers-reduced-motion` (splatter estático, sem animação).
+- Tipografia diagonal empilhada não pode quebrar legibilidade nem hit-area dos comandos — rotação só visual, alvo de clique permanece retangular.

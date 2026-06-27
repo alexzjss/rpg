@@ -34,6 +34,9 @@
             --ap-color:    #818cf8;
             --state-down:  #334155;
             --state-alert: #f97316;
+            /* fallback p/ vars injetadas inline pelo tema; combat sobrescreve inline via applySectionTheme */
+            --ember:       #f97316;
+            --ember-deep:  #c2410c;
             /* ── Fundação visual global (Etapa A) ──── */
             --accent-crimson: #dc2626;
             --accent-pink:    #ec4899;
@@ -818,8 +821,8 @@
             filter: brightness(1.08);
         }
         .mp-targeting-button--confirm {
-            background: linear-gradient(105deg, rgba(240,192,96,0.72), rgba(236,72,153,0.46)) !important;
-            border-color: rgba(240,192,96,0.68) !important;
+            background: linear-gradient(105deg, rgba(127,233,221,0.72), rgba(236,72,153,0.46)) !important;
+            border-color: rgba(127,233,221,0.68) !important;
             color: #fff7dc !important;
             box-shadow: 0 0 22px rgba(236,72,153,0.24), 0 10px 26px rgba(0,0,0,0.34) !important;
         }
@@ -1036,31 +1039,31 @@
             clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
             transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease !important;
         }
-        .mp-control-primary {
-            background: linear-gradient(105deg, #c2410c 0%, #f59e0b 34%, #ffe0a3 52%, #f0c060 68%, #c2410c 100%) !important;
+        :root[data-section='combat'] .mp-control-primary {
+            background: linear-gradient(105deg, #a3122e 0%, #d11f3f 34%, #cfeff0 52%, #7fe9dd 68%, #a3122e 100%) !important;
             color: #1a0f06 !important;
             border: 1px solid rgba(255,205,130,0.78) !important;
-            box-shadow: 0 8px 22px rgba(0,0,0,0.42), 0 0 22px rgba(249,115,22,0.5), inset 0 1px 0 rgba(255,255,255,0.4) !important;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.42), 0 0 22px rgba(209,31,63,0.5), inset 0 1px 0 rgba(255,255,255,0.4) !important;
             text-shadow: 0 1px 0 rgba(255,231,170,0.45);
         }
-        .mp-control-primary:hover {
+        :root[data-section='combat'] .mp-control-primary:hover {
             transform: translateY(-1px);
             filter: brightness(1.1) saturate(1.08);
-            box-shadow: 0 10px 28px rgba(0,0,0,0.5), 0 0 30px rgba(249,115,22,0.7), inset 0 1px 0 rgba(255,255,255,0.45) !important;
+            box-shadow: 0 10px 28px rgba(0,0,0,0.5), 0 0 30px rgba(209,31,63,0.7), inset 0 1px 0 rgba(255,255,255,0.45) !important;
         }
         /* Variante pequena (ex: Adicionar) — selo sutil, não ritual */
-        .mp-control-primary--small {
+        :root[data-section='combat'] .mp-control-primary--small {
             min-height: 31px;
-            background: linear-gradient(180deg, rgba(122,94,26,0.22), rgba(122,94,26,0.10)) !important;
+            background: linear-gradient(180deg, rgba(16,52,56,0.22), rgba(16,52,56,0.10)) !important;
             color: var(--gold-bright) !important;
-            border: 1px solid rgba(201,152,58,0.34) !important;
+            border: 1px solid rgba(47,212,196,0.34) !important;
             box-shadow: none !important;
             text-shadow: none;
         }
-        .mp-control-primary--small:hover {
-            background: linear-gradient(180deg, rgba(201,152,58,0.30), rgba(122,94,26,0.16)) !important;
-            border-color: rgba(240,192,96,0.5) !important;
-            box-shadow: 0 0 14px rgba(201,152,58,0.22) !important;
+        :root[data-section='combat'] .mp-control-primary--small:hover {
+            background: linear-gradient(180deg, rgba(47,212,196,0.30), rgba(16,52,56,0.16)) !important;
+            border-color: rgba(127,233,221,0.5) !important;
+            box-shadow: 0 0 14px rgba(47,212,196,0.22) !important;
         }
         .mp-control-secondary {
             background: rgba(19,16,11,0.54) !important;
@@ -1068,9 +1071,9 @@
             color: rgba(238,242,255,0.72) !important;
             box-shadow: none !important;
         }
-        .mp-control-secondary:hover {
+        :root[data-section='combat'] .mp-control-secondary:hover {
             color: var(--gold-pale) !important;
-            border-color: rgba(201,152,58,0.34) !important;
+            border-color: rgba(47,212,196,0.34) !important;
             background: rgba(255,255,255,0.07) !important;
         }
         .mp-control-danger {
@@ -1658,7 +1661,7 @@
         .mp-skill-row__brush {
             position: absolute;
             inset: 3px 0 2px 0;
-            background: linear-gradient(90deg, color-mix(in srgb, var(--skill-color) 85%, transparent), color-mix(in srgb, var(--skill-color) 50%, transparent) 58%, rgba(249,115,22,0.28));
+            background: linear-gradient(90deg, color-mix(in srgb, var(--skill-color) 85%, transparent), color-mix(in srgb, var(--skill-color) 50%, transparent) 58%, rgba(209,31,63,0.28));
             opacity: 0;
             transform: translateX(-18px) skewX(-8deg);
             clip-path: polygon(0 18%, 92% 0, 100% 42%, 94% 100%, 4% 86%);
@@ -2645,7 +2648,7 @@
         }
         .mp-battle-ghost--arena {
             font-size: clamp(110px, 13vw, 210px);
-            color: rgba(201,152,58,0.028);
+            color: rgba(47,212,196,0.028);
             top: 50%;
             left: 50%;
             transform: translate(-50%, -46%) rotate(-6deg);
@@ -2654,7 +2657,7 @@
         }
         .mp-battle-ghost--panel {
             font-size: 82px;
-            color: rgba(201,152,58,0.065);
+            color: rgba(47,212,196,0.065);
             bottom: -12px;
             left: -10px;
             letter-spacing: -0.05em;
@@ -2664,7 +2667,7 @@
         .mp-battle-ghost--skill {
             font-size: 60px;
             letter-spacing: -0.06em;
-            color: rgba(249,115,22,0.06);
+            color: rgba(209,31,63,0.06);
             pointer-events: none;
             user-select: none;
         }
@@ -2711,10 +2714,10 @@
             background: linear-gradient(90deg,
                 transparent 0%,
                 rgba(236,72,153,0.7) 18%,
-                rgba(240,192,96,0.95) 48%,
+                rgba(244,240,232,0.95) 48%,
                 rgba(103,232,249,0.65) 78%,
                 transparent 100%);
-            box-shadow: 0 0 22px rgba(236,72,153,0.3), 0 0 44px rgba(240,192,96,0.18);
+            box-shadow: 0 0 22px rgba(236,72,153,0.3), 0 0 44px rgba(47,212,196,0.18);
         }
 
         /* Fade inferior da arena */
@@ -2734,16 +2737,16 @@
         .mp-battle-arena-btn {
             border-radius: 0 !important;
             clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%) !important;
-            background: linear-gradient(180deg, rgba(30,20,11,0.9), rgba(18,12,7,0.9)) !important;
-            border: 1px solid rgba(201,152,58,0.3) !important;
-            color: var(--gold-mid) !important;
+            background: linear-gradient(180deg, rgba(10,26,30,0.9), rgba(8,18,20,0.9)) !important;
+            border: 1px solid rgba(47,212,196,0.3) !important;
+            color: #2fd4c4 !important;
             backdrop-filter: blur(12px) saturate(1.15) !important;
             transition: all 0.16s ease !important;
         }
         .mp-battle-arena-btn:hover {
-            background: rgba(50,32,6,0.72) !important;
-            border-color: rgba(201,152,58,0.6) !important;
-            color: var(--gold-pale) !important;
+            background: rgba(10,40,44,0.72) !important;
+            border-color: rgba(47,212,196,0.6) !important;
+            color: #f4f0e8 !important;
         }
         .mp-battle-arena-btn--active {
             background: rgba(34,197,94,0.16) !important;
@@ -2774,16 +2777,16 @@
             animation: mp-ember-rise var(--ember-dur, 10s) ease-in var(--ember-delay, 0s) infinite;
         }
         .mp-ember--ember {
-            background: radial-gradient(circle, #ffb454 0%, #f97316 45%, rgba(194,65,12,0) 72%);
-            box-shadow: 0 0 8px rgba(249,115,22,0.9), 0 0 16px rgba(249,115,22,0.5);
+            background: radial-gradient(circle, #ff5a78 0%, #d11f3f 45%, rgba(163,18,46,0) 72%);
+            box-shadow: 0 0 8px rgba(209,31,63,0.9), 0 0 16px rgba(209,31,63,0.5);
         }
         .mp-ember--gold {
-            background: radial-gradient(circle, #ffe9b0 0%, #f0c060 45%, rgba(201,152,58,0) 72%);
-            box-shadow: 0 0 8px rgba(240,192,96,0.85), 0 0 16px rgba(240,192,96,0.4);
+            background: radial-gradient(circle, #d9fff8 0%, #2fd4c4 45%, rgba(47,212,196,0) 72%);
+            box-shadow: 0 0 8px rgba(47,212,196,0.85), 0 0 16px rgba(47,212,196,0.4);
         }
         .mp-ember--spark {
-            background: radial-gradient(circle, #ffffff 0%, #ffd9a0 50%, rgba(255,180,90,0) 75%);
-            box-shadow: 0 0 10px rgba(255,220,160,0.95);
+            background: radial-gradient(circle, #ffffff 0%, #cfeff0 50%, rgba(255,180,90,0) 75%);
+            box-shadow: 0 0 10px rgba(244,240,232,0.95);
         }
         @keyframes mp-ember-rise {
             0%   { transform: translate(0, 0) scale(0.7); opacity: 0; }
@@ -2799,8 +2802,8 @@
             pointer-events: none;
             z-index: 1;
             background:
-                radial-gradient(ellipse 70% 42% at 50% -6%, rgba(249,115,22,0.30) 0%, rgba(194,65,12,0.12) 38%, transparent 66%),
-                radial-gradient(ellipse 50% 38% at 50% 108%, rgba(124,45,18,0.34) 0%, transparent 62%);
+                radial-gradient(ellipse 70% 42% at 50% -6%, rgba(209,31,63,0.30) 0%, rgba(163,18,46,0.12) 38%, transparent 66%),
+                radial-gradient(ellipse 50% 38% at 50% 108%, rgba(120,20,40,0.34) 0%, transparent 62%);
             animation: mp-forge-breathe 9s ease-in-out infinite;
         }
         @keyframes mp-forge-breathe {
@@ -2842,10 +2845,10 @@
             font-style: italic;
             color: transparent;
             background: linear-gradient(120deg,
-                rgba(201,152,58,0.10) 0%,
-                rgba(249,115,22,0.055) 42%,
-                rgba(201,152,58,0.045) 70%,
-                rgba(249,115,22,0.085) 100%);
+                rgba(244,240,232,0.10) 0%,
+                rgba(244,240,232,0.055) 42%,
+                rgba(244,240,232,0.045) 70%,
+                rgba(244,240,232,0.085) 100%);
             -webkit-background-clip: text;
             background-clip: text;
             text-shadow: none;
@@ -2856,13 +2859,13 @@
         .mp-battle-top-slash--molten {
             background: linear-gradient(90deg,
                 transparent 0%,
-                rgba(194,65,12,0.55) 12%,
-                rgba(249,115,22,0.95) 34%,
-                rgba(255,221,150,1) 50%,
-                rgba(240,192,96,0.95) 66%,
-                rgba(194,65,12,0.55) 88%,
+                rgba(163,18,46,0.55) 12%,
+                rgba(209,31,63,0.95) 34%,
+                rgba(244,240,232,1) 50%,
+                rgba(47,212,196,0.95) 66%,
+                rgba(163,18,46,0.55) 88%,
                 transparent 100%) !important;
-            box-shadow: 0 0 26px rgba(249,115,22,0.55), 0 0 52px rgba(240,192,96,0.28) !important;
+            box-shadow: 0 0 26px rgba(209,31,63,0.55), 0 0 52px rgba(47,212,196,0.28) !important;
             animation: mp-molten-flow 6s ease-in-out infinite;
         }
         @keyframes mp-molten-flow {
@@ -2891,8 +2894,8 @@
             border-radius: 50%;
             pointer-events: none;
             background: radial-gradient(circle,
-                color-mix(in srgb, var(--halo-color, #c9983a) 60%, transparent) 0%,
-                color-mix(in srgb, var(--halo-color, #c9983a) 18%, transparent) 40%,
+                color-mix(in srgb, var(--halo-color, #2fd4c4) 60%, transparent) 0%,
+                color-mix(in srgb, var(--halo-color, #2fd4c4) 18%, transparent) 40%,
                 transparent 64%);
             animation: mp-token-halo-pulse 2.4s ease-in-out infinite;
             z-index: -2;
@@ -3202,10 +3205,10 @@
             position: relative;
             padding: 16px 16px 14px !important;
             background: linear-gradient(102deg,
-                rgba(201,152,58,0.26),
-                rgba(249,115,22,0.18) 58%,
+                rgba(47,212,196,0.26),
+                rgba(209,31,63,0.18) 58%,
                 transparent) !important;
-            border-bottom: 1px solid rgba(201,152,58,0.34) !important;
+            border-bottom: 1px solid rgba(47,212,196,0.34) !important;
             clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
             overflow: hidden;
         }
@@ -3230,7 +3233,7 @@
             color: var(--gold-pale) !important;
             text-shadow:
                 0 3px 0 rgba(236,72,153,0.55),
-                0 0 22px rgba(201,152,58,0.3) !important;
+                0 0 22px rgba(47,212,196,0.3) !important;
             line-height: 1 !important;
         }
 
@@ -3414,21 +3417,52 @@
         .mp-page-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bg-base); }
         :root[data-atmosphere='parchment'] .mp-page-bg { background: var(--parchment-bg); }
 
+        /* ── JORNADA dusk: crepúsculo + estrelas + lua ── */
+        :root[data-atmosphere='dusk'] .mp-page-bg {
+          background:
+            radial-gradient(ellipse 130% 80% at 50% 100%, #4a2356 0%, transparent 62%),
+            linear-gradient(180deg, #150f2c 0%, #2a1a4e 55%, #3a2356 100%);
+        }
+        :root[data-atmosphere='dusk'] .mp-page-bg::before {
+          content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.9;
+          background-image:
+            radial-gradient(1.2px 1.2px at 14% 18%, rgba(233,226,255,0.9), transparent),
+            radial-gradient(1px 1px at 32% 30%, rgba(233,226,255,0.7), transparent),
+            radial-gradient(1.4px 1.4px at 56% 13%, #ffffff, transparent),
+            radial-gradient(1px 1px at 72% 26%, rgba(201,180,255,0.8), transparent),
+            radial-gradient(1.2px 1.2px at 84% 11%, rgba(233,226,255,0.85), transparent),
+            radial-gradient(1px 1px at 24% 44%, rgba(233,226,255,0.6), transparent),
+            radial-gradient(1px 1px at 46% 39%, rgba(201,180,255,0.7), transparent),
+            radial-gradient(1.2px 1.2px at 64% 48%, rgba(233,226,255,0.6), transparent);
+        }
+        :root[data-atmosphere='dusk'] .mp-page-bg::after {
+          content: ''; position: absolute; top: 7%; right: 8%; width: 44px; height: 44px; border-radius: 50%;
+          background: #ece3ff; box-shadow: -12px 7px 0 -2px #20153f; opacity: 0.82; pointer-events: none;
+        }
+
         /* ═══════════════════════════════════════════════════════════
            JORNADA — clima pergaminho / manuscrito de viagem
            ═══════════════════════════════════════════════════════════ */
         .mp-journey {
             position: relative;
-            color: var(--parchment-ink);
-            --jp-ink: #221a0f;
-            --jp-ink-soft: #5a4a30;
-            --jp-paper: #ece0c2;
-            --jp-paper-raised: #f4ead2;
-            --jp-paper-deep: #ddcca6;
-            --jp-edge: rgba(74,54,24,0.34);
-            --jp-edge-soft: rgba(74,54,24,0.18);
-            --jp-gold: #9a7322;
-            --jp-ember: #b4470f;
+            color: var(--text-primary);
+            --ct-win-from: #3a48b8;
+            --ct-win-to:   #201a62;
+            --ct-border:   #e8ecff;
+            --ct-ink:      #ece3ff;
+            --ct-ink-soft: #cdbef0;
+            --ct-lav:      #b9a3e8;
+            --ct-star:     #f0e2a0;
+            --ct-portal:   #bfe9ff;
+        }
+        /* janela estilo SNES (borda clara nítida + gradiente azul-roxo) */
+        .mp-journey .glass-panel {
+          background: linear-gradient(180deg, var(--ct-win-from), var(--ct-win-to)) !important;
+          border: 2px solid var(--ct-border) !important;
+          border-radius: 14px !important;
+          color: var(--ct-ink) !important;
+          box-shadow: 0 8px 30px rgba(10,6,30,0.5), inset 0 1px 0 rgba(255,255,255,0.18) !important;
+          backdrop-filter: none !important;
         }
         /* textura de papel sobre o fundo da página enquanto na Jornada */
         :root[data-atmosphere='parchment'] .mp-page-bg::after {
@@ -3441,72 +3475,39 @@
             background-size: 200px 200px, cover;
         }
 
-        /* ── Overrides de classes Tailwind escuras dentro da Jornada ── */
-        .mp-journey .text-white { color: var(--jp-ink) !important; }
-        .mp-journey .text-slate-300 { color: #43361f !important; }
-        .mp-journey .text-slate-400 { color: #5a4a30 !important; }
-        .mp-journey .text-slate-500 { color: #6b5a3c !important; }
-        .mp-journey .text-slate-600 { color: #7a6a48 !important; }
-        .mp-journey .bg-slate-900,
-        .mp-journey .bg-slate-900\/80,
-        .mp-journey .bg-slate-900\/80\/50,
-        .mp-journey .bg-slate-800,
-        .mp-journey .bg-black\/50 {
-            background: var(--jp-paper-raised) !important;
-            color: var(--jp-ink) !important;
-        }
-        .mp-journey .border-slate-800,
-        .mp-journey .border-slate-700,
-        .mp-journey .border-amber-900\/20 { border-color: var(--jp-edge) !important; }
-        .mp-journey .glass-panel {
-            background: linear-gradient(135deg, var(--jp-paper-raised), var(--jp-paper)) !important;
-            border: 1px solid var(--jp-edge) !important;
-            color: var(--jp-ink) !important;
-            box-shadow: 0 10px 30px rgba(60,40,10,0.18), inset 0 1px 0 rgba(255,255,255,0.5) !important;
-            backdrop-filter: none !important;
-        }
-        /* botões escuros viram pergaminho gravado */
-        .mp-journey .bg-slate-900.hover\:bg-slate-800,
-        .mp-journey button.bg-slate-900 {
-            background: linear-gradient(180deg, var(--jp-paper-raised), var(--jp-paper-deep)) !important;
-            color: var(--jp-ink) !important;
-            border-color: var(--jp-edge) !important;
-        }
-        .mp-journey textarea::placeholder,
-        .mp-journey input::placeholder { color: rgba(74,54,24,0.45) !important; }
-
         /* ── Header iluminado da Jornada ── */
         .mp-journey-title {
-            font-family: 'Playfair Display', serif !important;
+            font-family: 'Playfair Display', Georgia, serif !important;
             font-style: italic; font-weight: 900;
-            color: var(--jp-ink) !important;
-            text-shadow: 0 1px 0 rgba(255,255,255,0.5), 0 2px 14px rgba(154,115,34,0.22);
+            color: var(--ct-ink) !important;
+            text-shadow: 0 2px 18px rgba(120,90,220,0.5);
             letter-spacing: -0.01em;
         }
         .mp-journey-kicker {
-            font-family: 'Cinzel', serif !important;
-            color: var(--jp-ember) !important;
+            font-family: 'Cinzel', Georgia, serif !important;
+            color: var(--ct-lav) !important;
             letter-spacing: 0.32em !important;
         }
         /* sub-tabs em pergaminho */
         .mp-journey-subtabs {
-            background: rgba(120,90,30,0.10) !important;
-            border: 1px solid var(--jp-edge-soft) !important;
+            background: rgba(10,6,30,0.42) !important;
+            border: 1px solid rgba(200,180,255,0.14) !important;
         }
 
         /* ── Local como miniatura de manuscrito iluminado ── */
         /* Moldura de ouro + paspatur de pergaminho via box-shadow (sem reestruturar JSX) */
         .mp-journey-framed {
-            border: 0 !important;
+            border: 0 !important; border-radius: 16px !important;
             box-shadow:
-                0 0 0 3px var(--jp-gold),
-                0 0 0 14px #ece0c2,
-                0 0 0 16px var(--jp-edge),
-                0 18px 50px rgba(60,40,10,0.34) !important;
+                0 0 0 2px var(--ct-border),
+                0 0 0 5px rgba(58,72,184,0.6),
+                0 0 42px rgba(120,90,220,0.42),
+                0 18px 50px rgba(10,6,30,0.6) !important;
         }
         .mp-journey-frame-overlay {
             position: absolute; inset: 0; z-index: 18; pointer-events: none;
-            box-shadow: inset 0 0 0 2px rgba(255,238,190,0.55), inset 0 0 0 1px rgba(74,54,24,0.5);
+            box-shadow: inset 0 0 0 1px rgba(232,236,255,0.5);
+            background: radial-gradient(circle at 50% 44%, rgba(191,233,255,0.14), transparent 46%);
         }
         .mp-journey-frame-corner {
             position: absolute; width: 58px; height: 58px; z-index: 19; pointer-events: none;
@@ -3520,46 +3521,48 @@
 
         /* ── Diário de Bordo como crônica em pergaminho ── */
         .mp-journey-chronicle {
-            background: linear-gradient(135deg, #f4ead2, #e8dab6) !important;
-            border: 1px solid var(--jp-edge) !important;
-            border-left: 5px solid var(--jp-ember) !important;
-            box-shadow: 0 10px 30px rgba(60,40,10,0.2), inset 0 0 40px rgba(154,115,34,0.06) !important;
+            background: linear-gradient(180deg, var(--ct-win-from), var(--ct-win-to)) !important;
+            border: 2px solid var(--ct-border) !important;
+            border-left: 5px solid var(--ct-lav) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 8px 30px rgba(10,6,30,0.5), inset 0 0 40px rgba(120,90,220,0.12) !important;
         }
         .mp-journey-chronicle__title {
-            font-family: 'Cinzel', serif !important;
-            color: var(--jp-ember) !important;
+            font-family: 'Cinzel', Georgia, serif !important;
+            color: var(--ct-lav) !important;
             letter-spacing: 0.22em !important;
         }
         .mp-journey-chronicle textarea {
             background: transparent !important;
             border: none !important;
-            color: var(--jp-ink) !important;
+            color: var(--ct-ink-soft) !important;
             font-family: 'Inter', sans-serif;
             font-style: italic;
             line-height: 1.7 !important;
         }
         .mp-journey-dropcap::first-letter {
-            float: left; font-family: 'Playfair Display', serif; font-style: italic;
+            float: left; font-family: 'Playfair Display', Georgia, serif; font-style: italic;
             font-weight: 900; font-size: 3.1em; line-height: 0.78;
-            padding: 6px 10px 0 0; color: var(--jp-ember);
-            text-shadow: 0 2px 6px rgba(180,71,15,0.25);
+            padding: 6px 10px 0 0; color: var(--ct-star);
+            text-shadow: 0 2px 10px rgba(240,226,160,0.4);
         }
+        .mp-journey-chronicle textarea::placeholder { color: rgba(205,190,242,0.5) !important; }
 
-        /* ── Cozinhar / Forjar / Upgrades: cards → pergaminho ── */
-        .mp-jcard { background: linear-gradient(135deg, var(--jp-paper-raised), var(--jp-paper)) !important; }
-        .mp-jcard__panel { background: var(--jp-paper-raised) !important; }
-        .mp-jcard__white { color: var(--jp-ink) !important; }
-        .mp-jcard__muted { color: rgba(34,26,15,0.60) !important; }
-        .mp-jcard__faint { color: rgba(34,26,15,0.40) !important; }
-        /* selects/inputs escuros -> pergaminho */
+        /* ── Cozinhar / Forjar / Upgrades: cards → dusk ── */
+        .mp-journey .mp-jcard { background: linear-gradient(180deg, var(--ct-win-from), var(--ct-win-to)) !important; }
+        .mp-journey .mp-jcard__panel { background: rgba(20,16,52,0.6) !important; }
+        .mp-journey .mp-jcard__white { color: var(--ct-ink) !important; }
+        .mp-journey .mp-jcard__muted { color: var(--ct-ink-soft) !important; }
+        .mp-journey .mp-jcard__faint { color: var(--ct-lav) !important; }
+        /* selects/inputs → dusk */
         .mp-journey-cards select,
         .mp-journey-cards input:not([type=range]),
         .mp-journey-cards textarea {
-            background: rgba(255,250,238,0.7) !important;
-            color: var(--jp-ink) !important;
-            border-color: var(--jp-edge) !important;
+            background: rgba(20,16,52,0.7) !important;
+            color: var(--ct-ink) !important;
+            border-color: rgba(200,180,255,0.25) !important;
         }
-        .mp-journey-cards option { color: #221a0f; background: #f4ead2; }
+        .mp-journey-cards option { color: #ece3ff; background: #201a62; }
 
         /* ═══════════════════════════════════════════════════════════
            ABAS ESCURAS (Personagens/Habilidades/Itens/Selos/Extras)
@@ -3621,6 +3624,115 @@
         }
         .mp-utils__btn:hover { color: var(--text-primary); border-color: var(--brass); background: rgba(32,25,14,0.92); }
         .mp-utils__btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ═══════════════════════════════════════════════════════════
+   IDENTIDADES POR SEÇÃO — base + primitivas (Metaphor combat)
+   Defaults globais p/ tabs sem override; combat sobrescreve via applySectionTheme. Os blocos .mph-* e [data-section='combat'] abaixo é que são escopados.
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --sec-accent:   #c9983a;
+  --sec-accent-2: #67e8f9;
+  --sec-accent-3: #ec4899;
+  --sec-ink:      #f3ecdd;
+  --sec-mp:       #5a8ad8;
+  --sec-gold:     #e6b84e;
+}
+
+/* Splatter de tinta (carmesim/teal/magenta) — leve, via radial-gradient */
+.mph-splatter { position: relative; }
+.mph-splatter::before {
+  content: ''; position: absolute; inset: -8px; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 30%, rgba(209,31,63,0.85), transparent 30%),
+    radial-gradient(circle at 78% 60%, rgba(47,212,196,0.7), transparent 26%),
+    radial-gradient(circle at 40% 85%, rgba(230,51,110,0.7), transparent 26%);
+  opacity: 0.5;
+}
+
+/* Tag em paralelogramo magenta com serif branca */
+.mph-banner {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--sec-accent-3, #e6336e); color: #fff;
+  font-family: Georgia, 'Times New Roman', serif;
+  padding: 6px 22px 6px 16px;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+.mph-banner__accent { width: 4px; align-self: stretch; background: var(--sec-accent-2, #2fd4c4); }
+
+/* Token de botão circular preto (atalho) */
+.mph-token {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #0e0a0b; border: 1px solid var(--sec-ink, #f4f0e8);
+  font-family: Arial, sans-serif; font-weight: 700; font-size: 11px; color: var(--sec-ink, #f4f0e8);
+}
+
+/* Line-art: círculos concêntricos brancos finos */
+.mph-lineart {
+  background:
+    repeating-radial-gradient(circle at center, transparent 0 14px,
+      rgba(244,240,232,0.5) 14px 15px, transparent 15px 28px);
+}
+
+/* ── COMBATE: stage pintado (Metaphor) ── */
+:root[data-section='combat'] .mp-page-bg {
+  background:
+    radial-gradient(circle at 10% 16%, rgba(209,31,63,0.18), transparent 26%),
+    radial-gradient(circle at 6% 54%, rgba(47,212,196,0.13), transparent 24%),
+    radial-gradient(circle at 14% 84%, rgba(230,51,110,0.15), transparent 26%),
+    radial-gradient(circle at 90% 90%, rgba(47,212,196,0.10), transparent 30%),
+    #15100f;
+}
+:root[data-section='combat'] .mp-page-bg::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.06;
+  background:
+    repeating-radial-gradient(circle at 26% 72%, transparent 0 26px,
+      rgba(244,240,232,0.6) 26px 27px, transparent 27px 54px);
+}
+:root[data-section='combat'] .mp-page-bg::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.16; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+        /* Combat-scoped glaze override — Metaphor cool palette */
+        :root[data-section='combat'] .mp-glaze {
+          background:
+            radial-gradient(60% 50% at 18% 12%, rgba(209,31,63,0.12), transparent 60%),
+            radial-gradient(55% 50% at 85% 80%, rgba(47,212,196,0.10), transparent 60%);
+        }
+
+/* superfície dos painéis flutuantes + acento de respingo magenta no canto */
+:root[data-section='combat'] .mp-combat-panel-shell {
+  border: 1px solid rgba(47,212,196,0.26);
+  box-shadow: 0 10px 34px rgba(0,0,0,0.5), inset 0 1px 0 rgba(244,240,232,0.05);
+  position: relative;
+}
+:root[data-section='combat'] .mp-combat-panel-shell::after {
+  content: ''; position: absolute; left: -5px; top: -5px; width: 58px; height: 26px; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle at 40% 50%, rgba(230,51,110,0.75), transparent 62%);
+  opacity: 0.5;
+}
+
+/* recolora o brilho dourado dos painéis para teal */
+:root[data-section='combat'] .mp-floating-panel::after {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.06), transparent 28%),
+    radial-gradient(ellipse at 30% 0%, rgba(47,212,196,0.12), transparent 58%);
+}
+
+/* ── COMBATE: comandos em serif ── */
+:root[data-section='combat'] .mp-control-primary,
+:root[data-section='combat'] .mp-control-secondary,
+:root[data-section='combat'] .mp-action-button,
+:root[data-section='combat'] .mp-skill-row {
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.4px;
+}
+:root[data-section='combat'] .mp-action-button:hover:not(:disabled),
+:root[data-section='combat'] .mp-skill-row:hover:not(:disabled) {
+  border-color: var(--sec-accent-2, #2fd4c4);
+  box-shadow: 0 0 0 1px rgba(47,212,196,0.45), 0 6px 18px rgba(0,0,0,0.5);
+}
     </style>
 <script type="importmap">
 {
