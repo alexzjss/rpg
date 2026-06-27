@@ -23,9 +23,16 @@ const COMBAT_VARS: Record<string, string> = {
   '--ember-deep':  '#a3122e',
 };
 
+const JOURNEY_VARS: Record<string, string> = {
+  '--sec-accent':   '#b9a3e8', // lavanda
+  '--sec-accent-2': '#3a48b8', // azul-roxo da janela SNES
+  '--sec-accent-3': '#c9568f', // magenta (alertas)
+  '--sec-ink':      '#ece3ff',
+};
+
 export const SECTION_THEMES: Record<TabId, SectionThemeDef> = {
   combat:     { atmosphere: atmosphereForTab('combat'),     vars: COMBAT_VARS },
-  journey:    { atmosphere: atmosphereForTab('journey'),    vars: {} },
+  journey:    { atmosphere: atmosphereForTab('journey'),    vars: JOURNEY_VARS },
   characters: { atmosphere: atmosphereForTab('characters'), vars: {} },
   arsenal:    { atmosphere: atmosphereForTab('arsenal'),    vars: {} },
   extras:     { atmosphere: atmosphereForTab('extras'),     vars: {} },

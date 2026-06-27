@@ -14,6 +14,10 @@ describe('SECTION_THEMES', () => {
     expect(SECTION_THEMES.combat.vars['--sec-accent-2']).toBe('#2fd4c4');
     expect(SECTION_THEMES.combat.vars['--sec-accent-3']).toBe('#e6336e');
   });
+  it('journey usa atmosfera dusk e acento lavanda', () => {
+    expect(SECTION_THEMES.journey.atmosphere).toBe('dusk');
+    expect(SECTION_THEMES.journey.vars['--sec-accent']).toBe('#b9a3e8');
+  });
   it('ALL_SEC_VAR_KEYS cobre todas as chaves usadas por qualquer seção', () => {
     for (const t of ALL_TABS) {
       for (const k of Object.keys(SECTION_THEMES[t].vars)) {
