@@ -8,7 +8,7 @@ export interface UseKeyboardNav {
 
 /**
  * Navegação só por teclado (sem UI visível):
- * - teclas 1..7 vão direto às abas (na ordem de NAV_ORDER);
+ * - teclas 1..4 vão direto às abas (na ordem de NAV_ORDER);
  * - ArrowRight/ArrowLeft ciclam por todas as abas.
  */
 export function useKeyboardNav({ activeTab, onSelect }: {
@@ -16,7 +16,7 @@ export function useKeyboardNav({ activeTab, onSelect }: {
   onSelect: (id: TabId) => void;
 }): UseKeyboardNav {
   const handleKey = useCallback((e: KeyboardEvent) => {
-    if (e.key >= '1' && e.key <= '5') {
+    if (e.key >= '1' && e.key <= '4') {
       const id = NAV_ORDER[Number(e.key) - 1];
       if (id) { e.preventDefault(); onSelect(id); }
       return;
