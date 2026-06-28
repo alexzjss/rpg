@@ -2,7 +2,8 @@ import React from 'react';
 import { Swords, X } from 'lucide-react';
 import type { Card, Character, Item, Seal, Weapon } from '../types';
 import type { CenaState, SceneState } from '../utils/cena';
-import { setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken, setEncounterActive } from '../utils/cena';
+import { setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken } from '../utils/cena';
+import { startEncounter, endEncounter, advanceTurn, prevTurn } from '../utils/encounter';
 import { resolveCards, resolveSeals, resolveOwnedItems, resolveWeapons } from '../utils/items';
 import LogPanel from './cena/LogPanel';
 import SceneTitle from './cena/SceneTitle';
@@ -36,11 +37,23 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
   const presentNpcs = cena.npcRoster.filter(n => n.present && !n.hidden);
   const participants: Character[] = [...party, ...presentNpcs];
 
-  const activeChar: Character | null = !active
+  const byId = (id: string): Character | null =>
+    party.find(c => c.id === id) ?? cena.npcRoster.find(n => n.id === id) ?? null;
+  const initiativeParticipants = participants.map(p => ({
+    id: p.id, side: (party.some(c => c.id === p.id) ? 'party' : 'npc') as 'party' | 'npc',
+    name: p.name, baseInitiative: p.baseInitiative,
+  }));
+  const turnEntry = combat ? cena.encounter.order[cena.encounter.turnIndex] : undefined;
+  const turnActor = turnEntry ? byId(turnEntry.refId) : null;
+  const isDefeatedEntry = (e: { refId: string }) => { const c = byId(e.refId); return !!c && c.currentHp <= 0; };
+  const orderedParticipants = cena.encounter.order.map(e => byId(e.refId)).filter((c): c is Character => !!c);
+
+  const selectedChar: Character | null = !active
     ? null
     : active.side === 'party'
       ? party.find(c => c.id === active.id) ?? null
       : cena.npcRoster.find(n => n.id === active.id) ?? null;
+  const activeChar: Character | null = combat ? turnActor : selectedChar;
 
   const activeCards = activeChar ? resolveCards(activeChar, cards) : [];
   const activeSeals = activeChar ? resolveSeals(activeChar, seals) : [];
@@ -54,7 +67,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
   };
 
   const toggleBtn = (
-    <button onClick={() => updateCena(setEncounterActive(cena, !combat))}
+    <button onClick={() => updateCena(combat ? endEncounter(cena) : startEncounter(cena, initiativeParticipants))}
       style={{ flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 0', cursor: 'pointer',
         fontFamily: "'Anton',sans-serif", fontSize: 16, letterSpacing: '2px',
         background: combat ? '#15151a' : 'linear-gradient(100deg,#E0102B,#a60c20)',
@@ -79,11 +92,13 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       <div style={col}>
         {toggleBtn}
         {combat
-          ? <InitiativeTracker round={cena.encounter.round} participants={participants} activeId={active?.id ?? null} />
+          ? <InitiativeTracker round={cena.encounter.round} participants={orderedParticipants} activeId={turnEntry?.refId ?? null}
+              onPrev={() => updateCena({ ...cena, encounter: prevTurn(cena.encounter, isDefeatedEntry) })}
+              onNext={() => updateCena({ ...cena, encounter: advanceTurn(cena.encounter, isDefeatedEntry) })} />
           : <SceneTitle scene={cena.scene} onSceneChange={onSceneChange} />}
         <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
           <MapBoard image={cena.scene.image} participants={participants} tokens={cena.tokens}
-            activeId={active?.id ?? null}
+            activeId={combat ? (turnEntry?.refId ?? null) : (active?.id ?? null)}
             onMoveToken={(id, pos) => updateCena(setToken(cena, id, pos))}
             onSelect={selectById}
             combat={combat} enemyIds={presentNpcs.map(n => n.id)} />
