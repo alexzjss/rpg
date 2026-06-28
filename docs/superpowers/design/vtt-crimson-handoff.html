@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<meta name="design_doc_mode" content="canvas">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Barlow Condensed', sans-serif; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: #2a2a30; border-radius: 3px; }
+  @keyframes pulseRed { 0%,100% { box-shadow: 0 0 0 0 rgba(224,16,43,.5);} 50% { box-shadow: 0 0 0 5px rgba(224,16,43,0);} }
+  image-slot { display:block; }
+</style>
+</helmet>
+
+<!-- ===================== FRAME A : EQUILÍBRIO ===================== -->
+<div style="position:absolute; left:0; top:0; width:1500px;">
+  <div data-drags-parent="1" style="display:flex; align-items:center; gap:12px; margin-bottom:14px; font-family:'Barlow Semi Condensed',sans-serif;">
+    <span style="font-size:13px; font-weight:700; letter-spacing:3px; color:#E0102B; text-transform:uppercase;">Variação A</span>
+    <span style="font-size:13px; font-weight:600; letter-spacing:1px; color:#7a7a82; text-transform:uppercase;">Equilíbrio — Exploração</span>
+  </div>
+
+  <div style="width:1500px; height:940px; background:#0a0a0c; border-radius:4px; box-shadow:0 24px 70px rgba(0,0,0,.55); overflow:hidden; position:relative; display:grid; grid-template-columns:318px 1fr 364px; gap:14px; padding:16px; color:#ececef; font-size:15px;">
+
+    <!-- subtle red diagonal field -->
+    <div style="position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(118deg, rgba(224,16,43,0) 0 38px, rgba(224,16,43,.022) 38px 39px);"></div>
+
+    <!-- ===== LEFT COLUMN ===== -->
+    <div style="display:flex; flex-direction:column; gap:14px; min-height:0; position:relative; z-index:1;">
+      <!-- LOG / NOTAS -->
+      <div style="flex:1; min-height:0; background:#101013; border:1px solid #1e1e24; border-radius:3px; display:flex; flex-direction:column; clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%);">
+        <div style="display:flex; gap:0; border-bottom:1px solid #1e1e24;">
+          <div style="flex:1; padding:13px 0; text-align:center; font-family:'Barlow Semi Condensed'; font-weight:700; font-size:13px; letter-spacing:2.5px; color:#E0102B; border-bottom:2px solid #E0102B;">LOG</div>
+          <div style="flex:1; padding:13px 0; text-align:center; font-family:'Barlow Semi Condensed'; font-weight:600; font-size:13px; letter-spacing:2.5px; color:#5e5e66;">NOTAS</div>
+        </div>
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:11px;">
+          <div style="font-size:13px; color:#5a5a62; font-style:italic; letter-spacing:.5px;">— A sessão começou em Local Desconhecido —</div>
+          <!-- journal entry -->
+          <div style="background:#15151a; border-left:2px solid #6b6b74; padding:10px 12px; border-radius:0 3px 3px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px;"><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; letter-spacing:1.5px; color:#b9b9c0;">MIKHAIL MUSEIGEN</span><span style="font-size:11px; color:#55555c; letter-spacing:1px;">21:04</span></div>
+            <div style="font-size:14px; color:#cfcfd4; line-height:1.35;">A névoa engole o corredor. Avanço com a lâmina baixa.</div>
+          </div>
+          <!-- roll card -->
+          <div style="background:linear-gradient(135deg,#1a0d10,#141014); border:1px solid #3a1620; border-radius:3px; padding:11px 12px; display:flex; align-items:center; gap:12px; clip-path:polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%);">
+            <div style="width:46px; height:46px; flex:none; background:#E0102B; display:flex; align-items:center; justify-content:center; font-family:'Anton'; font-size:24px; color:#fff; clip-path:polygon(0 0,100% 0,100% 80%,80% 100%,0 100%);">17</div>
+            <div style="flex:1;"><div style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; letter-spacing:1.5px; color:#E0102B;">FUHAKU · d20</div><div style="font-size:13px; color:#9a9aa1;">Shinkai Black — <span style="color:#e9e9ee; font-weight:600;">Sucesso</span></div></div>
+          </div>
+          <div style="background:#15151a; border-left:2px solid #6b6b74; padding:10px 12px; border-radius:0 3px 3px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px;"><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; letter-spacing:1.5px; color:#b9b9c0;">MESTRE</span><span style="font-size:11px; color:#55555c; letter-spacing:1px;">21:06</span></div>
+            <div style="font-size:14px; color:#cfcfd4; line-height:1.35;">Algo respira além da porta selada. A Aura treme.</div>
+          </div>
+        </div>
+        <!-- message input -->
+        <div style="padding:10px 12px; border-top:1px solid #1e1e24; display:flex; align-items:center; gap:8px;">
+          <div style="flex:1; font-size:13px; color:#55555c; letter-spacing:.5px;">Rolar, falar ou /comando…</div>
+          <div style="width:30px; height:30px; flex:none; background:#E0102B; display:flex; align-items:center; justify-content:center; clip-path:polygon(0 0,100% 0,100% 75%,75% 100%,0 100%);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+        </div>
+      </div>
+
+      <!-- SELOS -->
+      <div style="height:212px; flex:none; background:#101013; border:1px solid #1e1e24; border-radius:3px; padding:14px; display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;"><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; letter-spacing:2.5px; color:#6f6f76;">SELOS</span><span style="flex:1; height:1px; background:linear-gradient(90deg,#E0102B,transparent);"></span><span style="font-size:11px; color:#55555c; letter-spacing:1px;">2 / 4</span></div>
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          <div style="display:flex; align-items:center; gap:11px; background:#15151a; border:1px solid #26262c; padding:9px 11px; border-radius:3px;">
+            <div style="width:30px; height:30px; flex:none; background:#E0102B; clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); display:flex; align-items:center; justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg></div>
+            <div style="flex:1;"><div style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:13px; letter-spacing:.5px; color:#e9e9ee;">Selo da Brasa</div><div style="font-size:12px; color:#7d7d85;">Aura +2 ao atacar</div></div>
+          </div>
+          <div style="display:flex; align-items:center; gap:11px; background:#15151a; border:1px solid #26262c; padding:9px 11px; border-radius:3px;">
+            <div style="width:30px; height:30px; flex:none; background:#2a2a30; clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); display:flex; align-items:center; justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b9b9c0" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg></div>
+            <div style="flex:1;"><div style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:13px; letter-spacing:.5px; color:#e9e9ee;">Selo do Vazio</div><div style="font-size:12px; color:#7d7d85;">Ignora 1 Forma inimiga</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CENTER COLUMN ===== -->
+    <div style="display:flex; flex-direction:column; gap:14px; min-height:0; position:relative; z-index:1;">
+      <!-- scene title -->
+      <div style="flex:none; background:linear-gradient(180deg,#101013,#0c0c0f); border:1px solid #1e1e24; border-radius:3px; padding:16px 22px; position:relative; overflow:hidden;">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:5px; background:#E0102B;"></div>
+        <div style="position:absolute; right:14px; top:14px; width:34px; height:34px; background:#15151a; border:1px solid #2a2a30; display:flex; align-items:center; justify-content:center; border-radius:3px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9a9aa1" stroke-width="1.6"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/></svg></div>
+        <div style="text-align:center;">
+          <div style="font-family:'Cinzel'; font-weight:700; font-size:30px; letter-spacing:4px; color:#f1f1f4; text-transform:uppercase;">Local Desconhecido</div>
+          <div style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:12px; letter-spacing:5px; color:#E0102B; margin-top:3px;">A FORTALEZA SOTERRADA</div>
+        </div>
+        <!-- environment toggles -->
+        <div style="display:flex; gap:8px; justify-content:center; margin-top:14px;">
+          <div style="width:38px; height:38px; background:#E0102B; display:flex; align-items:center; justify-content:center; clip-path:polygon(0 0,100% 0,100% 78%,78% 100%,0 100%);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></div>
+          <div style="width:38px; height:38px; background:#15151a; border:1px solid #26262c; display:flex; align-items:center; justify-content:center; clip-path:polygon(0 0,100% 0,100% 78%,78% 100%,0 100%);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7d7d85" stroke-width="1.6"><path d="M7 16a4 4 0 010-8 5 5 0 019.6-1A3.5 3.5 0 0117 16H7z"/><path d="M8 19l-1 2M12 19l-1 2M16 19l-1 2"/></svg></div>
+          <div style="width:38px; height:38px; background:#15151a; border:1px solid #26262c; display:flex; align-items:center; justify-content:center; clip-path:polygon(0 0,100% 0,100% 78%,78% 100%,0 100%);"><svg width="18" height="18" viewBox="0 0 24 24" fill="#7d7d85" stroke="none"><path d="M13 2L4 14h6l-1 8 10-12h-7z"/></svg></div>
+          <div style="width:38px; height:38px; background:#15151a; border:1px solid #26262c; display:flex; align-items:center; justify-content:center; clip-path:polygon(0 0,100% 0,100% 78%,78% 100%,0 100%);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7d7d85" stroke-width="1.6"><path d="M3 9h18M5 13h14M4 17h16"/></svg></div>
+          <div style="width:38px; height:38px; background:#15151a; border:1px solid #26262c; display:flex; align-items:center; justify-content:center; clip-path:polygon(0 0,100% 0,100% 78%,78% 100%,0 100%);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7d7d85" stroke-width="1.6"><path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/></svg></div>
+          <div style="width:38px; height:38px; background:#15151a; border:1px solid #26262c; display:flex; align-items:center; justify-content:center; clip-path:polygon(0 0,100% 0,100% 78%,78% 100%,0 100%);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7d7d85" stroke-width="1.6"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg></div>
+        </div>
+      </div>
+
+      <!-- map / scene -->
+      <div style="flex:1; min-height:0; position:relative; border:1px solid #1e1e24; border-radius:3px; overflow:hidden; background:#08080a;">
+        <image-slot id="vtt_map_a" style="position:absolute; inset:0; width:100%; height:100%;" shape="rect" placeholder="Solte o mapa da cena aqui"></image-slot>
+        <div style="position:absolute; inset:0; pointer-events:none; background:radial-gradient(120% 90% at 50% 40%, transparent 40%, rgba(0,0,0,.7) 100%);"></div>
+        <div style="position:absolute; inset:0; pointer-events:none; background:linear-gradient(0deg, rgba(224,16,43,.05), transparent 30%); opacity:.7;"></div>
+        <!-- grid overlay -->
+        <div style="position:absolute; inset:0; pointer-events:none; opacity:.12; background:linear-gradient(#fff 1px, transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px); background-size:54px 54px;"></div>
+        <!-- a token on the board -->
+        <div style="position:absolute; left:46%; top:44%; width:54px; height:54px; border-radius:50%; border:2px solid #E0102B; box-shadow:0 0 18px rgba(224,16,43,.6); overflow:hidden; animation:pulseRed 2.4s infinite;"><image-slot id="vtt_token_a" style="width:100%; height:100%;" shape="circle" placeholder=""></image-slot></div>
+        <div style="position:absolute; left:12px; bottom:12px; font-family:'Barlow Semi Condensed'; font-weight:600; font-size:11px; letter-spacing:2px; color:#8a8a90; background:rgba(8,8,10,.6); padding:5px 9px; border-radius:2px; backdrop-filter:blur(2px);">CAMADA · MESTRE</div>
+      </div>
+
+      <!-- active character bar -->
+      <div style="flex:none; align-self:center; width:460px; background:linear-gradient(180deg,#141417,#0e0e11); border:1px solid #2a2a30; border-radius:3px; padding:14px 18px; display:flex; align-items:center; gap:16px; position:relative; clip-path:polygon(0 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%);">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:4px; background:#E0102B;"></div>
+        <div style="width:58px; height:58px; flex:none; border-radius:50%; border:2px solid #E0102B; overflow:hidden;"><image-slot id="vtt_active_a" style="width:100%; height:100%;" shape="circle" placeholder=""></image-slot></div>
+        <div style="flex:1;">
+          <div style="font-family:'Anton'; font-size:22px; letter-spacing:2px; color:#f1f1f4; line-height:1; text-transform:uppercase;">Shinkai Black</div>
+          <div style="margin-top:9px; display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex; align-items:center; gap:9px;"><span style="width:34px; font-family:'Barlow Semi Condensed'; font-weight:700; font-size:11px; letter-spacing:1px; color:#8a8a90;">HP</span><span style="flex:1; height:9px; background:#26262c; border-radius:2px; overflow:hidden;"><span style="display:block; width:75%; height:100%; background:linear-gradient(90deg,#B00C22,#E0102B);"></span></span><span style="width:42px; text-align:right; font-family:'Barlow Semi Condensed'; font-weight:700; font-size:13px; color:#e9e9ee;">45/60</span></div>
+            <div style="display:flex; align-items:center; gap:9px;"><span style="width:34px; font-family:'Barlow Semi Condensed'; font-weight:700; font-size:11px; letter-spacing:1px; color:#8a8a90;">AURA</span><span style="flex:1; height:9px; background:#26262c; border-radius:2px; overflow:hidden;"><span style="display:block; width:95%; height:100%; background:linear-gradient(90deg,#6f6f9e,#cfcfe6);"></span></span><span style="width:42px; text-align:right; font-family:'Barlow Semi Condensed'; font-weight:700; font-size:13px; color:#e9e9ee;">19/20</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RIGHT COLUMN ===== -->
+    <div style="display:flex; flex-direction:column; gap:14px; min-height:0; position:relative; z-index:1;">
+      <!-- PARTY / NPCS -->
+      <div style="flex:1; min-height:0; background:#101013; border:1px solid #1e1e24; border-radius:3px; display:flex; flex-direction:column; clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%);">
+        <div style="display:flex; border-bottom:1px solid #1e1e24;">
+          <div style="flex:1; padding:13px 0; text-align:center; font-family:'Barlow Semi Condensed'; font-weight:700; font-size:13px; letter-spacing:2.5px; color:#E0102B; border-bottom:2px solid #E0102B;">PARTY <span style="color:#6f6f76;">3</span></div>
+          <div style="flex:1; padding:13px 0; text-align:center; font-family:'Barlow Semi Condensed'; font-weight:600; font-size:13px; letter-spacing:2.5px; color:#5e5e66;">NPCS</div>
+        </div>
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:10px;">
+          <!-- active member -->
+          <div style="display:flex; align-items:center; gap:12px; background:linear-gradient(90deg,#1d0e12,#15151a); border:1px solid #3a1620; border-left:3px solid #E0102B; padding:11px 12px; border-radius:3px;">
+            <div style="width:44px; height:44px; flex:none; border-radius:50%; border:2px solid #E0102B; overflow:hidden;"><image-slot id="vtt_p1_a" style="width:100%; height:100%;" shape="circle" placeholder=""></image-slot></div>
+            <div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:7px;"><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:16px; letter-spacing:.5px; color:#E0102B;">Shinkai Black</span><span style="font-size:10px; font-weight:700; letter-spacing:1px; color:#fff; background:#E0102B; padding:1px 5px; border-radius:2px;">ATIVO</span></div><div style="display:flex; align-items:center; gap:8px; margin-top:5px;"><span style="flex:1; height:6px; background:#26262c; border-radius:2px; overflow:hidden;"><span style="display:block; width:75%; height:100%; background:#E0102B;"></span></span><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:12px; color:#9a9aa1;">45/60</span></div></div>
+          </div>
+          <!-- member -->
+          <div style="display:flex; align-items:center; gap:12px; background:#15151a; border:1px solid #22222a; padding:11px 12px; border-radius:3px;">
+            <div style="width:44px; height:44px; flex:none; border-radius:50%; border:2px solid #34343c; overflow:hidden;"><image-slot id="vtt_p2_a" style="width:100%; height:100%;" shape="circle" placeholder=""></image-slot></div>
+            <div style="flex:1; min-width:0;"><div style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:16px; letter-spacing:.5px; color:#e9e9ee;">Mikhail Museigen</div><div style="display:flex; align-items:center; gap:8px; margin-top:5px;"><span style="flex:1; height:6px; background:#26262c; border-radius:2px; overflow:hidden;"><span style="display:block; width:69%; height:100%; background:#7a7a82;"></span></span><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:12px; color:#9a9aa1;">50/72</span></div></div>
+          </div>
+          <!-- member -->
+          <div style="display:flex; align-items:center; gap:12px; background:#15151a; border:1px solid #22222a; padding:11px 12px; border-radius:3px;">
+            <div style="width:44px; height:44px; flex:none; border-radius:50%; border:2px solid #34343c; overflow:hidden;"><image-slot id="vtt_p3_a" style="width:100%; height:100%;" shape="circle" placeholder=""></image-slot></div>
+            <div style="flex:1; min-width:0;"><div style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:16px; letter-spacing:.5px; color:#e9e9ee;">Thomas Salazar</div><div style="display:flex; align-items:center; gap:8px; margin-top:5px;"><span style="flex:1; height:6px; background:#26262c; border-radius:2px; overflow:hidden;"><span style="display:block; width:73%; height:100%; background:#7a7a82;"></span></span><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:12px; color:#9a9aa1;">61/84</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div style="height:212px; flex:none; background:#101013; border:1px solid #1e1e24; border-radius:3px; padding:14px; display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:13px;"><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; letter-spacing:2px; color:#6f6f76;">AÇÕES · CARTAS · ITENS</span><span style="flex:1; height:1px; background:linear-gradient(90deg,#E0102B,transparent);"></span></div>
+        <div style="display:flex; flex-wrap:wrap; gap:9px; align-content:flex-start;">
+          <div style="display:flex; align-items:center; gap:7px; background:#15151a; border:1px solid #2a2a30; padding:8px 12px; clip-path:polygon(0 0,100% 0,100% 72%,90% 100%,0 100%);"><span style="width:7px; height:7px; background:#E0102B; border-radius:50%;"></span><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:14px; color:#e3e3e8;">Força</span></div>
+          <div style="display:flex; align-items:center; gap:7px; background:#15151a; border:1px solid #2a2a30; padding:8px 12px; clip-path:polygon(0 0,100% 0,100% 72%,90% 100%,0 100%);"><span style="width:7px; height:7px; background:#E0102B; border-radius:50%;"></span><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:14px; color:#e3e3e8;">def</span></div>
+          <div style="display:flex; align-items:center; gap:7px; background:#15151a; border:1px solid #2a2a30; padding:8px 12px; clip-path:polygon(0 0,100% 0,100% 72%,90% 100%,0 100%);"><span style="width:7px; height:7px; background:#E0102B; border-radius:50%;"></span><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:14px; color:#e3e3e8;">Fuhaku</span><span style="font-size:11px; font-weight:700; color:#E0102B;">3◆</span></div>
+          <div style="display:flex; align-items:center; gap:7px; background:#15151a; border:1px solid #2a2a30; padding:8px 12px; clip-path:polygon(0 0,100% 0,100% 72%,90% 100%,0 100%);"><span style="width:7px; height:7px; background:#cfcfe6; border-radius:50%;"></span><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:14px; color:#e3e3e8;">Forma</span><span style="font-size:11px; font-weight:700; color:#9a9aa1;">1◆</span></div>
+          <div style="display:flex; align-items:center; gap:7px; background:#15151a; border:1px solid #2a2a30; padding:8px 12px; clip-path:polygon(0 0,100% 0,100% 72%,90% 100%,0 100%);"><span style="width:7px; height:7px; background:#7a7a82; border-radius:50%;"></span><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:14px; color:#e3e3e8;">arma</span><span style="font-size:11px; font-weight:700; color:#9a9aa1;">×1</span></div>
+        </div>
+        <div style="flex:1;"></div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <div style="width:32px; height:32px; background:#15151a; border:1px solid #2a2a30; border-radius:3px; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="#E0102B" stroke="none"><path d="M13 2L4 14h6l-1 8 10-12h-7z"/></svg></div>
+          <div style="width:32px; height:32px; background:#15151a; border:1px solid #2a2a30; border-radius:3px; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7d7d85" stroke-width="1.6"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7"/></svg></div>
+          <div style="width:32px; height:32px; background:#15151a; border:1px solid #2a2a30; border-radius:3px; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7d7d85" stroke-width="1.6"><path d="M12 3v12M7 11l5 5 5-5M4 21h16"/></svg></div>
+          <div style="width:32px; height:32px; background:#15151a; border:1px solid #2a2a30; border-radius:3px; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7d7d85" stroke-width="1.6"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== FRAME B : SHOWTIME ===================== -->
+<div style="position:absolute; left:1600px; top:0; width:1500px;">
+  <div data-drags-parent="1" style="display:flex; align-items:center; gap:12px; margin-bottom:14px; font-family:'Barlow Semi Condensed',sans-serif;">
+    <span style="font-size:13px; font-weight:700; letter-spacing:3px; color:#E0102B; text-transform:uppercase;">Variação B</span>
+    <span style="font-size:13px; font-weight:600; letter-spacing:1px; color:#7a7a82; text-transform:uppercase;">Showtime — Turno de Combate</span>
+  </div>
+
+  <div style="width:1500px; height:940px; background:#0a0a0c; border-radius:4px; box-shadow:0 24px 70px rgba(0,0,0,.55); overflow:hidden; position:relative; display:grid; grid-template-columns:318px 1fr 364px; gap:14px; padding:16px; color:#ececef; font-size:15px;">
+    <div style="position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(118deg, rgba(224,16,43,0) 0 38px, rgba(224,16,43,.03) 38px 39px);"></div>
+
+    <!-- ===== LEFT COLUMN ===== -->
+    <div style="display:flex; flex-direction:column; gap:14px; min-height:0; position:relative; z-index:1;">
+      <div style="flex:1; min-height:0; background:#101013; border:1px solid #1e1e24; border-radius:3px; display:flex; flex-direction:column; clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%);">
+        <div style="display:flex; border-bottom:1px solid #1e1e24;">
+          <div style="flex:1; padding:13px 0; text-align:center; font-family:'Barlow Semi Condensed'; font-weight:700; font-size:13px; letter-spacing:2.5px; color:#E0102B; border-bottom:2px solid #E0102B;">LOG</div>
+          <div style="flex:1; padding:13px 0; text-align:center; font-family:'Barlow Semi Condensed'; font-weight:600; font-size:13px; letter-spacing:2.5px; color:#5e5e66;">NOTAS</div>
+        </div>
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:11px;">
+          <div style="font-size:13px; color:#5a5a62; font-style:italic; letter-spacing:.5px;">— Rodada 3 · Iniciativa ativa —</div>
+          <div style="background:linear-gradient(135deg,#1a0d10,#141014); border:1px solid #3a1620; border-radius:3px; padding:11px 12px; display:flex; align-items:center; gap:12px; clip-path:polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%);">
+            <div style="width:46px; height:46px; flex:none; background:#E0102B; display:flex; align-items:center; justify-content:center; font-family:'Anton'; font-size:24px; color:#fff; clip-path:polygon(0 0,100% 0,100% 80%,80% 100%,0 100%);">18</div>
+            <div style="flex:1;"><div style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; letter-spacing:1.5px; color:#E0102B;">ATAQUE · d20+5</div><div style="font-size:13px; color:#9a9aa1;">Shinkai → Sentinela — <span style="color:#e9e9ee; font-weight:600;">Acerto</span></div></div>
+          </div>
+          <div style="background:#15151a; border-left:2px solid #E0102B; padding:10px 12px; border-radius:0 3px 3px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px;"><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; letter-spacing:1.5px; color:#E0102B;">DANO</span><span style="font-size:11px; color:#55555c; letter-spacing:1px;">agora</span></div>
+            <div style="font-size:14px; color:#cfcfd4; line-height:1.35;">Lâmina de Fuhaku — <b style="color:#fff;">9 de dano</b> à Sentinela.</div>
+          </div>
+          <div style="background:#15151a; border-left:2px solid #6b6b74; padding:10px 12px; border-radius:0 3px 3px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px;"><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; letter-spacing:1.5px; color:#b9b9c0;">MESTRE</span><span style="font-size:11px; color:#55555c; letter-spacing:1px;">agora</span></div>
+            <div style="font-size:14px; color:#cfcfd4; line-height:1.35;">A Sentinela cambaleia. Sua Forma racha — aproveite.</div>
+          </div>
+        </div>
+        <div style="padding:10px 12px; border-top:1px solid #1e1e24; display:flex; align-items:center; gap:8px;">
+          <div style="flex:1; font-size:13px; color:#55555c; letter-spacing:.5px;">Rolar, falar ou /comando…</div>
+          <div style="width:30px; height:30px; flex:none; background:#E0102B; display:flex; align-items:center; justify-content:center; clip-path:polygon(0 0,100% 0,100% 75%,75% 100%,0 100%);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+        </div>
+      </div>
+
+      <!-- SELOS -->
+      <div style="height:212px; flex:none; background:#101013; border:1px solid #1e1e24; border-radius:3px; padding:14px; display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;"><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; letter-spacing:2.5px; color:#6f6f76;">SELOS</span><span style="flex:1; height:1px; background:linear-gradient(90deg,#E0102B,transparent);"></span><span style="font-size:11px; color:#55555c; letter-spacing:1px;">3 / 4</span></div>
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          <div style="display:flex; align-items:center; gap:11px; background:#15151a; border:1px solid #3a1620; padding:9px 11px; border-radius:3px; animation:pulseRed 2.4s infinite;">
+            <div style="width:30px; height:30px; flex:none; background:#E0102B; clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); display:flex; align-items:center; justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg></div>
+            <div style="flex:1;"><div style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:13px; letter-spacing:.5px; color:#e9e9ee;">Selo da Brasa</div><div style="font-size:12px; color:#E0102B;">Ativo · Aura +2 ao atacar</div></div>
+          </div>
+          <div style="display:flex; align-items:center; gap:11px; background:#15151a; border:1px solid #26262c; padding:9px 11px; border-radius:3px;">
+            <div style="width:30px; height:30px; flex:none; background:#2a2a30; clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); display:flex; align-items:center; justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b9b9c0" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg></div>
+            <div style="flex:1;"><div style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:13px; letter-spacing:.5px; color:#e9e9ee;">Selo do Vazio</div><div style="font-size:12px; color:#7d7d85;">Ignora 1 Forma inimiga</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CENTER COLUMN ===== -->
+    <div style="display:flex; flex-direction:column; gap:14px; min-height:0; position:relative; z-index:1;">
+      <!-- initiative tracker -->
+      <div style="flex:none; background:linear-gradient(180deg,#101013,#0c0c0f); border:1px solid #1e1e24; border-radius:3px; padding:12px 16px; display:flex; align-items:center; gap:12px;">
+        <div style="font-family:'Anton'; font-size:13px; letter-spacing:2px; color:#E0102B; writing-mode:horizontal-tb;">RODADA<br><span style="color:#f1f1f4; font-size:22px;">3</span></div>
+        <div style="width:1px; height:42px; background:#26262c;"></div>
+        <div style="flex:1; display:flex; align-items:center; gap:10px;">
+          <div style="display:flex; flex-direction:column; align-items:center; gap:4px;"><div style="width:50px; height:50px; border-radius:50%; border:2px solid #E0102B; box-shadow:0 0 14px rgba(224,16,43,.6); overflow:hidden;"><image-slot id="vtt_init1" style="width:100%;height:100%;" shape="circle" placeholder=""></image-slot></div><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:10px; letter-spacing:1px; color:#E0102B;">SHINKAI</span></div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a3a42" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+          <div style="display:flex; flex-direction:column; align-items:center; gap:4px; opacity:.62;"><div style="width:40px; height:40px; border-radius:50%; border:2px solid #34343c; overflow:hidden;"><image-slot id="vtt_init2" style="width:100%;height:100%;" shape="circle" placeholder=""></image-slot></div><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:10px; color:#7d7d85;">MIKHAIL</span></div>
+          <div style="display:flex; flex-direction:column; align-items:center; gap:4px; opacity:.62;"><div style="width:40px; height:40px; border-radius:50%; border:2px solid #5a2630; overflow:hidden; background:#1a0e11; display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E0102B" stroke-width="1.6"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:10px; color:#E0102B;">SENTINELA</span></div>
+          <div style="display:flex; flex-direction:column; align-items:center; gap:4px; opacity:.62;"><div style="width:40px; height:40px; border-radius:50%; border:2px solid #34343c; overflow:hidden;"><image-slot id="vtt_init3" style="width:100%;height:100%;" shape="circle" placeholder=""></image-slot></div><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:10px; color:#7d7d85;">THOMAS</span></div>
+        </div>
+        <div style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:11px; letter-spacing:1.5px; color:#8a8a90; text-align:right;">SUA VEZ<br><span style="color:#E0102B;">0:24</span></div>
+      </div>
+
+      <!-- map / scene -->
+      <div style="flex:1; min-height:0; position:relative; border:1px solid #1e1e24; border-radius:3px; overflow:hidden; background:#08080a;">
+        <image-slot id="vtt_map_b" style="position:absolute; inset:0; width:100%; height:100%;" shape="rect" placeholder="Solte o mapa da cena aqui"></image-slot>
+        <div style="position:absolute; inset:0; pointer-events:none; background:radial-gradient(120% 90% at 50% 40%, transparent 35%, rgba(0,0,0,.72) 100%);"></div>
+        <div style="position:absolute; inset:0; pointer-events:none; opacity:.1; background:linear-gradient(#fff 1px, transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px); background-size:54px 54px;"></div>
+        <!-- big red diagonal showtime slash -->
+        <div style="position:absolute; left:-40px; bottom:-20px; width:560px; height:120px; background:linear-gradient(100deg,#E0102B,#8a0a1c); transform:rotate(-7deg); opacity:.96; box-shadow:0 8px 40px rgba(224,16,43,.5); display:flex; align-items:center; padding-left:60px;">
+          <span style="font-family:'Anton'; font-size:46px; letter-spacing:3px; color:#fff; transform:rotate(0deg); text-shadow:3px 3px 0 #6a0816;">SHOW<span style="color:#0a0a0c;">TIME</span></span>
+        </div>
+        <!-- enemy target reticle -->
+        <div style="position:absolute; right:24%; top:30%; width:78px; height:78px;">
+          <div style="position:absolute; inset:0; border:2px solid #E0102B; border-radius:50%; animation:pulseRed 1.6s infinite;"></div>
+          <div style="position:absolute; inset:-9px; border:2px dashed rgba(224,16,43,.5); border-radius:50%;"></div>
+          <div style="position:absolute; left:50%; top:-26px; transform:translateX(-50%); font-family:'Barlow Semi Condensed'; font-weight:700; font-size:11px; letter-spacing:1px; color:#fff; background:#E0102B; padding:2px 7px; white-space:nowrap; clip-path:polygon(0 0,100% 0,92% 100%,8% 100%);">SENTINELA · 28 HP</div>
+        </div>
+        <div style="position:absolute; left:12px; bottom:12px; font-family:'Barlow Semi Condensed'; font-weight:600; font-size:11px; letter-spacing:2px; color:#8a8a90; background:rgba(8,8,10,.6); padding:5px 9px; border-radius:2px;">CAMADA · COMBATE</div>
+      </div>
+
+      <!-- active character spotlight -->
+      <div style="flex:none; align-self:center; width:540px; background:linear-gradient(180deg,#181014,#0e0e11); border:1px solid #3a1620; border-radius:3px; padding:15px 20px; display:flex; align-items:center; gap:18px; position:relative; clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%);">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:5px; background:#E0102B;"></div>
+        <div style="width:66px; height:66px; flex:none; border-radius:50%; border:2px solid #E0102B; overflow:hidden; box-shadow:0 0 16px rgba(224,16,43,.5);"><image-slot id="vtt_active_b" style="width:100%; height:100%;" shape="circle" placeholder=""></image-slot></div>
+        <div style="flex:1;">
+          <div style="display:flex; align-items:center; gap:9px;"><span style="font-family:'Anton'; font-size:26px; letter-spacing:2px; color:#f1f1f4; line-height:1; text-transform:uppercase;">Shinkai Black</span><span style="font-size:10px; font-weight:700; letter-spacing:1px; color:#fff; background:#E0102B; padding:2px 6px;">SEU TURNO</span></div>
+          <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex; align-items:center; gap:9px;"><span style="width:38px; font-family:'Barlow Semi Condensed'; font-weight:700; font-size:11px; letter-spacing:1px; color:#8a8a90;">HP</span><span style="flex:1; height:10px; background:#26262c; border-radius:2px; overflow:hidden;"><span style="display:block; width:75%; height:100%; background:linear-gradient(90deg,#B00C22,#E0102B);"></span></span><span style="width:46px; text-align:right; font-family:'Barlow Semi Condensed'; font-weight:700; font-size:14px; color:#e9e9ee;">45/60</span></div>
+            <div style="display:flex; align-items:center; gap:9px;"><span style="width:38px; font-family:'Barlow Semi Condensed'; font-weight:700; font-size:11px; letter-spacing:1px; color:#8a8a90;">AURA</span><span style="flex:1; height:10px; background:#26262c; border-radius:2px; overflow:hidden;"><span style="display:block; width:95%; height:100%; background:linear-gradient(90deg,#6f6f9e,#cfcfe6);"></span></span><span style="width:46px; text-align:right; font-family:'Barlow Semi Condensed'; font-weight:700; font-size:14px; color:#e9e9ee;">19/20</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RIGHT COLUMN ===== -->
+    <div style="display:flex; flex-direction:column; gap:14px; min-height:0; position:relative; z-index:1;">
+      <!-- PARTY -->
+      <div style="flex:none; background:#101013; border:1px solid #1e1e24; border-radius:3px; display:flex; flex-direction:column;">
+        <div style="display:flex; border-bottom:1px solid #1e1e24;">
+          <div style="flex:1; padding:12px 0; text-align:center; font-family:'Barlow Semi Condensed'; font-weight:700; font-size:13px; letter-spacing:2.5px; color:#E0102B; border-bottom:2px solid #E0102B;">PARTY <span style="color:#6f6f76;">3</span></div>
+          <div style="flex:1; padding:12px 0; text-align:center; font-family:'Barlow Semi Condensed'; font-weight:600; font-size:13px; letter-spacing:2.5px; color:#5e5e66;">NPCS <span style="color:#E0102B;">1</span></div>
+        </div>
+        <div style="padding:11px; display:flex; flex-direction:column; gap:9px;">
+          <div style="display:flex; align-items:center; gap:11px; background:linear-gradient(90deg,#1d0e12,#15151a); border:1px solid #3a1620; border-left:3px solid #E0102B; padding:9px 11px; border-radius:3px;">
+            <div style="width:40px; height:40px; flex:none; border-radius:50%; border:2px solid #E0102B; overflow:hidden;"><image-slot id="vtt_p1_b" style="width:100%; height:100%;" shape="circle" placeholder=""></image-slot></div>
+            <div style="flex:1; min-width:0;"><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:15px; color:#E0102B;">Shinkai Black</span><div style="display:flex; align-items:center; gap:7px; margin-top:4px;"><span style="flex:1; height:5px; background:#26262c; border-radius:2px; overflow:hidden;"><span style="display:block; width:75%; height:100%; background:#E0102B;"></span></span><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:11px; color:#9a9aa1;">45/60</span></div></div>
+          </div>
+          <div style="display:flex; align-items:center; gap:11px; background:#15151a; border:1px solid #22222a; padding:9px 11px; border-radius:3px;">
+            <div style="width:40px; height:40px; flex:none; border-radius:50%; border:2px solid #34343c; overflow:hidden;"><image-slot id="vtt_p2_b" style="width:100%; height:100%;" shape="circle" placeholder=""></image-slot></div>
+            <div style="flex:1; min-width:0;"><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:15px; color:#e9e9ee;">Mikhail Museigen</span><div style="display:flex; align-items:center; gap:7px; margin-top:4px;"><span style="flex:1; height:5px; background:#26262c; border-radius:2px; overflow:hidden;"><span style="display:block; width:69%; height:100%; background:#7a7a82;"></span></span><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:11px; color:#9a9aa1;">50/72</span></div></div>
+          </div>
+          <div style="display:flex; align-items:center; gap:11px; background:#15151a; border:1px solid #22222a; padding:9px 11px; border-radius:3px;">
+            <div style="width:40px; height:40px; flex:none; border-radius:50%; border:2px solid #34343c; overflow:hidden;"><image-slot id="vtt_p3_b" style="width:100%; height:100%;" shape="circle" placeholder=""></image-slot></div>
+            <div style="flex:1; min-width:0;"><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:15px; color:#e9e9ee;">Thomas Salazar</span><div style="display:flex; align-items:center; gap:7px; margin-top:4px;"><span style="flex:1; height:5px; background:#26262c; border-radius:2px; overflow:hidden;"><span style="display:block; width:73%; height:100%; background:#7a7a82;"></span></span><span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:11px; color:#9a9aa1;">61/84</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTION MENU (P5 vertical) -->
+      <div style="flex:1; min-height:0; background:#101013; border:1px solid #1e1e24; border-radius:3px; padding:14px; display:flex; flex-direction:column; clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%);">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:13px;"><span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; letter-spacing:2px; color:#6f6f76;">AÇÕES · CARTAS · ITENS</span><span style="flex:1; height:1px; background:linear-gradient(90deg,#E0102B,transparent);"></span></div>
+        <div style="display:flex; flex-direction:column; gap:8px; flex:1;">
+          <!-- primary action -->
+          <div style="display:flex; align-items:center; gap:12px; background:linear-gradient(100deg,#E0102B,#a60c20); padding:12px 14px; clip-path:polygon(0 0,100% 0,100% 70%,96% 100%,0 100%); box-shadow:0 4px 18px rgba(224,16,43,.35);">
+            <span style="width:26px; height:26px; flex:none; background:rgba(0,0,0,.25); display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M14.5 3.5L21 10 9 22H4v-5z"/><path d="M3 21l3-3"/></svg></span>
+            <span style="flex:1; font-family:'Anton'; font-size:18px; letter-spacing:2px; color:#fff;">ATACAR</span>
+            <span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; color:rgba(255,255,255,.7);">1</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; background:#15151a; border:1px solid #2a2a30; padding:11px 14px; clip-path:polygon(0 0,100% 0,100% 72%,96% 100%,0 100%);">
+            <span style="width:26px; height:26px; flex:none; background:#26262c; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E0102B" stroke-width="1.8"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg></span>
+            <span style="flex:1; font-family:'Anton'; font-size:18px; letter-spacing:2px; color:#e9e9ee;">HABILIDADE</span>
+            <span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; color:#6f6f76;">2</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; background:#15151a; border:1px solid #2a2a30; padding:11px 14px; clip-path:polygon(0 0,100% 0,100% 72%,96% 100%,0 100%);">
+            <span style="width:26px; height:26px; flex:none; background:#26262c; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#cfcfe6" stroke-width="1.8"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/></svg></span>
+            <span style="flex:1; font-family:'Anton'; font-size:18px; letter-spacing:2px; color:#e9e9ee;">FORMA</span>
+            <span style="font-size:11px; font-weight:700; color:#9a9aa1;">1◆</span>
+            <span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; color:#6f6f76;">3</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; background:#15151a; border:1px solid #2a2a30; padding:11px 14px; clip-path:polygon(0 0,100% 0,100% 72%,96% 100%,0 100%);">
+            <span style="width:26px; height:26px; flex:none; background:#26262c; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9a9aa1" stroke-width="1.8"><path d="M7 8h10l-1 12H8z"/><path d="M9 8V5h6v3"/></svg></span>
+            <span style="flex:1; font-family:'Anton'; font-size:18px; letter-spacing:2px; color:#e9e9ee;">ITEM</span>
+            <span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; color:#6f6f76;">4</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; background:#15151a; border:1px solid #2a2a30; padding:11px 14px; clip-path:polygon(0 0,100% 0,100% 72%,96% 100%,0 100%);">
+            <span style="width:26px; height:26px; flex:none; background:#26262c; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9a9aa1" stroke-width="1.8"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg></span>
+            <span style="flex:1; font-family:'Anton'; font-size:18px; letter-spacing:2px; color:#e9e9ee;">GUARDA</span>
+            <span style="font-family:'Barlow Semi Condensed'; font-weight:700; font-size:12px; color:#6f6f76;">5</span>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:11px; border-top:1px solid #1e1e24;">
+          <span style="font-family:'Barlow Semi Condensed'; font-weight:600; font-size:12px; letter-spacing:1px; color:#6f6f76;">FUHAKU <span style="color:#E0102B; font-weight:700;">3◆</span> disponível</span>
+          <div style="display:flex; gap:7px;">
+            <div style="width:30px; height:30px; background:#15151a; border:1px solid #2a2a30; border-radius:3px; display:flex; align-items:center; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="#E0102B" stroke="none"><path d="M13 2L4 14h6l-1 8 10-12h-7z"/></svg></div>
+            <div style="width:30px; height:30px; background:#15151a; border:1px solid #2a2a30; border-radius:3px; display:flex; align-items:center; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7d7d85" stroke-width="1.6"><path d="M5 4h11l3 3v13H5z"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
