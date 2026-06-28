@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import CenaTab from './CenaTab';
 import { createDefaultCena } from '../utils/cena';
@@ -11,7 +11,7 @@ function cast(id: string, name: string): Character {
     maxAmmo: 0, currentAmmo: 0, baseInitiative: 0, cardIds: [], conditions: [], items: [], role: 'cast' };
 }
 
-describe('CenaTab (exploração crimson)', () => {
+describe('CenaTab — exploração', () => {
   it('mostra o nome do local e a party', () => {
     const cena = createDefaultCena();
     cena.scene.locationName = 'A FORTALEZA';
@@ -20,11 +20,22 @@ describe('CenaTab (exploração crimson)', () => {
     expect(screen.getByText('Shinkai')).toBeTruthy();
   });
 
-  it('selecionar um membro da party mostra a ActiveBar (label AURA)', () => {
+  it('o botão Iniciar Combate liga o encounter', () => {
     const cena = createDefaultCena();
+    const updateCena = vi.fn();
+    render(<CenaTab cena={cena} characters={[]} cards={[]} seals={[]} items={[]} weapons={[]} updateCena={updateCena} updateCharacterStats={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /iniciar combate/i }));
+    expect(updateCena).toHaveBeenCalled();
+    expect(updateCena.mock.calls[0][0].encounter.isActive).toBe(true);
+  });
+});
+
+describe('CenaTab — combate', () => {
+  it('com encounter ativo mostra tracker de iniciativa e menu de ações', () => {
+    const cena = { ...createDefaultCena(), encounter: { isActive: true, round: 3, turnIndex: 0, order: [] } };
     render(<CenaTab cena={cena} characters={[cast('p1', 'Shinkai')]} cards={[]} seals={[]} items={[]} weapons={[]} updateCena={() => {}} updateCharacterStats={() => {}} />);
-    expect(screen.queryByText('AURA')).toBeNull();
-    fireEvent.click(screen.getByText('Shinkai'));
-    expect(screen.getByText('AURA')).toBeTruthy();
+    expect(screen.getByText(/rodada/i)).toBeTruthy();
+    expect(screen.getByText('ATACAR')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /encerrar combate/i })).toBeTruthy();
   });
 });
