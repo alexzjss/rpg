@@ -25,9 +25,9 @@ const tabBtn = (active: boolean): React.CSSProperties => ({
   borderBottom: active ? '2px solid var(--sec-accent)' : '2px solid transparent',
 });
 
-function Row({ char, selected, onClick, children }: {
-  char: Character; selected: boolean; onClick: () => void; children?: React.ReactNode;
-}) {
+interface RowProps { char: Character; selected: boolean; onClick: () => void; children?: React.ReactNode }
+
+const Row: React.FC<RowProps> = ({ char, selected, onClick, children }) => {
   return (
     <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', cursor: 'pointer',
       borderRadius: 10, background: selected ? 'var(--bg-raised)' : 'transparent',
@@ -42,7 +42,7 @@ function Row({ char, selected, onClick, children }: {
       {children}
     </div>
   );
-}
+};
 
 const iconBtn: React.CSSProperties = { background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 3 };
 

@@ -13,7 +13,9 @@ const header: React.CSSProperties = {
 const body: React.CSSProperties = { flex: 1, minHeight: 0, overflow: 'auto', padding: 8, display: 'flex', flexWrap: 'wrap', gap: 6, alignContent: 'flex-start' };
 const empty: React.CSSProperties = { color: 'var(--text-muted)', fontSize: 12, fontStyle: 'italic', padding: 6 };
 
-function Chip({ name, image, badge }: { name: string; image?: string; badge?: string }) {
+interface ChipProps { name: string; image?: string; badge?: string }
+
+const Chip: React.FC<ChipProps> = ({ name, image, badge }) => {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 9px', borderRadius: 9,
       background: 'var(--bg-raised)', border: '1px solid var(--border-faint)', fontSize: 12, color: 'var(--text-primary)' }}>
@@ -24,7 +26,7 @@ function Chip({ name, image, badge }: { name: string; image?: string; badge?: st
       {badge && <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{badge}</span>}
     </div>
   );
-}
+};
 
 export const SealsPanel: React.FC<{ seals: Seal[] }> = ({ seals }) => (
   <div style={shell}>
