@@ -1,10 +1,12 @@
 import React from 'react';
 import type { Card, Character, Item, Seal, Weapon } from '../types';
 import type { CenaState, SceneState } from '../utils/cena';
-import { setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent } from '../utils/cena';
+import { setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken } from '../utils/cena';
 import { resolveCards, resolveSeals, resolveOwnedItems, resolveWeapons } from '../utils/items';
 import LogPanel from './cena/LogPanel';
-import SceneStage from './cena/SceneStage';
+import SceneTitle from './cena/SceneTitle';
+import MapBoard from './cena/MapBoard';
+import ActiveBar from './cena/ActiveBar';
 import RosterPanel, { type ActiveRef } from './cena/RosterPanel';
 import { SealsPanel, ActionsPanel } from './cena/ActivePanels';
 
@@ -20,9 +22,9 @@ export interface CenaTabProps {
 }
 
 /**
- * Aba Cena — exploração (Fase 2A). Layout cockpit:
- *   [log] [  cena (ativo)  ] [roster]
- *   [selos][     cena      ][ações ]
+ * Aba Cena — Exploração (Fase 2C, estética Crimson). Layout em 3 colunas:
+ *   [log]   [ SceneTitle / MapBoard / ActiveBar ]   [roster]
+ *   [selos] [             (centro)             ]   [actions]
  */
 const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items, weapons, updateCena }) => {
   const [active, setActive] = React.useState<ActiveRef | null>(null);
@@ -30,6 +32,8 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
   const party = characters.filter(c => (c.role ?? 'npc') === 'cast');
   const npcChars = characters.filter(c => (c.role ?? 'npc') === 'npc');
   const importable = npcChars.filter(c => !cena.npcRoster.some(n => n.id === c.id));
+  const presentNpcs = cena.npcRoster.filter(n => n.present && !n.hidden);
+  const participants: Character[] = [...party, ...presentNpcs];
 
   const activeChar: Character | null = !active
     ? null
@@ -44,42 +48,41 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
 
   const onSceneChange = (partial: Partial<SceneState>) => updateCena(setScene(cena, partial));
 
+  const selectById = (id: string) => {
+    if (party.some(c => c.id === id)) setActive({ id, side: 'party' });
+    else if (cena.npcRoster.some(n => n.id === id)) setActive({ id, side: 'npc' });
+  };
+
   return (
-    <div style={{
-      display: 'grid', gap: 12, height: '100%', minHeight: 0,
-      gridTemplateColumns: '260px 1fr 300px',
-      gridTemplateRows: '1fr 168px',
-      gridTemplateAreas: `"log stage roster" "seals stage actions"`,
-    }}>
+    <div style={{ display: 'grid', gap: 14, height: '100%', minHeight: 0, color: '#ececef',
+      gridTemplateColumns: '318px 1fr 364px', gridTemplateRows: '1fr 212px',
+      gridTemplateAreas: `"log stage roster" "selos stage actions"` }}>
+
       <div style={{ gridArea: 'log', minHeight: 0 }}>
         <LogPanel log={cena.log} notes={cena.scene.notes} onNotesChange={notes => onSceneChange({ notes })} />
       </div>
 
-      <div style={{ gridArea: 'stage', minHeight: 0 }}>
-        <SceneStage scene={cena.scene} active={activeChar} onSceneChange={onSceneChange} />
+      <div style={{ gridArea: 'stage', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <SceneTitle scene={cena.scene} onSceneChange={onSceneChange} />
+        <MapBoard image={cena.scene.image} participants={participants} tokens={cena.tokens}
+          activeId={active?.id ?? null}
+          onMoveToken={(id, pos) => updateCena(setToken(cena, id, pos))}
+          onSelect={selectById} />
+        <ActiveBar active={activeChar} />
       </div>
 
       <div style={{ gridArea: 'roster', minHeight: 0 }}>
         <RosterPanel
-          party={party}
-          npcRoster={cena.npcRoster}
-          importable={importable}
-          active={active}
+          party={party} npcRoster={cena.npcRoster} importable={importable} active={active}
           onSelectActive={setActive}
-          onImportNpc={id => {
-            const char = npcChars.find(c => c.id === id);
-            if (char) updateCena(addNpcFromCharacter(cena, char));
-          }}
+          onImportNpc={id => { const c = npcChars.find(x => x.id === id); if (c) updateCena(addNpcFromCharacter(cena, c)); }}
           onToggleHidden={id => updateCena(toggleNpcHidden(cena, id))}
           onTogglePresent={id => updateCena(toggleNpcPresent(cena, id))}
-          onRemoveNpc={id => {
-            updateCena(removeNpc(cena, id));
-            setActive(prev => (prev?.side === 'npc' && prev.id === id ? null : prev));
-          }}
+          onRemoveNpc={id => { updateCena(removeNpc(cena, id)); setActive(prev => (prev?.side === 'npc' && prev.id === id ? null : prev)); }}
         />
       </div>
 
-      <div style={{ gridArea: 'seals', minHeight: 0 }}>
+      <div style={{ gridArea: 'selos', minHeight: 0 }}>
         <SealsPanel seals={activeSeals} />
       </div>
 

@@ -50,7 +50,7 @@ const Row: React.FC<RowProps> = ({ char, selected, onClick, children }) => {
           <span style={{ flex: 1, height: 6, background: '#26262c', borderRadius: 2, overflow: 'hidden' }}>
             <span style={{ display: 'block', width: `${pct}%`, height: '100%', background: selected ? '#E0102B' : '#7a7a82' }} />
           </span>
-          <span style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 600, fontSize: 12, color: '#9a9aa1' }}><span>{char.currentHp}</span><span>/</span><span>{char.maxHp}</span></span>
+          <span style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 600, fontSize: 12, color: '#9a9aa1' }}>{char.currentHp}/{char.maxHp}</span>
         </div>
       </div>
       {children}
