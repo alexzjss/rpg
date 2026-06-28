@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createDefaultCena, DEFAULT_SCENE, DEFAULT_ENCOUNTER, setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken, setEncounterActive } from './cena';
+import { createDefaultCena, DEFAULT_SCENE, DEFAULT_ENCOUNTER, setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken, setEncounterActive, logEntry, appendLog } from './cena';
 import type { Character } from '../types';
 
 function fakeChar(id: string, over: Partial<Character> = {}): Character {
@@ -107,5 +107,23 @@ describe('setEncounterActive', () => {
     expect(on.encounter.isActive).toBe(true);
     expect(cena.encounter.isActive).toBe(false);
     expect(setEncounterActive(on, false).encounter.isActive).toBe(false);
+  });
+});
+
+describe('log helpers', () => {
+  it('logEntry cria entrada com kind/text e id único', () => {
+    const a = logEntry('system', 'Olá');
+    const b = logEntry('roll', 'Rolagem');
+    expect(a.kind).toBe('system');
+    expect(a.text).toBe('Olá');
+    expect(typeof a.timestamp).toBe('number');
+    expect(a.id).not.toBe(b.id);
+  });
+  it('appendLog anexa sem mutar o original', () => {
+    const cena = createDefaultCena();
+    const next = appendLog(cena, [logEntry('system', 'x')]);
+    expect(next.log).toHaveLength(1);
+    expect(cena.log).toHaveLength(0);
+    expect(next).not.toBe(cena);
   });
 });

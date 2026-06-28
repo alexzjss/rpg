@@ -121,3 +121,14 @@ export function setToken(cena: CenaState, id: string, pos: { x: number; y: numbe
 export function setEncounterActive(cena: CenaState, active: boolean): CenaState {
   return { ...cena, encounter: { ...cena.encounter, isActive: active } };
 }
+
+let _logSeq = 0;
+/** Cria uma entrada de log com id único e timestamp atual. */
+export function logEntry(kind: CenaLogEntry['kind'], text: string): CenaLogEntry {
+  _logSeq += 1;
+  return { id: `log-${Date.now()}-${_logSeq}`, kind, text, timestamp: Date.now() };
+}
+/** Anexa entradas ao log (imutável). */
+export function appendLog(cena: CenaState, entries: CenaLogEntry[]): CenaState {
+  return { ...cena, log: [...cena.log, ...entries] };
+}
