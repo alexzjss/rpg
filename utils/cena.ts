@@ -53,6 +53,8 @@ export interface CenaState {
   npcRoster: NpcEntry[];
   encounter: EncounterState;
   log: CenaLogEntry[];
+  /** Posições dos tokens no mapa, por id de participante (% do mapa, 0–100). */
+  tokens: Record<string, { x: number; y: number }>;
 }
 
 export const DEFAULT_SCENE: SceneState = {
@@ -78,6 +80,7 @@ export function createDefaultCena(): CenaState {
     npcRoster: [],
     encounter: { ...DEFAULT_ENCOUNTER, order: [] },
     log: [],
+    tokens: {},
   };
 }
 
@@ -107,4 +110,14 @@ export function toggleNpcHidden(cena: CenaState, npcId: string): CenaState {
 /** Inverte se o NPC está presente na cena. */
 export function toggleNpcPresent(cena: CenaState, npcId: string): CenaState {
   return { ...cena, npcRoster: cena.npcRoster.map(n => n.id === npcId ? { ...n, present: !n.present } : n) };
+}
+
+/** Define/atualiza a posição de um token (imutável). */
+export function setToken(cena: CenaState, id: string, pos: { x: number; y: number }): CenaState {
+  return { ...cena, tokens: { ...cena.tokens, [id]: pos } };
+}
+
+/** Liga/desliga o encounter (modo combate visual nesta fase). */
+export function setEncounterActive(cena: CenaState, active: boolean): CenaState {
+  return { ...cena, encounter: { ...cena.encounter, isActive: active } };
 }

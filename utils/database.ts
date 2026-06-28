@@ -218,6 +218,7 @@ function ensureCena(raw: any): CenaState {
     encounter: { ...base.encounter, ...(raw.encounter ?? {}),
       order: Array.isArray(raw.encounter?.order) ? raw.encounter.order : [] },
     log: Array.isArray(raw.log) ? raw.log : [],
+    tokens: (raw.tokens && typeof raw.tokens === 'object') ? raw.tokens : {},
   };
 }
 

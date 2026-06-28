@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createDefaultCena, DEFAULT_SCENE, DEFAULT_ENCOUNTER, setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent } from './cena';
+import { createDefaultCena, DEFAULT_SCENE, DEFAULT_ENCOUNTER, setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken, setEncounterActive } from './cena';
 import type { Character } from '../types';
 
 function fakeChar(id: string, over: Partial<Character> = {}): Character {
@@ -79,5 +79,33 @@ describe('removeNpc / toggleNpcHidden / toggleNpcPresent', () => {
   it('toggleNpcPresent inverte present do alvo', () => {
     const cena = addNpcFromCharacter(createDefaultCena(), fakeChar('a'));
     expect(toggleNpcPresent(cena, 'a').npcRoster[0].present).toBe(false);
+  });
+});
+
+describe('tokens', () => {
+  it('createDefaultCena começa com tokens vazio', () => {
+    expect(createDefaultCena().tokens).toEqual({});
+  });
+  it('setToken define a posição de um id sem mutar o original', () => {
+    const cena = createDefaultCena();
+    const next = setToken(cena, 'p1', { x: 40, y: 55 });
+    expect(next.tokens.p1).toEqual({ x: 40, y: 55 });
+    expect(cena.tokens.p1).toBeUndefined();
+    expect(next).not.toBe(cena);
+  });
+  it('setToken atualiza posição existente', () => {
+    let cena = setToken(createDefaultCena(), 'p1', { x: 10, y: 10 });
+    cena = setToken(cena, 'p1', { x: 90, y: 20 });
+    expect(cena.tokens.p1).toEqual({ x: 90, y: 20 });
+  });
+});
+
+describe('setEncounterActive', () => {
+  it('liga e desliga o encounter sem mutar o original', () => {
+    const cena = createDefaultCena();
+    const on = setEncounterActive(cena, true);
+    expect(on.encounter.isActive).toBe(true);
+    expect(cena.encounter.isActive).toBe(false);
+    expect(setEncounterActive(on, false).encounter.isActive).toBe(false);
   });
 });
