@@ -3,7 +3,7 @@ import { SECTION_THEMES, ALL_SEC_VAR_KEYS, applySectionTheme } from './sectionTh
 import { atmosphereForTab } from './atmosphere';
 import type { TabId } from './atmosphere';
 
-const ALL_TABS: TabId[] = ['combat', 'journey', 'characters', 'arsenal', 'extras'];
+const ALL_TABS: TabId[] = ['cena', 'combat', 'journey', 'characters', 'arsenal', 'extras'];
 
 describe('SECTION_THEMES', () => {
   it('tem entrada para toda TabId', () => {
@@ -29,6 +29,11 @@ describe('SECTION_THEMES', () => {
   it('extras usa acento cinza e override de ember', () => {
     expect(SECTION_THEMES.extras.vars['--sec-accent']).toBe('#9aa3b0');
     expect(SECTION_THEMES.extras.vars['--ember']).toBe('#8a93a0');
+  });
+  it('cena usa acento brasa (âmbar/dourado)', () => {
+    expect(SECTION_THEMES.cena.atmosphere).toBe('dark');
+    expect(SECTION_THEMES.cena.vars['--sec-accent']).toBe('#e0772e');
+    expect(SECTION_THEMES.cena.vars['--ember']).toBe('#e0772e');
   });
   it('ALL_SEC_VAR_KEYS cobre todas as chaves usadas por qualquer seção', () => {
     for (const t of ALL_TABS) {

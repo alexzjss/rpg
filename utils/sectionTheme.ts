@@ -72,7 +72,22 @@ const EXTRAS_VARS: Record<string, string> = {
   '--ember-deep':  '#4a4f57',
 };
 
+const CENA_VARS: Record<string, string> = {
+  '--sec-accent':   '#e0772e', // brasa-laranja
+  '--sec-accent-2': '#c9962f', // ouro
+  '--sec-accent-3': '#f0d9a8', // pergaminho claro
+  '--sec-ink':      '#f3ecdd',
+  '--gold-dim':    '#5a2310',
+  '--gold-mid':    '#c9962f',
+  '--gold-bright': '#e0a766',
+  '--gold-pale':   '#f0d9a8',
+  '--border-gold': 'rgba(224,119,46,0.30)',
+  '--ember':       '#e0772e',
+  '--ember-deep':  '#a3380f',
+};
+
 export const SECTION_THEMES: Record<TabId, SectionThemeDef> = {
+  cena:       { atmosphere: atmosphereForTab('cena'),       vars: CENA_VARS },
   combat:     { atmosphere: atmosphereForTab('combat'),     vars: COMBAT_VARS },
   journey:    { atmosphere: atmosphereForTab('journey'),    vars: JOURNEY_VARS },
   characters: { atmosphere: atmosphereForTab('characters'), vars: CHARACTERS_VARS },
