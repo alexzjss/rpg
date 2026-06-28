@@ -1,8 +1,8 @@
 export type TabId = 'cena' | 'combat' | 'arsenal' | 'characters' | 'extras' | 'journey';
-export type Atmosphere = 'dark' | 'parchment' | 'dusk';
+export type Atmosphere = 'dark' | 'parchment' | 'dusk' | 'noir';
 
 const TAB_ATMOSPHERE: Record<TabId, Atmosphere> = {
-  cena: 'dark',
+  cena: 'noir',
   combat: 'dark', arsenal: 'dark',
   characters: 'dark', extras: 'dark', journey: 'dusk',
 };
@@ -47,6 +47,18 @@ export const ATMOSPHERE_VARS: Record<Atmosphere, Record<string, string>> = {
     '--border-faint': 'rgba(200,180,255,0.10)',
     '--border-mid': 'rgba(200,180,255,0.20)',
     '--surface-ink': '#ece3ff',
+  },
+  noir: {
+    '--bg-base': '#0a0a0c',
+    '--bg-surface': '#101013',
+    '--bg-raised': '#15151a',
+    '--bg-overlay': '#1b1b21',
+    '--text-primary': '#ececef',
+    '--text-secondary': '#9a9aa1',
+    '--text-muted': '#7d7d85',
+    '--border-faint': '#1e1e24',
+    '--border-mid': '#26262c',
+    '--surface-ink': '#ececef',
   },
 };
 

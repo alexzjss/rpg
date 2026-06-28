@@ -73,17 +73,17 @@ const EXTRAS_VARS: Record<string, string> = {
 };
 
 const CENA_VARS: Record<string, string> = {
-  '--sec-accent':   '#e0772e', // brasa-laranja
-  '--sec-accent-2': '#c9962f', // ouro
-  '--sec-accent-3': '#f0d9a8', // pergaminho claro
-  '--sec-ink':      '#f3ecdd',
-  '--gold-dim':    '#5a2310',
-  '--gold-mid':    '#c9962f',
-  '--gold-bright': '#e0a766',
-  '--gold-pale':   '#f0d9a8',
-  '--border-gold': 'rgba(224,119,46,0.30)',
-  '--ember':       '#e0772e',
-  '--ember-deep':  '#a3380f',
+  '--sec-accent':   '#E0102B',
+  '--sec-accent-2': '#cfcfe6',
+  '--sec-accent-3': '#B00C22',
+  '--sec-ink':      '#ececef',
+  '--gold-dim':    '#3a1620',
+  '--gold-mid':    '#E0102B',
+  '--gold-bright': '#ff2a44',
+  '--gold-pale':   '#ffd9de',
+  '--border-gold': 'rgba(224,16,43,0.32)',
+  '--ember':       '#E0102B',
+  '--ember-deep':  '#8a0a1c',
 };
 
 export const SECTION_THEMES: Record<TabId, SectionThemeDef> = {

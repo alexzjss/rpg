@@ -30,10 +30,10 @@ describe('SECTION_THEMES', () => {
     expect(SECTION_THEMES.extras.vars['--sec-accent']).toBe('#9aa3b0');
     expect(SECTION_THEMES.extras.vars['--ember']).toBe('#8a93a0');
   });
-  it('cena usa acento brasa (âmbar/dourado)', () => {
-    expect(SECTION_THEMES.cena.atmosphere).toBe('dark');
-    expect(SECTION_THEMES.cena.vars['--sec-accent']).toBe('#e0772e');
-    expect(SECTION_THEMES.cena.vars['--ember']).toBe('#e0772e');
+  it('cena usa atmosfera noir e acento crimson', () => {
+    expect(SECTION_THEMES.cena.atmosphere).toBe('noir');
+    expect(SECTION_THEMES.cena.vars['--sec-accent']).toBe('#E0102B');
+    expect(SECTION_THEMES.cena.vars['--ember']).toBe('#E0102B');
   });
   it('ALL_SEC_VAR_KEYS cobre todas as chaves usadas por qualquer seção', () => {
     for (const t of ALL_TABS) {
