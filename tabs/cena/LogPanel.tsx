@@ -7,42 +7,46 @@ export interface LogPanelProps {
   onNotesChange: (next: string) => void;
 }
 
-const tabBtn = (active: boolean): React.CSSProperties => ({
-  flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 800, letterSpacing: '0.14em',
-  textTransform: 'uppercase', cursor: 'pointer', background: 'transparent', border: 'none',
-  color: active ? 'var(--sec-accent)' : 'var(--text-muted)',
-  borderBottom: active ? '2px solid var(--sec-accent)' : '2px solid transparent',
+const PANEL: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0,
+  background: '#101013', border: '1px solid #1e1e24', borderRadius: 3,
+  clipPath: 'polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%)',
+};
+const tab = (active: boolean): React.CSSProperties => ({
+  flex: 1, padding: '13px 0', textAlign: 'center', cursor: 'pointer',
+  fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: active ? 700 : 600,
+  fontSize: 13, letterSpacing: '2.5px', background: 'transparent', border: 'none',
+  color: active ? '#E0102B' : '#5e5e66',
+  borderBottom: active ? '2px solid #E0102B' : '2px solid transparent',
 });
 
 const LogPanel: React.FC<LogPanelProps> = ({ log, notes, onNotesChange }) => {
-  const [tab, setTab] = React.useState<'log' | 'notes'>('log');
+  const [view, setView] = React.useState<'log' | 'notes'>('log');
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0,
-      background: 'var(--bg-surface)', border: '1px solid var(--border-mid)', borderRadius: 14, overflow: 'hidden' }}>
-      <div role="tablist" style={{ display: 'flex', borderBottom: '1px solid var(--border-faint)' }}>
-        <button role="tab" aria-selected={tab === 'log'} style={tabBtn(tab === 'log')} onClick={() => setTab('log')}>Log</button>
-        <button role="tab" aria-selected={tab === 'notes'} style={tabBtn(tab === 'notes')} onClick={() => setTab('notes')}>Notas</button>
+    <div style={PANEL}>
+      <div role="tablist" style={{ display: 'flex', borderBottom: '1px solid #1e1e24' }}>
+        <button role="tab" aria-selected={view === 'log'} style={tab(view === 'log')} onClick={() => setView('log')}>LOG</button>
+        <button role="tab" aria-selected={view === 'notes'} style={tab(view === 'notes')} onClick={() => setView('notes')}>NOTAS</button>
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 12 }}>
-        {tab === 'log' ? (
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 11 }}>
+        {view === 'log' ? (
           log.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: 12, fontStyle: 'italic' }}>Nada aconteceu ainda.</p>
+            <div style={{ fontSize: 13, color: '#5a5a62', fontStyle: 'italic', letterSpacing: '.5px' }}>— Nada aconteceu ainda —</div>
           ) : (
-            <ul style={{ display: 'flex', flexDirection: 'column', gap: 6, listStyle: 'none', margin: 0, padding: 0 }}>
-              {log.map(e => (
-                <li key={e.id} style={{ fontSize: 12, color: 'var(--text-secondary)', borderLeft: '2px solid var(--border-mid)', paddingLeft: 8 }}>
-                  {e.text}
-                </li>
-              ))}
-            </ul>
+            log.map(e => (
+              <div key={e.id} style={{ background: '#15151a', borderLeft: '2px solid #6b6b74', padding: '10px 12px', borderRadius: '0 3px 3px 0' }}>
+                <div style={{ fontSize: 14, color: '#cfcfd4', lineHeight: 1.35 }}>{e.text}</div>
+              </div>
+            ))
           )
         ) : (
           <textarea
             value={notes}
             onChange={e => onNotesChange(e.target.value)}
             placeholder="Anotações do mestre…"
-            style={{ width: '100%', height: '100%', minHeight: 200, resize: 'none', background: 'var(--bg-base)',
-              color: 'var(--text-primary)', border: '1px solid var(--border-faint)', borderRadius: 8, padding: 10, fontSize: 13, outline: 'none' }}
+            style={{ width: '100%', height: '100%', minHeight: 200, resize: 'none', background: '#0a0a0c',
+              color: '#ececef', border: '1px solid #1e1e24', borderRadius: 3, padding: 12, fontSize: 14,
+              fontFamily: "'Barlow Condensed',sans-serif", outline: 'none' }}
           />
         )}
       </div>
