@@ -1,4 +1,4 @@
-import { Character, Item, OwnedItem, Weapon } from '../types';
+import { Card, Character, Item, OwnedItem, Seal, Weapon } from '../types';
 
 /** Item do catálogo com a quantidade possuída anexada. */
 export interface ResolvedItem extends Item {
@@ -58,4 +58,18 @@ export function resolveWeapons(char: Character, catalogue: Weapon[]): Weapon[] {
   return (char.weaponIds ?? [])
     .map(id => catalogue.find(w => w.id === id))
     .filter(Boolean) as Weapon[];
+}
+
+/** Reconstrói as cartas que um personagem possui, a partir do catálogo (ignora órfãs, preserva ordem). */
+export function resolveCards(char: Character, catalogue: Card[]): Card[] {
+  return (char.cardIds ?? [])
+    .map(id => catalogue.find(c => c.id === id))
+    .filter(Boolean) as Card[];
+}
+
+/** Reconstrói os selos que um personagem possui, a partir do catálogo (ignora órfãos, preserva ordem). */
+export function resolveSeals(char: Character, catalogue: Seal[]): Seal[] {
+  return (char.sealIds ?? [])
+    .map(id => catalogue.find(s => s.id === id))
+    .filter(Boolean) as Seal[];
 }
