@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { atmosphereForTab, ATMOSPHERE_VARS, applyAtmosphere } from './atmosphere';
 
 describe('atmosphereForTab', () => {
-  it('jornada é dusk; o resto é escuro', () => {
+  it('jornada é dusk; o resto (incl. cena) é escuro', () => {
     expect(atmosphereForTab('journey')).toBe('dusk');
-    for (const t of ['combat','arsenal','characters','extras'] as const) {
+    for (const t of ['cena','combat','arsenal','characters','extras'] as const) {
       expect(atmosphereForTab(t)).toBe('dark');
     }
   });
