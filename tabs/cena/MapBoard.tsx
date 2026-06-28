@@ -8,11 +8,13 @@ export interface MapBoardProps {
   activeId: string | null;
   onMoveToken: (id: string, pos: { x: number; y: number }) => void;
   onSelect: (id: string) => void;
+  combat?: boolean;
+  enemyIds?: string[];
 }
 
 const DEFAULT_POS = { x: 50, y: 50 };
 
-const MapBoard: React.FC<MapBoardProps> = ({ image, participants, tokens, activeId, onMoveToken, onSelect }) => {
+const MapBoard: React.FC<MapBoardProps> = ({ image, participants, tokens, activeId, onMoveToken, onSelect, combat = false, enemyIds = [] }) => {
   const boardRef = React.useRef<HTMLDivElement>(null);
   const dragId = React.useRef<string | null>(null);
 
@@ -64,7 +66,27 @@ const MapBoard: React.FC<MapBoardProps> = ({ image, participants, tokens, active
           </div>
         );
       })}
-      <div style={{ position: 'absolute', left: 12, bottom: 12, fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: '2px', color: '#8a8a90', background: 'rgba(8,8,10,.6)', padding: '5px 9px', borderRadius: 2 }}>CAMADA · MESTRE</div>
+      {combat && (
+        <>
+          <div style={{ position: 'absolute', left: -40, bottom: -20, width: 560, height: 120,
+            background: 'linear-gradient(100deg,#E0102B,#8a0a1c)', transform: 'rotate(-7deg)', opacity: 0.96,
+            boxShadow: '0 8px 40px rgba(224,16,43,.5)', display: 'flex', alignItems: 'center', paddingLeft: 60, pointerEvents: 'none' }}>
+            <span style={{ fontFamily: "'Anton',sans-serif", fontSize: 46, letterSpacing: '3px', color: '#fff', textShadow: '3px 3px 0 #6a0816' }}>SHOWTIME</span>
+          </div>
+          {(() => {
+            const enemyId = enemyIds.find(id => tokens[id]);
+            const pos = enemyId ? tokens[enemyId] : null;
+            if (!pos) return null;
+            return (
+              <div style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%,-50%)', width: 78, height: 78, pointerEvents: 'none' }}>
+                <div style={{ position: 'absolute', inset: 0, border: '2px solid #E0102B', borderRadius: '50%' }} />
+                <div style={{ position: 'absolute', inset: -9, border: '2px dashed rgba(224,16,43,.5)', borderRadius: '50%' }} />
+              </div>
+            );
+          })()}
+        </>
+      )}
+      <div style={{ position: 'absolute', left: 12, bottom: 12, fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: '2px', color: '#8a8a90', background: 'rgba(8,8,10,.6)', padding: '5px 9px', borderRadius: 2 }}>{combat ? 'CAMADA · COMBATE' : 'CAMADA · MESTRE'}</div>
     </div>
   );
 };

@@ -26,3 +26,15 @@ describe('MapBoard', () => {
     expect(token.style.top).toBe('60%');
   });
 });
+
+describe('MapBoard combate', () => {
+  it('mostra a camada de combate e o slash Showtime', () => {
+    render(<MapBoard image="x.png" participants={[]} tokens={{}} activeId={null} onMoveToken={() => {}} onSelect={() => {}} combat />);
+    expect(screen.getByText(/camada · combate/i)).toBeTruthy();
+    expect(screen.getByText(/showtime/i)).toBeTruthy();
+  });
+  it('fora de combate mostra a camada do mestre', () => {
+    render(<MapBoard image="x.png" participants={[]} tokens={{}} activeId={null} onMoveToken={() => {}} onSelect={() => {}} />);
+    expect(screen.getByText(/camada · mestre/i)).toBeTruthy();
+  });
+});
