@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import InitiativeTracker from './InitiativeTracker';
 import type { Character } from '../../types';
 
@@ -17,5 +17,16 @@ describe('InitiativeTracker', () => {
     expect(screen.getByText(/rodada/i)).toBeTruthy();
     expect(screen.getByText('SHINKAI')).toBeTruthy();
     expect(screen.getByText('MIKHAIL')).toBeTruthy();
+  });
+});
+
+describe('InitiativeTracker — turnos e caídos', () => {
+  it('chama onNext/onPrev nos botões', () => {
+    const onNext = vi.fn(); const onPrev = vi.fn();
+    render(<InitiativeTracker round={1} participants={[ch('p1', 'Shinkai')]} activeId="p1" onPrev={onPrev} onNext={onNext} />);
+    fireEvent.click(screen.getByRole('button', { name: /próximo turno/i }));
+    fireEvent.click(screen.getByRole('button', { name: /turno anterior/i }));
+    expect(onNext).toHaveBeenCalled();
+    expect(onPrev).toHaveBeenCalled();
   });
 });
