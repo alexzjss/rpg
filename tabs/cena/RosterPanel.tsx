@@ -8,7 +8,6 @@ export type ActiveRef = { id: string; side: 'party' | 'npc' };
 export interface RosterPanelProps {
   party: Character[];
   npcRoster: NpcEntry[];
-  /** Personagens role==='npc' ainda não no roster (para importar). */
   importable: Character[];
   active: ActiveRef | null;
   onSelectActive: (ref: ActiveRef) => void;
@@ -18,66 +17,75 @@ export interface RosterPanelProps {
   onRemoveNpc: (npcId: string) => void;
 }
 
-const tabBtn = (active: boolean): React.CSSProperties => ({
-  flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 800, letterSpacing: '0.14em',
-  textTransform: 'uppercase', cursor: 'pointer', background: 'transparent', border: 'none',
-  color: active ? 'var(--sec-accent)' : 'var(--text-muted)',
-  borderBottom: active ? '2px solid var(--sec-accent)' : '2px solid transparent',
+const PANEL: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0,
+  background: '#101013', border: '1px solid #1e1e24', borderRadius: 3,
+  clipPath: 'polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%)',
+};
+const tab = (active: boolean): React.CSSProperties => ({
+  flex: 1, padding: '13px 0', textAlign: 'center', cursor: 'pointer',
+  fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: active ? 700 : 600, fontSize: 13,
+  letterSpacing: '2.5px', background: 'transparent', border: 'none',
+  color: active ? '#E0102B' : '#5e5e66', borderBottom: active ? '2px solid #E0102B' : '2px solid transparent',
 });
+const iconBtn: React.CSSProperties = { background: 'transparent', border: 'none', cursor: 'pointer', color: '#7d7d85', padding: 3, display: 'flex' };
 
 interface RowProps { char: Character; selected: boolean; onClick: () => void; children?: React.ReactNode }
-
 const Row: React.FC<RowProps> = ({ char, selected, onClick, children }) => {
+  const pct = char.maxHp > 0 ? Math.max(0, Math.min(100, (char.currentHp / char.maxHp) * 100)) : 0;
   return (
-    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', cursor: 'pointer',
-      borderRadius: 10, background: selected ? 'var(--bg-raised)' : 'transparent',
-      border: selected ? '1px solid var(--border-gold)' : '1px solid transparent' }}>
+    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', cursor: 'pointer', borderRadius: 3,
+      background: selected ? 'linear-gradient(90deg,#1d0e12,#15151a)' : '#15151a',
+      border: selected ? '1px solid #3a1620' : '1px solid #22222a',
+      borderLeft: selected ? '3px solid #E0102B' : '1px solid #22222a' }}>
       {char.icon
-        ? <img src={char.icon} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover' }} />
-        : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--bg-base)' }} />}
+        ? <img src={char.icon} alt="" style={{ width: 44, height: 44, flex: 'none', borderRadius: '50%', objectFit: 'cover', border: selected ? '2px solid #E0102B' : '2px solid #34343c' }} />
+        : <div style={{ width: 44, height: 44, flex: 'none', borderRadius: '50%', background: '#0a0a0c', border: selected ? '2px solid #E0102B' : '2px solid #34343c' }} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{char.name}</div>
-        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>HP {char.currentHp}/{char.maxHp}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 16, letterSpacing: '.5px', color: selected ? '#E0102B' : '#e9e9ee', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{char.name}</span>
+          {selected && <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1px', color: '#fff', background: '#E0102B', padding: '1px 5px', borderRadius: 2 }}>ATIVO</span>}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 }}>
+          <span style={{ flex: 1, height: 6, background: '#26262c', borderRadius: 2, overflow: 'hidden' }}>
+            <span style={{ display: 'block', width: `${pct}%`, height: '100%', background: selected ? '#E0102B' : '#7a7a82' }} />
+          </span>
+          <span style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 600, fontSize: 12, color: '#9a9aa1' }}><span>{char.currentHp}</span><span>/</span><span>{char.maxHp}</span></span>
+        </div>
       </div>
       {children}
     </div>
   );
 };
 
-const iconBtn: React.CSSProperties = { background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 3 };
-
 const RosterPanel: React.FC<RosterPanelProps> = ({
   party, npcRoster, importable, active, onSelectActive, onImportNpc, onToggleHidden, onTogglePresent, onRemoveNpc,
 }) => {
-  const [tab, setTab] = React.useState<'party' | 'npcs'>('party');
+  const [view, setView] = React.useState<'party' | 'npcs'>('party');
   const [importing, setImporting] = React.useState(false);
   const visibleNpcs = npcRoster.filter(n => !n.hidden);
   const hiddenNpcs = npcRoster.filter(n => n.hidden);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0,
-      background: 'var(--bg-surface)', border: '1px solid var(--border-mid)', borderRadius: 14, overflow: 'hidden' }}>
-      <div role="tablist" style={{ display: 'flex', borderBottom: '1px solid var(--border-faint)' }}>
-        <button role="tab" aria-selected={tab === 'party'} style={tabBtn(tab === 'party')} onClick={() => setTab('party')}>Party</button>
-        <button role="tab" aria-selected={tab === 'npcs'} style={tabBtn(tab === 'npcs')} onClick={() => setTab('npcs')}>NPCs</button>
+    <div style={PANEL}>
+      <div role="tablist" style={{ display: 'flex', borderBottom: '1px solid #1e1e24' }}>
+        <button role="tab" aria-selected={view === 'party'} style={tab(view === 'party')} onClick={() => setView('party')}>PARTY <span style={{ color: '#6f6f76' }}>{party.length}</span></button>
+        <button role="tab" aria-selected={view === 'npcs'} style={tab(view === 'npcs')} onClick={() => setView('npcs')}>NPCS{npcRoster.length > 0 ? <span style={{ color: '#E0102B' }}> {npcRoster.length}</span> : null}</button>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {tab === 'party' ? (
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {view === 'party' ? (
           party.length === 0
-            ? <p style={{ color: 'var(--text-muted)', fontSize: 12, fontStyle: 'italic', padding: 8 }}>Sem personagens no elenco.</p>
+            ? <p style={{ color: '#7d7d85', fontSize: 13, fontStyle: 'italic', padding: 8 }}>Sem personagens no elenco.</p>
             : party.map(c => (
-                <Row key={c.id} char={c} selected={active?.side === 'party' && active.id === c.id}
-                  onClick={() => onSelectActive({ id: c.id, side: 'party' })} />
+                <Row key={c.id} char={c} selected={active?.side === 'party' && active.id === c.id} onClick={() => onSelectActive({ id: c.id, side: 'party' })} />
               ))
         ) : (
           <>
             {visibleNpcs.map(n => (
-              <Row key={n.id} char={n} selected={active?.side === 'npc' && active.id === n.id}
-                onClick={() => onSelectActive({ id: n.id, side: 'npc' })}>
-                <button style={iconBtn} title={n.present ? 'Presente' : 'Ausente'}
-                  onClick={e => { e.stopPropagation(); onTogglePresent(n.id); }}>
-                  <span style={{ fontSize: 14, color: n.present ? 'var(--sec-accent)' : 'var(--text-muted)' }}>●</span>
+              <Row key={n.id} char={n} selected={active?.side === 'npc' && active.id === n.id} onClick={() => onSelectActive({ id: n.id, side: 'npc' })}>
+                <button style={iconBtn} title={n.present ? 'Presente' : 'Ausente'} onClick={e => { e.stopPropagation(); onTogglePresent(n.id); }}>
+                  <span style={{ fontSize: 14, color: n.present ? '#E0102B' : '#7d7d85' }}>●</span>
                 </button>
                 <button style={iconBtn} title="Ocultar" onClick={e => { e.stopPropagation(); onToggleHidden(n.id); }}><Eye size={14} /></button>
                 <button style={iconBtn} title="Remover" onClick={e => { e.stopPropagation(); onRemoveNpc(n.id); }}><Trash2 size={14} /></button>
@@ -86,12 +94,9 @@ const RosterPanel: React.FC<RosterPanelProps> = ({
 
             {hiddenNpcs.length > 0 && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '8px 8px 2px' }}>
-                  Ocultos ({hiddenNpcs.length})
-                </div>
+                <div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '2px', color: '#6f6f76', padding: '6px 4px 2px' }}>OCULTOS ({hiddenNpcs.length})</div>
                 {hiddenNpcs.map(n => (
-                  <Row key={n.id} char={n} selected={active?.side === 'npc' && active.id === n.id}
-                    onClick={() => onSelectActive({ id: n.id, side: 'npc' })}>
+                  <Row key={n.id} char={n} selected={active?.side === 'npc' && active.id === n.id} onClick={() => onSelectActive({ id: n.id, side: 'npc' })}>
                     <button style={iconBtn} title="Revelar" onClick={e => { e.stopPropagation(); onToggleHidden(n.id); }}><EyeOff size={14} /></button>
                     <button style={iconBtn} title="Remover" onClick={e => { e.stopPropagation(); onRemoveNpc(n.id); }}><Trash2 size={14} /></button>
                   </Row>
@@ -100,21 +105,21 @@ const RosterPanel: React.FC<RosterPanelProps> = ({
             )}
 
             <button onClick={() => setImporting(v => !v)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8, padding: '8px',
-                background: 'var(--bg-raised)', border: '1px dashed var(--border-gold)', borderRadius: 10,
-                color: 'var(--sec-accent)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', cursor: 'pointer' }}>
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 6, padding: 9,
+                background: '#15151a', border: '1px dashed #3a1620', color: '#E0102B',
+                fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+                clipPath: 'polygon(0 0,100% 0,100% 72%,90% 100%,0 100%)' }}>
               <Plus size={14} /> Adicionar NPC
             </button>
 
             {importing && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 4, padding: 6,
-                background: 'var(--bg-base)', borderRadius: 10, border: '1px solid var(--border-faint)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2, padding: 6, background: '#0a0a0c', border: '1px solid #1e1e24', borderRadius: 3 }}>
                 {importable.length === 0
-                  ? <p style={{ color: 'var(--text-muted)', fontSize: 11, fontStyle: 'italic', padding: 4 }}>Nenhum NPC disponível para importar.</p>
+                  ? <p style={{ color: '#7d7d85', fontSize: 12, fontStyle: 'italic', padding: 4 }}>Nenhum NPC disponível para importar.</p>
                   : importable.map(c => (
                       <button key={c.id} onClick={() => { onImportNpc(c.id); setImporting(false); }}
-                        style={{ textAlign: 'left', padding: '6px 8px', background: 'transparent', border: 'none', cursor: 'pointer',
-                          color: 'var(--text-secondary)', fontSize: 12, borderRadius: 6 }}>
+                        style={{ textAlign: 'left', padding: '7px 9px', background: 'transparent', border: 'none', cursor: 'pointer',
+                          color: '#cfcfd4', fontFamily: "'Barlow Condensed',sans-serif", fontSize: 14 }}>
                         {c.name}
                       </button>
                     ))}
