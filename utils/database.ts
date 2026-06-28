@@ -11,6 +11,7 @@
  */
 
 import { Card, Character, CombatState, Item, JourneyState, Seal, Weapon } from '../types';
+import { CenaState, createDefaultCena } from './cena';
 
 // ─────────────────────────────────────────────────────────────────
 // AppExtras — dados do GM / ferramentas que antes ficavam de fora
@@ -51,10 +52,11 @@ export interface AppSnapshot {
   weapons: Weapon[];
   combat: CombatState;
   journey: JourneyState;
+  cena: CenaState;
   extras: AppExtras;
 }
 
-export const SNAPSHOT_VERSION = 3;
+export const SNAPSHOT_VERSION = 4;
 
 // ─────────────────────────────────────────────────────────────────
 // Defaults
@@ -86,6 +88,8 @@ export const DEFAULT_JOURNEY: JourneyState = {
   notes: '',
   recipes: [],
 };
+
+export const DEFAULT_CENA: CenaState = createDefaultCena();
 
 // ─────────────────────────────────────────────────────────────────
 // IndexedDB internals
@@ -205,6 +209,18 @@ function ensureJourney(raw: any): JourneyState {
   return { ...DEFAULT_JOURNEY, ...raw, recipes: Array.isArray(raw.recipes) ? raw.recipes : [] };
 }
 
+function ensureCena(raw: any): CenaState {
+  if (!raw || typeof raw !== 'object') return createDefaultCena();
+  const base = createDefaultCena();
+  return {
+    scene: { ...base.scene, ...(raw.scene ?? {}) },
+    npcRoster: Array.isArray(raw.npcRoster) ? raw.npcRoster : [],
+    encounter: { ...base.encounter, ...(raw.encounter ?? {}),
+      order: Array.isArray(raw.encounter?.order) ? raw.encounter.order : [] },
+    log: Array.isArray(raw.log) ? raw.log : [],
+  };
+}
+
 function ensureExtras(raw: any): AppExtras {
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_EXTRAS };
   return {
@@ -220,9 +236,9 @@ function ensureExtras(raw: any): AppExtras {
 // ─────────────────────────────────────────────────────────────────
 // In-memory listener registry
 // ─────────────────────────────────────────────────────────────────
-type ListenerKey = 'characters' | 'cards' | 'items' | 'seals' | 'weapons' | 'combat' | 'journey' | 'extras';
+type ListenerKey = 'characters' | 'cards' | 'items' | 'seals' | 'weapons' | 'combat' | 'journey' | 'cena' | 'extras';
 const _listeners: Record<ListenerKey, Function[]> = {
-  characters: [], cards: [], items: [], seals: [], weapons: [], combat: [], journey: [], extras: [],
+  characters: [], cards: [], items: [], seals: [], weapons: [], combat: [], journey: [], cena: [], extras: [],
 };
 
 function _notify(key: ListenerKey, data: any) {
@@ -290,7 +306,7 @@ async function runMigrations() {
 // Load all from IDB
 // ─────────────────────────────────────────────────────────────────
 async function loadAll() {
-  const [chars, cards, items, seals, weapons, combatRec, journeyRec, extrasRec] = await Promise.all([
+  const [chars, cards, items, seals, weapons, combatRec, journeyRec, cenaRec, extrasRec] = await Promise.all([
     _getAll<any>('characters'),
     _getAll<any>('cards'),
     _getAll<any>('items'),
@@ -298,6 +314,7 @@ async function loadAll() {
     _getAll<any>('weapons'),
     _get<any>('meta', '__combat'),
     _get<any>('meta', '__journey'),
+    _get<any>('meta', '__cena'),
     _get<any>('meta', '__extras'),
   ]);
   return {
@@ -308,6 +325,7 @@ async function loadAll() {
     weapons: weapons as Weapon[],
     combat: ensureCombat(combatRec?.value),
     journey: ensureJourney(journeyRec?.value),
+    cena: ensureCena(cenaRec?.value),
     extras: ensureExtras(extrasRec?.value),
   };
 }
@@ -326,6 +344,7 @@ export const DatabaseService = {
     weapons: Weapon[];
     combat: CombatState;
     journey: JourneyState;
+    cena: CenaState;
     extras: AppExtras;
   }> => {
     await runMigrations();
@@ -360,6 +379,10 @@ export const DatabaseService = {
   syncJourneyState: (cb: (d: JourneyState) => void) => {
     _get<any>('meta', '__journey').then(r => cb(ensureJourney(r?.value))).catch(() => cb({ ...DEFAULT_JOURNEY }));
     return _subscribe<JourneyState>('journey', cb);
+  },
+  syncCenaState: (cb: (d: CenaState) => void) => {
+    _get<any>('meta', '__cena').then(r => cb(ensureCena(r?.value))).catch(() => cb(createDefaultCena()));
+    return _subscribe<CenaState>('cena', cb);
   },
   syncExtras: (cb: (d: AppExtras) => void) => {
     _get<any>('meta', '__extras').then(r => cb(ensureExtras(r?.value))).catch(() => cb({ ...DEFAULT_EXTRAS }));
@@ -448,6 +471,10 @@ export const DatabaseService = {
     await _put('meta', { id: '__journey', value: state });
     _notify('journey', state);
   },
+  updateCena: async (state: CenaState) => {
+    await _put('meta', { id: '__cena', value: state });
+    _notify('cena', state);
+  },
   updateExtras: async (extras: AppExtras) => {
     await _put('meta', { id: '__extras', value: extras });
     _notify('extras', extras);
@@ -463,6 +490,7 @@ export const DatabaseService = {
       _replaceAll('weapons', snapshot.weapons ?? []),
       _put('meta', { id: '__combat', value: snapshot.combat }),
       _put('meta', { id: '__journey', value: snapshot.journey }),
+      _put('meta', { id: '__cena', value: snapshot.cena }),
       _put('meta', { id: '__extras', value: snapshot.extras }),
       _put('meta', { id: '__snapshot_meta', savedAt: snapshot.savedAt, version: snapshot.version }),
     ]);
@@ -475,6 +503,7 @@ export const DatabaseService = {
     _notify('combat', snapshot.combat);
     _publishCombat(snapshot.combat);
     _notify('journey', snapshot.journey);
+    _notify('cena', snapshot.cena);
     _notify('extras', snapshot.extras);
   },
 
@@ -503,6 +532,7 @@ export const DatabaseService = {
         weapons: Array.isArray(raw.weapons) ? raw.weapons : [],
         combat: ensureCombat(raw.combat),
         journey: ensureJourney(raw.journey),
+        cena: ensureCena(raw.cena),
         // Suporte a formato antigo (sem extras encapsulado)
         extras: ensureExtras(
           raw.extras ?? {
