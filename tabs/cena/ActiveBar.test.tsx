@@ -20,3 +20,14 @@ describe('ActiveBar', () => {
     expect(container.firstChild).toBeNull();
   });
 });
+
+describe('ActiveBar combate', () => {
+  it('mostra o badge SEU TURNO em combate', () => {
+    render(<ActiveBar active={char} combat />);
+    expect(screen.getByText(/seu turno/i)).toBeTruthy();
+  });
+  it('não mostra o badge fora de combate', () => {
+    render(<ActiveBar active={char} />);
+    expect(screen.queryByText(/seu turno/i)).toBeNull();
+  });
+});
