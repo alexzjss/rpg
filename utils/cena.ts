@@ -80,3 +80,31 @@ export function createDefaultCena(): CenaState {
     log: [],
   };
 }
+
+/** Merge parcial imutável em scene. */
+export function setScene(cena: CenaState, partial: Partial<SceneState>): CenaState {
+  return { ...cena, scene: { ...cena.scene, ...partial } };
+}
+
+/** Cria um NpcEntry (presente, revelado) a partir de um Character e o adiciona ao roster.
+ *  No-op (retorna a mesma referência) se já houver NPC com o mesmo id. */
+export function addNpcFromCharacter(cena: CenaState, char: Character): CenaState {
+  if (cena.npcRoster.some(n => n.id === char.id)) return cena;
+  const npc: NpcEntry = { ...char, isNpc: true, hidden: false, present: true };
+  return { ...cena, npcRoster: [...cena.npcRoster, npc] };
+}
+
+/** Remove um NPC do roster pelo id. */
+export function removeNpc(cena: CenaState, npcId: string): CenaState {
+  return { ...cena, npcRoster: cena.npcRoster.filter(n => n.id !== npcId) };
+}
+
+/** Inverte o estado oculto/revelado de um NPC. */
+export function toggleNpcHidden(cena: CenaState, npcId: string): CenaState {
+  return { ...cena, npcRoster: cena.npcRoster.map(n => n.id === npcId ? { ...n, hidden: !n.hidden } : n) };
+}
+
+/** Inverte se o NPC está presente na cena. */
+export function toggleNpcPresent(cena: CenaState, npcId: string): CenaState {
+  return { ...cena, npcRoster: cena.npcRoster.map(n => n.id === npcId ? { ...n, present: !n.present } : n) };
+}
