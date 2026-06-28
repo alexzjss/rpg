@@ -133,3 +133,34 @@ A união `activeTab` em `App.tsx` troca `'combat' | 'journey'` por `'cena'`.
 - Onde exatamente vivem as condições temporárias e o estado de turno do encounter.
 - Comportamento do botão **+** (criar NPC novo vs. adicionar do roster à cena).
 - Persistência do `npcRoster` e `scene` no `utils/database.ts`.
+
+---
+
+## Revisão 2026-06-28 — Renovação Visual "Crimson Showtime" (handoff Claude Design)
+
+O usuário trouxe um handoff de design (Claude Design) com duas frames: **Variação A —
+Equilíbrio (Exploração)** e **Variação B — Showtime (Turno de Combate)**. Decidiu
+seguir esse design, o que **reverte/ajusta** decisões anteriores deste spec:
+
+- **GRID DE VOLTA (reversão):** o mapa central passa a ter **grid funcional simples** —
+  imagem de fundo (`scene.image`), grade decorativa e **tokens arrastáveis** dos
+  participantes presentes (party + NPCs com `present`), com posição salva. SEM medição,
+  AoE ou névoa. Construído **do zero** em `tabs/cena/` (mantém a regra de não reusar
+  `components/combat/grid/*`). → O critério "nenhum resquício de grid/tokens" acima fica
+  restrito a AoE/névoa/pins/uniões; tokens posicionáveis voltam ao escopo.
+- **Tema:** a seção Cena adota a estética **dark + crimson `#E0102B`** (substitui
+  Brasa/Pergaminho **apenas na Cena**), via `applySectionTheme('cena')` (nova atmosfera
+  "noir" + vars `--sec-*` crimson). Fontes **Anton / Barlow Condensed / Barlow Semi
+  Condensed / Cinzel** carregadas no `index.html`. Cortes angulares (clip-path).
+- **Log sem input:** mantém-se a decisão de **log automático sem campo de digitação**
+  (o campo de mensagem do design é omitido).
+- **Dois modos na mesma aba:** **Exploração (Frame A)** e **Combate (Frame B)**,
+  alternados por um **toggle visual** nesta etapa (flip de `encounter.isActive`); a
+  lógica real de iniciativa/turnos/resolução continua na **Fase 3**. O tracker de
+  iniciativa e o spotlight do combate são montados como **skin** (ordem derivada dos
+  presentes, sem rolagem real ainda).
+- **Layout (ambos os modos):** esquerda = Log/Notas + Selos; centro = (título da
+  cena | tracker de iniciativa) + mapa + (barra | spotlight) do ativo; direita =
+  Party|NPCs + (Ações em grade | menu de ações vertical estilo P5).
+
+Plano correspondente: `docs/superpowers/plans/2026-06-28-aba-cena-fase2c-renovacao-visual.md`.
