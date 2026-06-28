@@ -108,10 +108,13 @@ import CardFusionPanel from './components/combat/CardFusionPanel';
 import CombatArena from './components/combat/grid/CombatArena';
 import { migrateCombatState } from './utils/combatMigration';
 import { applySectionTheme } from './utils/sectionTheme';
+import type { CenaState } from './utils/cena';
+import { createDefaultCena } from './utils/cena';
 import { TabSweep, Title, ImagePickerButton } from './components/ui';
 import { useKeyboardNav } from './components/nav';
 import JourneyTab from './tabs/JourneyTab';
 import CombatTab from './tabs/CombatTab';
+import CenaTab from './tabs/CenaTab';
 import { getUserReducedMotion, setUserReducedMotion } from './utils/motionPref';
 
 // Command icons (base64)
@@ -358,8 +361,9 @@ function TabButton({ icon, active, onClick, children }: {
 }
 
 // Etapa B: metadados de cabeçalho por aba (kicker + título grande)
-type AppTab = 'combat' | 'arsenal' | 'characters' | 'extras' | 'journey';
+type AppTab = 'cena' | 'combat' | 'arsenal' | 'characters' | 'extras' | 'journey';
 const TAB_META: Record<AppTab, { label: string; kicker: string }> = {
+  cena:       { label: 'Cena',        kicker: 'Exploração & Combate' },
   combat:     { label: 'Combate',     kicker: 'Arena & Iniciativa' },
   journey:    { label: 'Jornada',     kicker: 'Exploração & Aventura' },
   characters: { label: 'Personagens', kicker: 'Receptáculos & Vínculos' },
@@ -3287,7 +3291,7 @@ const SealComboModal: React.FC<{
 // --- Aplicação Principal ---
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'combat' | 'arsenal' | 'characters' | 'extras' | 'journey'>('combat');
+  const [activeTab, setActiveTab] = useState<'cena' | 'combat' | 'arsenal' | 'characters' | 'extras' | 'journey'>('cena');
   const [reducedMotion, setReducedMotion] = React.useState(getUserReducedMotion());
   React.useEffect(() => {
     applySectionTheme(activeTab);
@@ -3322,6 +3326,7 @@ const App: React.FC = () => {
   const latestCombatRef = useRef<CombatState | null>(null);
   useEffect(() => { latestCombatRef.current = combat; }, [combat]);
   const [journey, setJourney] = useState<JourneyState | null>(null);
+  const [cena, setCena] = useState<CenaState>(createDefaultCena());
   const [isLoading, setIsLoading] = useState(true);
 
   // States para Tooltip e UX
@@ -3503,7 +3508,7 @@ const App: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
 
-    DatabaseService.initialize().then(({ characters: chars, cards: cds, items: its, seals: sls, weapons: wps, combat: cbt, journey: jny, extras }) => {
+    DatabaseService.initialize().then(({ characters: chars, cards: cds, items: its, seals: sls, weapons: wps, combat: cbt, journey: jny, cena: cn, extras }) => {
       if (cancelled) return;
       setCharacters(chars);
       setCards(cds);
@@ -3512,6 +3517,7 @@ const App: React.FC = () => {
       setWeapons(wps);
       setCombat(migrateCombatState(cbt));
       setJourney(jny);
+      setCena(cn);
       // Restore extras state
       setGmNotes(extras.gmNotes ?? '');
       setCombatNotes(extras.combatNotes ?? '');
@@ -3535,6 +3541,7 @@ const App: React.FC = () => {
     const unsubWeapons = DatabaseService.syncWeapons((data) => { if (!cancelled) setWeapons(data); });
     const unsubCombat = DatabaseService.syncCombatState((data) => { if (!cancelled) setCombat(migrateCombatState(data)); });
     const unsubJourney = DatabaseService.syncJourneyState((data) => { if (!cancelled) setJourney(data); });
+    const unsubCena = DatabaseService.syncCenaState((data) => { if (!cancelled) setCena(data); });
 
     // Responde a pedidos da janela de jogadores com o snapshot atual de combate
     const unsubReq = DatabaseService.onCombatRequest(() => {
@@ -3543,7 +3550,7 @@ const App: React.FC = () => {
 
     return () => {
       cancelled = true;
-      unsubChars(); unsubCards(); unsubItems(); unsubSeals(); unsubWeapons(); unsubCombat(); unsubJourney(); unsubReq();
+      unsubChars(); unsubCards(); unsubItems(); unsubSeals(); unsubWeapons(); unsubCombat(); unsubJourney(); unsubCena(); unsubReq();
     };
   }, []);
 
@@ -3557,7 +3564,7 @@ const App: React.FC = () => {
       try {
         setAutoSaveStatus('saving');
         await DatabaseService.saveFullSnapshot({
-          version: 3,
+          version: 4,
           savedAt: new Date().toISOString(),
           characters,
           cards,
@@ -3566,6 +3573,7 @@ const App: React.FC = () => {
           weapons,
           combat: combat!,
           journey: journey!,
+          cena,
           extras: {
             gmNotes,
             combatNotes,
@@ -3810,7 +3818,7 @@ const App: React.FC = () => {
     try {
       setAutoSaveStatus('saving');
       await DatabaseService.saveFullSnapshot({
-        version: 3,
+        version: 4,
         savedAt: new Date().toISOString(),
         characters,
         cards,
@@ -3819,6 +3827,7 @@ const App: React.FC = () => {
         weapons,
         combat,
         journey,
+        cena,
         extras: { gmNotes, combatNotes, shopCurrency, characterCurrencies, progressBars, rollHistory, lootList, nameStyle },
       });
       setAutoSaveStatus('saved');
@@ -4013,6 +4022,11 @@ const App: React.FC = () => {
       newFC.push({ id: wfc.id, name: wfc.name, duration: 999 });
     });
     updateCombat({ ...c, fieldConditions: newFC });
+  };
+
+  const updateCena = (next: CenaState) => {
+    setCena(next);
+    DatabaseService.updateCena(next);
   };
 
   const updateJourney = (newState: Partial<JourneyState>) => {
@@ -5921,6 +5935,19 @@ const App: React.FC = () => {
 
       <main className="flex-1 p-5 md:p-8 max-w-[1920px] mx-auto w-full" style={{ overflow: 'auto', minHeight: 0, height: 0 }}>
         {/* ... (Previous tabs code omitted for brevity as they are unchanged) ... */}
+        {/* Aba Cena */}
+        {activeTab === 'cena' && (
+          <CenaTab
+            cena={cena}
+            characters={characters}
+            cards={cards}
+            seals={seals}
+            items={items}
+            weapons={weapons}
+            updateCena={updateCena}
+            updateCharacterStats={updateCharacterStats}
+          />
+        )}
         {/* Aba Jornada */}
         {activeTab === 'journey' && journey && (
           <JourneyTab
