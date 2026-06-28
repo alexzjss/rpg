@@ -2356,7 +2356,7 @@ const CharacterCard: React.FC<{
   setSetupCombatant: (c: Character) => void;
 }> = ({ char, idx, isCharInCombat, setEditingCharacter, deleteCharacter, setSetupCombatant }) => {
   const isNpc = (char.role ?? 'npc') === 'npc';
-  const accentColor = isNpc ? 'rgba(100,116,139,0.9)' : '#c9983a';
+  const accentColor = isNpc ? 'rgba(120,150,200,0.85)' : '#5a9ae8';
   const inCombat = isCharInCombat(char.id);
 
   return (
@@ -2395,16 +2395,16 @@ const CharacterCard: React.FC<{
         <div className="mp-character-stat-strip">
           <div className="mp-character-stat">
             <span className="mp-character-stat__label">❤ HP</span>
-            <span className="mp-character-stat__value" style={{ '--stat-color': '#f87171' } as React.CSSProperties}>{char.maxHp}</span>
+            <span className="mp-character-stat__value" style={{ '--stat-color': '#4ad08a' } as React.CSSProperties}>{char.maxHp}</span>
           </div>
           <div className="mp-character-stat">
             <span className="mp-character-stat__label">⚡ Aura</span>
-            <span className="mp-character-stat__value" style={{ '--stat-color': '#fbbf24' } as React.CSSProperties}>{char.maxAura}</span>
+            <span className="mp-character-stat__value" style={{ '--stat-color': '#5a9ae8' } as React.CSSProperties}>{char.maxAura}</span>
           </div>
           {char.maxAmmo > 0 && (
             <div className="mp-character-stat">
               <span className="mp-character-stat__label">🎯 Mun.</span>
-              <span className="mp-character-stat__value" style={{ '--stat-color': '#fb923c' } as React.CSSProperties}>{char.maxAmmo}</span>
+              <span className="mp-character-stat__value" style={{ '--stat-color': '#7fe0ff' } as React.CSSProperties}>{char.maxAmmo}</span>
             </div>
           )}
         </div>
@@ -6112,7 +6112,7 @@ const App: React.FC = () => {
               {filteredCharacters.filter(c => (c.role ?? 'npc') === 'cast').length > 0 && (
                 <>
                   <div className="mp-section-divider col-span-full"
-                    style={{ '--divider-color': 'rgba(201,152,58,0.75)', '--divider-bg': 'rgba(120,90,20,0.22)' } as React.CSSProperties}>
+                    style={{ '--divider-color': 'rgba(127,224,255,0.8)', '--divider-bg': 'rgba(20,54,110,0.3)' } as React.CSSProperties}>
                     <div className="mp-section-divider__label">
                       <Star style={{ width:9, height:9 }} /> Cast
                     </div>
@@ -6176,7 +6176,7 @@ const App: React.FC = () => {
                 <button
                   key={sub.id}
                   onClick={() => setArsenalSubTab(sub.id as any)}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all ${arsenalSubTab === sub.id ? 'bg-amber-600 text-white shadow-[0_0_15px_rgba(201,152,58,0.4)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}
+                  className={`p5-subtab flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all ${arsenalSubTab === sub.id ? 'bg-amber-600 text-white shadow-[0_0_15px_rgba(201,152,58,0.4)]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}
                 >
                   {sub.icon} {sub.label}
                 </button>
@@ -6250,7 +6250,7 @@ const App: React.FC = () => {
                   <div
                     key={card.id}
                     className={`group relative border rounded-[2.5rem] overflow-hidden ${colors.border} ${typeClass} anim-fade-up`}
-                    style={{ animationDelay: `${idx * 40}ms`, background: "#1c1810" }}
+                    style={{ animationDelay: `${idx * 40}ms`, background: "#141014" }}
                   >
                     {/* Type color tint */}
                     <div className={`absolute inset-0 bg-gradient-to-br ${colors.bg} opacity-15 pointer-events-none transition-opacity duration-300 group-hover:opacity-30`} />
@@ -6367,7 +6367,7 @@ const App: React.FC = () => {
 
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))', gap:14 }}>
               {items.filter(it => it.name.toLowerCase().includes(itemSearchTerm.toLowerCase())).map(it => (
-                <div key={it.id} onClick={() => setEditingCatalogItem(it)} style={{ cursor:'pointer', borderRadius:16, overflow:'hidden', border:'1px solid var(--border-gold)', background:'linear-gradient(165deg, rgba(40,30,5,0.85), rgba(20,16,8,0.92))', position:'relative' }} className="hover:brightness-110 transition-all">
+                <div key={it.id} onClick={() => setEditingCatalogItem(it)} style={{ cursor:'pointer', borderRadius:4, overflow:'hidden', border:'1px solid var(--border-gold)', background:'linear-gradient(165deg, #1a1218, #100a0c)', position:'relative', clipPath:'polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%)', transform:'rotate(-1deg)' }} className="hover:brightness-110 transition-all">
                   <div style={{ height:120, background: it.image ? `url(${it.image}) center/cover` : 'linear-gradient(145deg,#1e180e,#100e08)' }} />
                   <div style={{ padding:'10px 12px' }}>
                     <p style={{ fontSize:13, fontWeight:800, color:'var(--gold-pale)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{it.name}</p>
@@ -6421,8 +6421,8 @@ const App: React.FC = () => {
                 <div key={seal.id}
                   className="group relative border rounded-[2.5rem] overflow-hidden card-seal anim-fade-up"
                   style={{
-                    background:'linear-gradient(145deg,rgba(20,10,5,0.95),rgba(30,15,5,0.9))',
-                    border:'1.5px solid rgba(234,88,12,0.35)',
+                    background:'linear-gradient(145deg,#1a1218,#100a0c)',
+                    border:'1.5px solid rgba(212,20,42,0.45)',
                     animationDelay: `${idx * 0.04}s`,
                   }}>
                   {/* Top accent */}
@@ -6557,7 +6557,7 @@ const App: React.FC = () => {
 
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))', gap:14 }}>
                   {filteredWeapons.map(w => (
-                    <div key={w.id} onClick={() => setEditingWeapon(w)} style={{ cursor:'pointer', borderRadius:16, overflow:'hidden', border:'1px solid var(--border-gold)', background:'linear-gradient(165deg, rgba(40,30,5,0.85), rgba(20,16,8,0.92))', position:'relative' }} className="group hover:brightness-110 transition-all">
+                    <div key={w.id} onClick={() => setEditingWeapon(w)} style={{ cursor:'pointer', borderRadius:4, overflow:'hidden', border:'1px solid var(--border-gold)', background:'linear-gradient(165deg, #1a1218, #100a0c)', position:'relative', clipPath:'polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%)', transform:'rotate(-1deg)' }} className="group hover:brightness-110 transition-all">
                       <div style={{ height:120, background: w.image ? `url(${w.image}) center/cover` : 'linear-gradient(145deg,#1e180e,#100e08)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                         {!w.image && <Swords style={{ width:36, height:36, opacity:0.15 }} />}
                       </div>

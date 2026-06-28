@@ -18,6 +18,18 @@ describe('SECTION_THEMES', () => {
     expect(SECTION_THEMES.journey.atmosphere).toBe('dusk');
     expect(SECTION_THEMES.journey.vars['--sec-accent']).toBe('#b9a3e8');
   });
+  it('arsenal usa acento carmesim e override de ember', () => {
+    expect(SECTION_THEMES.arsenal.vars['--sec-accent']).toBe('#d4142a');
+    expect(SECTION_THEMES.arsenal.vars['--ember']).toBe('#d4142a');
+  });
+  it('characters usa acento azul FF e override de ember', () => {
+    expect(SECTION_THEMES.characters.vars['--sec-accent']).toBe('#5a9ae8');
+    expect(SECTION_THEMES.characters.vars['--ember']).toBe('#5a9ae8');
+  });
+  it('extras usa acento cinza e override de ember', () => {
+    expect(SECTION_THEMES.extras.vars['--sec-accent']).toBe('#9aa3b0');
+    expect(SECTION_THEMES.extras.vars['--ember']).toBe('#8a93a0');
+  });
   it('ALL_SEC_VAR_KEYS cobre todas as chaves usadas por qualquer seção', () => {
     for (const t of ALL_TABS) {
       for (const k of Object.keys(SECTION_THEMES[t].vars)) {
@@ -38,13 +50,13 @@ describe('applySectionTheme', () => {
     expect(document.documentElement.dataset.section).toBe('combat');
     expect(document.documentElement.dataset.atmosphere).toBe(atmosphereForTab('combat'));
   });
-  it('remove as vars de combat ao trocar para uma seção sem overrides', () => {
+  it('remove as vars de combat ao trocar para extras e aplica overrides de extras', () => {
     applySectionTheme('combat');
     expect(document.documentElement.style.getPropertyValue('--sec-accent')).toBe('#d11f3f');
     expect(document.documentElement.style.getPropertyValue('--gold-mid')).toBe('#2fd4c4');
     applySectionTheme('extras');
     expect(document.documentElement.dataset.section).toBe('extras');
-    expect(document.documentElement.style.getPropertyValue('--sec-accent')).toBe('');
-    expect(document.documentElement.style.getPropertyValue('--gold-mid')).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--sec-accent')).toBe('#9aa3b0');
+    expect(document.documentElement.style.getPropertyValue('--gold-mid')).toBe('#8a93a0');
   });
 });

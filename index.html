@@ -3475,6 +3475,16 @@
             background-size: 200px 200px, cover;
         }
 
+        /* ── EXTRAS cinza neutro: fundo plano, sem calor ── */
+        :root[data-section='extras'] .mp-page-bg {
+          background: linear-gradient(180deg, #16181c 0%, #1c2026 100%);
+        }
+        :root[data-section='extras'] .mp-glaze {
+          background:
+            radial-gradient(60% 50% at 18% 12%, rgba(160,170,185,0.05), transparent 60%),
+            radial-gradient(55% 50% at 85% 80%, rgba(160,170,185,0.04), transparent 60%);
+        }
+
         /* ── Header iluminado da Jornada ── */
         .mp-journey-title {
             font-family: 'Playfair Display', Georgia, serif !important;
@@ -3600,6 +3610,176 @@
         .mp-darktab [style*="color: rgb(103, 232, 249)"] { color: #f0c060 !important; }
         .mp-darktab [style*="rgb(56, 189, 248)"] { color: #f59e0b !important; }
 
+        /* ── EXTRAS: .mp-darktab quente -> cinza neutro ── */
+        :root[data-section='extras'] .mp-darktab .text-slate-300 { color: #d6dae2 !important; }
+        :root[data-section='extras'] .mp-darktab .text-slate-400 { color: #aab2bf !important; }
+        :root[data-section='extras'] .mp-darktab .text-slate-500 { color: #8a93a0 !important; }
+        :root[data-section='extras'] .mp-darktab .text-slate-600 { color: #6a727e !important; }
+        :root[data-section='extras'] .mp-darktab .text-slate-700 { color: #4a505a !important; }
+        :root[data-section='extras'] .mp-darktab .bg-slate-900,
+        :root[data-section='extras'] .mp-darktab .bg-slate-900\/80,
+        :root[data-section='extras'] .mp-darktab .bg-slate-900\/70,
+        :root[data-section='extras'] .mp-darktab .bg-slate-900\/60,
+        :root[data-section='extras'] .mp-darktab .bg-slate-900\/50,
+        :root[data-section='extras'] .mp-darktab .bg-slate-950 { background-color: #16181c !important; }
+        :root[data-section='extras'] .mp-darktab .bg-slate-800,
+        :root[data-section='extras'] .mp-darktab .bg-slate-800\/80,
+        :root[data-section='extras'] .mp-darktab .bg-slate-800\/60,
+        :root[data-section='extras'] .mp-darktab .bg-slate-800\/50 { background-color: #22262e !important; }
+        :root[data-section='extras'] .mp-darktab .hover\:bg-slate-800:hover,
+        :root[data-section='extras'] .mp-darktab .hover\:bg-slate-700:hover { background-color: #2a2f38 !important; }
+        :root[data-section='extras'] .mp-darktab .border-slate-800 { border-color: rgba(160,170,185,0.18) !important; }
+        :root[data-section='extras'] .mp-darktab .border-slate-700 { border-color: rgba(160,170,185,0.28) !important; }
+        :root[data-section='extras'] .mp-darktab .border-slate-600 { border-color: rgba(160,170,185,0.38) !important; }
+        :root[data-section='extras'] .mp-darktab [style*="color: rgb(103, 232, 249)"] { color: #cdd3dc !important; }
+        :root[data-section='extras'] .mp-darktab [style*="rgb(56, 189, 248)"] { color: #cdd3dc !important; }
+
+        /* ── EXTRAS: âmbar -> cinza neutro ── */
+        :root[data-section='extras'] .bg-amber-700,
+        :root[data-section='extras'] .bg-amber-600,
+        :root[data-section='extras'] .bg-amber-500 { background-color: #4a505a !important; box-shadow: none !important; }
+        :root[data-section='extras'] .hover\:bg-amber-600:hover,
+        :root[data-section='extras'] .hover\:bg-amber-500:hover { background-color: #5a616c !important; }
+        :root[data-section='extras'] .hover\:bg-amber-950\/30:hover { background-color: rgba(160,170,185,0.08) !important; }
+        :root[data-section='extras'] .text-amber-300,
+        :root[data-section='extras'] .text-amber-400,
+        :root[data-section='extras'] .text-amber-500,
+        :root[data-section='extras'] .text-amber-600 { color: #cdd3dc !important; }
+        :root[data-section='extras'] .group:hover .group-hover\:text-amber-400 { color: #cdd3dc !important; }
+        :root[data-section='extras'] .border-amber-400\/30,
+        :root[data-section='extras'] .border-amber-600 { border-color: rgba(160,170,185,0.4) !important; }
+        :root[data-section='extras'] .hover\:border-amber-500:hover,
+        :root[data-section='extras'] .focus\:border-amber-500:focus { border-color: rgba(205,211,220,0.5) !important; }
+        /* ── EXTRAS: variantes amber com opacidade (stragglers) -> cinza ── */
+        :root[data-section='extras'] .bg-amber-700\/40,
+        :root[data-section='extras'] .bg-amber-950,
+        :root[data-section='extras'] .bg-amber-950\/50 { background-color: rgba(160,170,185,0.10) !important; }
+        :root[data-section='extras'] .hover\:bg-amber-700\/60:hover,
+        :root[data-section='extras'] .hover\:bg-amber-900\/30:hover,
+        :root[data-section='extras'] .hover\:bg-amber-900\/40:hover { background-color: rgba(160,170,185,0.16) !important; }
+        :root[data-section='extras'] .border-amber-700\/50,
+        :root[data-section='extras'] .border-amber-400\/20 { border-color: rgba(160,170,185,0.3) !important; }
+        :root[data-section='extras'] .hover\:border-amber-600\/40:hover { border-color: rgba(205,211,220,0.45) !important; }
+        :root[data-section='extras'] .focus\:border-amber-600:focus { border-color: rgba(205,211,220,0.5) !important; }
+        :root[data-section='extras'] .group:hover .group-hover\:text-amber-500,
+        :root[data-section='extras'] .hover\:text-amber-400:hover { color: #cdd3dc !important; }
+        :root[data-section='extras'] .shadow-amber-900\/40 { --tw-shadow-color: rgba(160,170,185,0.3) !important; }
+        /* glass-panel plano cinza */
+        :root[data-section='extras'] .glass-panel {
+          background: linear-gradient(160deg, rgba(34,38,46,0.9), rgba(22,24,28,0.9)) !important;
+          border: 1px solid rgba(160,170,185,0.14) !important;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+        }
+
+        /* ── PERSONAGENS: .mp-darktab quente -> azul FF ── */
+        :root[data-section='characters'] .mp-darktab .text-slate-300 { color: #eaf2ff !important; }
+        :root[data-section='characters'] .mp-darktab .text-slate-400 { color: #b8cce8 !important; }
+        :root[data-section='characters'] .mp-darktab .text-slate-500 { color: #7fb3e8 !important; }
+        :root[data-section='characters'] .mp-darktab .text-slate-600 { color: #5a7fa8 !important; }
+        :root[data-section='characters'] .mp-darktab .text-slate-700 { color: #3a5578 !important; }
+        :root[data-section='characters'] .mp-darktab .bg-slate-900,
+        :root[data-section='characters'] .mp-darktab .bg-slate-900\/80,
+        :root[data-section='characters'] .mp-darktab .bg-slate-900\/60,
+        :root[data-section='characters'] .mp-darktab .bg-slate-900\/50,
+        :root[data-section='characters'] .mp-darktab .bg-slate-950 { background-color: #0a1c3c !important; }
+        :root[data-section='characters'] .mp-darktab .bg-slate-800,
+        :root[data-section='characters'] .mp-darktab .bg-slate-800\/80,
+        :root[data-section='characters'] .mp-darktab .bg-slate-800\/60,
+        :root[data-section='characters'] .mp-darktab .bg-slate-800\/50 { background-color: #102a52 !important; }
+        :root[data-section='characters'] .mp-darktab .hover\:bg-slate-800:hover,
+        :root[data-section='characters'] .mp-darktab .hover\:bg-slate-700:hover { background-color: #163a66 !important; }
+        :root[data-section='characters'] .mp-darktab .border-slate-800 { border-color: rgba(120,170,255,0.22) !important; }
+        :root[data-section='characters'] .mp-darktab .border-slate-700 { border-color: rgba(120,170,255,0.34) !important; }
+        :root[data-section='characters'] .mp-darktab .border-slate-600 { border-color: rgba(120,170,255,0.45) !important; }
+        :root[data-section='characters'] .mp-darktab [style*="color: rgb(103, 232, 249)"] { color: #7fe0ff !important; }
+        :root[data-section='characters'] .mp-darktab [style*="rgb(56, 189, 248)"] { color: #7fe0ff !important; }
+
+        /* ── PERSONAGENS: âmbar/ouro Tailwind -> azul FF ── */
+        :root[data-section='characters'] .bg-amber-600,
+        :root[data-section='characters'] .bg-amber-500 { background-color: #2e6ad0 !important; box-shadow: 0 0 15px rgba(90,154,232,0.4) !important; }
+        :root[data-section='characters'] .hover\:bg-amber-500:hover,
+        :root[data-section='characters'] .hover\:bg-amber-600:hover { background-color: #3f82e8 !important; }
+        :root[data-section='characters'] .text-amber-300,
+        :root[data-section='characters'] .text-amber-400,
+        :root[data-section='characters'] .text-amber-500 { color: #9fd0ff !important; }
+        :root[data-section='characters'] .border-amber-400\/30,
+        :root[data-section='characters'] .border-amber-600\/40,
+        :root[data-section='characters'] .border-amber-600 { border-color: rgba(120,170,255,0.5) !important; }
+        :root[data-section='characters'] .focus\:border-amber-600:focus { border-color: #7fe0ff !important; }
+
+        /* ── ARSENAL: neutraliza o aquecimento do .mp-darktab ── */
+        :root[data-section='arsenal'] .mp-darktab .text-slate-300 { color: #f4f0e8 !important; }
+        :root[data-section='arsenal'] .mp-darktab .text-slate-400 { color: #cabfc2 !important; }
+        :root[data-section='arsenal'] .mp-darktab .text-slate-500 { color: #8a8086 !important; }
+        :root[data-section='arsenal'] .mp-darktab .text-slate-600 { color: #6a6066 !important; }
+        :root[data-section='arsenal'] .mp-darktab .text-slate-700 { color: #4a444a !important; }
+        :root[data-section='arsenal'] .mp-darktab .bg-slate-900,
+        :root[data-section='arsenal'] .mp-darktab .bg-slate-900\/80,
+        :root[data-section='arsenal'] .mp-darktab .bg-slate-900\/60,
+        :root[data-section='arsenal'] .mp-darktab .bg-slate-900\/50,
+        :root[data-section='arsenal'] .mp-darktab .bg-slate-950 { background-color: #100a0c !important; }
+        :root[data-section='arsenal'] .mp-darktab .bg-slate-800,
+        :root[data-section='arsenal'] .mp-darktab .bg-slate-800\/80,
+        :root[data-section='arsenal'] .mp-darktab .bg-slate-800\/60,
+        :root[data-section='arsenal'] .mp-darktab .bg-slate-800\/50 { background-color: #1a1218 !important; }
+        :root[data-section='arsenal'] .mp-darktab .hover\:bg-slate-800:hover,
+        :root[data-section='arsenal'] .mp-darktab .hover\:bg-slate-700:hover { background-color: #241820 !important; }
+        :root[data-section='arsenal'] .mp-darktab .border-slate-800 { border-color: rgba(212,20,42,0.22) !important; }
+        :root[data-section='arsenal'] .mp-darktab .border-slate-700 { border-color: rgba(212,20,42,0.34) !important; }
+        :root[data-section='arsenal'] .mp-darktab .border-slate-600 { border-color: rgba(212,20,42,0.45) !important; }
+        :root[data-section='arsenal'] .mp-darktab [style*="color: rgb(103, 232, 249)"] { color: #f01030 !important; }
+        :root[data-section='arsenal'] .mp-darktab [style*="rgb(56, 189, 248)"] { color: #f01030 !important; }
+
+        /* ── ARSENAL: âmbar/ouro Tailwind -> carmesim ── */
+        :root[data-section='arsenal'] .bg-amber-600,
+        :root[data-section='arsenal'] .bg-amber-500 { background-color: #d4142a !important; box-shadow: 0 0 15px rgba(212,20,42,0.45) !important; }
+        :root[data-section='arsenal'] .hover\:bg-amber-500:hover,
+        :root[data-section='arsenal'] .hover\:bg-amber-600:hover { background-color: #f01030 !important; }
+        :root[data-section='arsenal'] .bg-amber-700\/40 { background-color: rgba(212,20,42,0.30) !important; }
+        :root[data-section='arsenal'] .text-amber-300,
+        :root[data-section='arsenal'] .text-amber-400 { color: #ff7a8c !important; }
+        :root[data-section='arsenal'] .border-amber-400\/30,
+        :root[data-section='arsenal'] .border-amber-600\/40,
+        :root[data-section='arsenal'] .border-amber-600 { border-color: rgba(212,20,42,0.5) !important; }
+        :root[data-section='arsenal'] .focus\:border-amber-600:focus { border-color: #f01030 !important; }
+        :root[data-section='arsenal'] .text-amber-500,
+        :root[data-section='arsenal'] .text-amber-500\/80 { color: #ff7a8c !important; }
+        :root[data-section='arsenal'] .bg-amber-950\/30 { background-color: rgba(212,20,42,0.12) !important; }
+        :root[data-section='arsenal'] .border-amber-900\/30 { border-color: rgba(212,20,42,0.30) !important; }
+
+        /* ── ARSENAL: banner diagonal Persona nos h2 de seção ── */
+        :root[data-section='arsenal'] .mp-darktab h2 {
+          position: relative; display: inline-block;
+          padding: 6px 22px 6px 16px;
+          background: #0a0506 !important;
+          color: #f4f0e8 !important;
+          -webkit-text-fill-color: #f4f0e8 !important;
+          -webkit-background-clip: border-box !important;
+          background-clip: border-box !important;
+          clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+          border-left: 5px solid #d4142a;
+          text-shadow: 0 2px 0 rgba(212,20,42,0.6);
+        }
+        :root[data-section='arsenal'] .mp-darktab h2::after {
+          content: ''; position: absolute; left: -5px; bottom: -7px; width: 70%; height: 4px;
+          background: linear-gradient(90deg, #f01030, transparent);
+        }
+
+        /* ── ARSENAL: card shell Persona (recorte + skew + slash vermelho) ── */
+        :root[data-section='arsenal'] .mp-darktab .group.rounded-\[2\.5rem\] {
+          border-radius: 4px !important;
+          clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%);
+          transform: rotate(-1.2deg);
+          background-color: #141014 !important;
+          border-width: 1.5px !important;
+        }
+        :root[data-section='arsenal'] .mp-darktab .group.rounded-\[2\.5rem\]:nth-child(even) { transform: rotate(0.8deg); }
+        :root[data-section='arsenal'] .mp-darktab .group.rounded-\[2\.5rem\]::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px; z-index: 2;
+          background: linear-gradient(90deg, #f01030, #8a0a18); pointer-events: none;
+        }
+        :root[data-section='arsenal'] .mp-darktab .group.rounded-\[2\.5rem\] h3 { font-style: italic; }
+
         /* ===== A Forja do Mestre — Fundação "brasa disciplinada" ===== */
         :root {
           /* acento único de ação */
@@ -3694,12 +3874,69 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 200px 200px;
 }
+/* ── ARSENAL Persona: preto + faixas diagonais + halftone ── */
+:root[data-section='arsenal'] .mp-page-bg {
+  background:
+    linear-gradient(118deg, transparent 0 46%, rgba(212,20,42,0.10) 46.2% 47%, transparent 47.2% 63%, rgba(212,20,42,0.07) 63.2% 64%, transparent 64.2%),
+    #0c0708;
+}
+:root[data-section='arsenal'] .mp-page-bg::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.5;
+  background-image: radial-gradient(rgba(212,20,42,0.5) 1px, transparent 1.4px);
+  background-size: 12px 12px;
+  -webkit-mask-image: linear-gradient(135deg, #000 0 22%, transparent 42%);
+          mask-image: linear-gradient(135deg, #000 0 22%, transparent 42%);
+}
+:root[data-section='arsenal'] .mp-page-bg::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 100% 100%, rgba(212,20,42,0.10), transparent 40%);
+}
+/* ── PERSONAGENS Final Fantasy: azul profundo + cristais ── */
+:root[data-section='characters'] .mp-page-bg {
+  background: linear-gradient(180deg, #081428 0%, #0e2a52 100%);
+}
+:root[data-section='characters'] .mp-page-bg::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.4;
+  background-image:
+    linear-gradient(135deg, transparent 0 49.6%, rgba(127,224,255,0.5) 49.7% 50%, transparent 50.1%),
+    linear-gradient(45deg, transparent 0 49.6%, rgba(90,154,232,0.4) 49.7% 50%, transparent 50.1%);
+  background-size: 64px 64px, 96px 96px;
+  -webkit-mask-image: radial-gradient(ellipse at 80% 0%, #000 0 30%, transparent 60%);
+          mask-image: radial-gradient(ellipse at 80% 0%, #000 0 30%, transparent 60%);
+}
+:root[data-section='arsenal'] .p5-subtab {
+  border-radius: 0 !important;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  font-style: italic;
+}
         /* Combat-scoped glaze override — Metaphor cool palette */
         :root[data-section='combat'] .mp-glaze {
           background:
             radial-gradient(60% 50% at 18% 12%, rgba(209,31,63,0.12), transparent 60%),
             radial-gradient(55% 50% at 85% 80%, rgba(47,212,196,0.10), transparent 60%);
         }
+        /* neutraliza o glaze quente sobre o fundo azul */
+        :root[data-section='characters'] .mp-glaze {
+          background:
+            radial-gradient(60% 50% at 18% 12%, rgba(90,154,232,0.10), transparent 60%),
+            radial-gradient(55% 50% at 85% 80%, rgba(127,224,255,0.08), transparent 60%);
+        }
+        /* CTA primário (Novo) ouro -> azul FF */
+        :root[data-section='characters'] .mp-cta {
+          background: linear-gradient(105deg, #5a9ae8, #2e6ad0 48%, #1e4e9a) !important;
+          border-color: rgba(168,200,255,0.7) !important;
+          color: #06122a !important;
+          box-shadow: 0 10px 26px rgba(0,0,0,0.36), 0 0 22px rgba(90,154,232,0.3) !important;
+        }
+        :root[data-section='characters'] .mp-section-kicker { color: #7fe0ff !important; }
+        :root[data-section='characters'] .mp-empty strong { color: #cfe2ff !important; }
+        :root[data-section='characters'] .mp-empty { border-color: rgba(120,170,255,0.2) !important; }
+        :root[data-section='characters'] .mp-character-banner {
+          background: linear-gradient(160deg, rgba(23,56,110,0.92), rgba(11,33,72,0.92)) !important;
+          border: 1.5px solid rgba(168,200,255,0.5) !important;
+        }
+        :root[data-section='characters'] .mp-character-name { color: #eaf2ff !important; }
+        :root[data-section='characters'] .mp-character-portrait__badge { color: #cfe2ff !important; }
 
 /* superfície dos painéis flutuantes + acento de respingo magenta no canto */
 :root[data-section='combat'] .mp-combat-panel-shell {
