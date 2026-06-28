@@ -1,0 +1,21 @@
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
+import InitiativeTracker from './InitiativeTracker';
+import type { Character } from '../../types';
+
+afterEach(() => cleanup());
+
+function ch(id: string, name: string): Character {
+  return { id, name, icon: '', maxHp: 10, currentHp: 10, maxAura: 5, currentAura: 5, maxAmmo: 0, currentAmmo: 0,
+    baseInitiative: 0, cardIds: [], conditions: [], items: [] };
+}
+
+describe('InitiativeTracker', () => {
+  it('mostra a rodada e os participantes', () => {
+    render(<InitiativeTracker round={3} participants={[ch('p1', 'Shinkai'), ch('p2', 'Mikhail')]} activeId="p1" />);
+    expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.getByText(/rodada/i)).toBeTruthy();
+    expect(screen.getByText('SHINKAI')).toBeTruthy();
+    expect(screen.getByText('MIKHAIL')).toBeTruthy();
+  });
+});
