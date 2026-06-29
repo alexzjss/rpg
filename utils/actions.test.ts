@@ -64,3 +64,48 @@ describe('actorActions', () => {
     expect(groups.item).toHaveLength(0);
   });
 });
+
+import { applyStatDelta, computeResolution, type StatSnapshot, type ResolvedAction as RA } from './actions';
+
+const snap = (over: Partial<StatSnapshot> = {}): StatSnapshot => ({
+  currentHp: 20, maxHp: 20, currentAura: 10, maxAura: 10, currentAmmo: 5, maxAmmo: 5, defense: 12, conditions: [], ...over,
+});
+const atk = (over: Partial<RA> = {}): RA => ({ source: 'card', id: 'a', name: 'Golpe', category: 'atacar', diceRoll: '1d20', targeting: 'other', damage: 6, ...over });
+
+describe('applyStatDelta', () => {
+  it('clampa HP/Aura/Ammo em [0,max]', () => {
+    expect(applyStatDelta(snap({ currentHp: 5 }), { hp: -9 })).toMatchObject({ currentHp: 0 });
+    expect(applyStatDelta(snap({ currentHp: 18 }), { hp: 9 })).toMatchObject({ currentHp: 20 });
+    expect(applyStatDelta(snap({ currentAura: 2 }), { aura: -5 })).toMatchObject({ currentAura: 0 });
+  });
+});
+
+describe('computeResolution', () => {
+  it('acerto (total ≥ defesa) aplica dano e desconta custo', () => {
+    const r = computeResolution('A', snap({ currentAura: 10 }), 'B', snap({ defense: 12 }), atk({ damage: 6, auraCost: 2 }), 15);
+    expect(r.success).toBe(true);
+    expect(r.targetDelta.hp).toBe(-6);
+    expect(r.actorDelta.aura).toBe(-2);
+    expect(r.log.length).toBeGreaterThanOrEqual(2);
+  });
+  it('erro (total < defesa) não aplica dano, mas desconta custo', () => {
+    const r = computeResolution('A', snap(), 'B', snap({ defense: 18 }), atk({ damage: 6, auraCost: 2 }), 10);
+    expect(r.success).toBe(false);
+    expect(r.targetDelta.hp).toBeUndefined();
+    expect(r.actorDelta.aura).toBe(-2);
+  });
+  it('cura (self) sempre sucede e cura HP/Aura', () => {
+    const r = computeResolution('A', snap(), 'A', snap(), atk({ source: 'seal', damage: undefined, healHp: 5, targeting: 'self' }), 1);
+    expect(r.success).toBe(true);
+    expect(r.targetDelta.hp).toBe(5);
+  });
+  it('bloqueia se faltar aura', () => {
+    const r = computeResolution('A', snap({ currentAura: 1 }), 'B', snap(), atk({ auraCost: 3 }), 20);
+    expect(r.blocked).toBeTruthy();
+    expect(r.actorDelta).toEqual({});
+  });
+  it('aplica condição no sucesso', () => {
+    const r = computeResolution('A', snap(), 'B', snap({ defense: 5 }), atk({ conditionName: 'Queimando', conditionDuration: 3 }), 20);
+    expect(r.conditionApplied).toEqual({ name: 'Queimando', duration: 3 });
+  });
+});

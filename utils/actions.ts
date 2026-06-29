@@ -85,3 +85,106 @@ export function actorActions(args: { cards: Card[]; seals: Seal[]; weapons: Weap
   for (const i of args.items) if (i.usableInCombat) out.item.push(normalizeItem(i));
   return out;
 }
+
+import { rollDice } from './dice';
+import { DEFAULT_DEFENSE } from '../types';
+import type { CenaLogEntry } from './cena';
+import { logEntry } from './cena';
+
+export interface StatSnapshot {
+  currentHp: number; maxHp: number;
+  currentAura: number; maxAura: number;
+  currentAmmo: number; maxAmmo: number;
+  defense?: number;
+  conditions: { name: string; duration: number }[];
+}
+
+export interface StatDelta { hp?: number; aura?: number; ammo?: number }
+
+export interface Resolution {
+  blocked?: string;
+  success: boolean;
+  attackTotal: number;
+  actorDelta: StatDelta;
+  targetDelta: StatDelta;
+  conditionApplied?: { name: string; duration: number };
+  log: CenaLogEntry[];
+}
+
+/** Aplica um delta a stats, clampando cada um em [0, max]. */
+export function applyStatDelta(
+  s: { currentHp: number; maxHp: number; currentAura: number; maxAura: number; currentAmmo: number; maxAmmo: number },
+  d: StatDelta,
+): { currentHp: number; currentAura: number; currentAmmo: number } {
+  const clamp = (v: number, max: number) => Math.max(0, Math.min(max, v));
+  return {
+    currentHp: clamp(s.currentHp + (d.hp ?? 0), s.maxHp),
+    currentAura: clamp(s.currentAura + (d.aura ?? 0), s.maxAura),
+    currentAmmo: clamp(s.currentAmmo + (d.ammo ?? 0), s.maxAmmo),
+  };
+}
+
+/** Resolução pura dado o total já rolado (determinística). */
+export function computeResolution(
+  actorName: string, actor: StatSnapshot,
+  targetName: string, target: StatSnapshot,
+  action: ResolvedAction, attackTotal: number,
+): Resolution {
+  const auraCost = action.auraCost ?? 0;
+  const ammoCost = action.ammoCost ?? 0;
+  if (actor.currentAura < auraCost) {
+    return { blocked: 'Aura insuficiente', success: false, attackTotal: 0, actorDelta: {}, targetDelta: {}, log: [logEntry('system', `${actorName}: Aura insuficiente para ${action.name}.`)] };
+  }
+  if (actor.currentAmmo < ammoCost) {
+    return { blocked: 'Munição insuficiente', success: false, attackTotal: 0, actorDelta: {}, targetDelta: {}, log: [logEntry('system', `${actorName}: Munição insuficiente para ${action.name}.`)] };
+  }
+
+  const actorDelta: StatDelta = {};
+  if (auraCost) actorDelta.aura = -auraCost;
+  if (ammoCost) actorDelta.ammo = -ammoCost;
+
+  const log: CenaLogEntry[] = [];
+  const isSelf = action.targeting === 'self';
+  const hasDamage = (action.damage ?? 0) > 0;
+
+  let success = true;
+  if (!isSelf && hasDamage) {
+    const def = target.defense ?? DEFAULT_DEFENSE;
+    success = attackTotal >= def;
+    log.push(logEntry('roll', `${actorName} usa ${action.name}: rola ${attackTotal} vs defesa ${def} — ${success ? 'ACERTO' : 'ERRO'}.`));
+  } else {
+    log.push(logEntry('roll', `${actorName} usa ${action.name}.`));
+  }
+
+  const targetDelta: StatDelta = {};
+  let conditionApplied: { name: string; duration: number } | undefined;
+  if (success) {
+    if (hasDamage) {
+      targetDelta.hp = -(action.damage ?? 0);
+      log.push(logEntry('damage', `${targetName} sofre ${action.damage} de dano${action.damageType ? ` (${action.damageType})` : ''}.`));
+    }
+    if (action.healHp) {
+      targetDelta.hp = (targetDelta.hp ?? 0) + action.healHp;
+      log.push(logEntry('damage', `${targetName} recupera ${action.healHp} de HP.`));
+    }
+    if (action.healAura) {
+      targetDelta.aura = (targetDelta.aura ?? 0) + action.healAura;
+      log.push(logEntry('damage', `${targetName} recupera ${action.healAura} de Aura.`));
+    }
+    if (action.conditionName) {
+      conditionApplied = { name: action.conditionName, duration: action.conditionDuration ?? 1 };
+      log.push(logEntry('condition', `${targetName} recebe ${action.conditionName}.`));
+    }
+  }
+  return { success, attackTotal, actorDelta, targetDelta, conditionApplied, log };
+}
+
+/** Resolve a ação rolando o dado de ataque (default 1d20). */
+export function resolveAction(
+  actorName: string, actor: StatSnapshot,
+  targetName: string, target: StatSnapshot,
+  action: ResolvedAction,
+): Resolution {
+  const attackTotal = rollDice(action.diceRoll || '1d20').total;
+  return computeResolution(actorName, actor, targetName, target, action, attackTotal);
+}
