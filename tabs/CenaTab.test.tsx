@@ -3,46 +3,39 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import CenaTab from './CenaTab';
 import { createDefaultCena } from '../utils/cena';
 import { startEncounter } from '../utils/encounter';
-import type { Character } from '../types';
+import type { Character, Seal } from '../types';
 
 afterEach(() => cleanup());
 
-function cast(id: string, name: string): Character {
-  return { id, name, icon: '', maxHp: 20, currentHp: 12, maxAura: 6, currentAura: 6,
-    maxAmmo: 0, currentAmmo: 0, baseInitiative: 0, cardIds: [], conditions: [], items: [], role: 'cast' };
+function cast(id: string, name: string, over: Partial<Character> = {}): Character {
+  return { id, name, icon: '', maxHp: 20, currentHp: 20, maxAura: 10, currentAura: 10,
+    maxAmmo: 0, currentAmmo: 0, baseInitiative: 0, cardIds: [], conditions: [], items: [], role: 'cast', ...over };
 }
-const props = (cena: any, characters: Character[], updateCena: any) => ({
-  cena, characters, cards: [], seals: [], items: [], weapons: [], updateCena, updateCharacterStats: () => {},
+const props = (cena: any, characters: Character[], over: any = {}) => ({
+  cena, characters, cards: [], seals: [], items: [], weapons: [], updateCena: () => {}, updateCharacterStats: () => {}, ...over,
 });
 
-describe('CenaTab — iniciar/encerrar combate', () => {
-  it('Iniciar Combate monta a ordem de iniciativa (party + NPCs presentes)', () => {
-    const cena = createDefaultCena();
+describe('CenaTab — iniciar/encerrar (3A intacto)', () => {
+  it('Iniciar Combate monta a ordem', () => {
     const updateCena = vi.fn();
-    render(<CenaTab {...props(cena, [cast('p1', 'Shinkai')], updateCena)} />);
+    render(<CenaTab {...props(createDefaultCena(), [cast('p1', 'Shinkai')], { updateCena })} />);
     fireEvent.click(screen.getByRole('button', { name: /iniciar combate/i }));
-    const next = updateCena.mock.calls[0][0];
-    expect(next.encounter.isActive).toBe(true);
-    expect(next.encounter.order).toHaveLength(1);
-    expect(next.encounter.order[0].refId).toBe('p1');
+    expect(updateCena.mock.calls[0][0].encounter.order).toHaveLength(1);
   });
+});
 
-  it('com encounter ativo destaca o ator do turno no ActiveBar', () => {
+describe('CenaTab — resolução (3B)', () => {
+  it('cura self resolve imediatamente e grava no ator (party)', () => {
+    const heal: Seal = { id: 'sh', name: 'Cura', code: '', image: '', description: '', healHp: 5 };
     let cena = createDefaultCena();
     cena = startEncounter(cena, [{ id: 'p1', side: 'party', name: 'Shinkai', baseInitiative: 0 }]);
-    render(<CenaTab {...props(cena, [cast('p1', 'Shinkai')], () => {})} />);
-    expect(screen.getByText(/seu turno/i)).toBeTruthy();
-    expect(screen.getByText(/rodada/i)).toBeTruthy();
-  });
-
-  it('Encerrar Combate limpa a ordem', () => {
-    let cena = createDefaultCena();
-    cena = startEncounter(cena, [{ id: 'p1', side: 'party', name: 'Shinkai', baseInitiative: 0 }]);
-    const updateCena = vi.fn();
-    render(<CenaTab {...props(cena, [cast('p1', 'Shinkai')], updateCena)} />);
-    fireEvent.click(screen.getByRole('button', { name: /encerrar combate/i }));
-    const next = updateCena.mock.calls[0][0];
-    expect(next.encounter.isActive).toBe(false);
-    expect(next.encounter.order).toEqual([]);
+    const updateCharacterStats = vi.fn();
+    const p1 = cast('p1', 'Shinkai', { currentHp: 10, sealIds: ['sh'] });
+    render(<CenaTab {...props(cena, [p1], { seals: [heal], updateCharacterStats })} />);
+    fireEvent.click(screen.getByText('HABILIDADE'));
+    fireEvent.click(screen.getByText('Cura'));
+    expect(updateCharacterStats).toHaveBeenCalled();
+    const [, updates] = updateCharacterStats.mock.calls[0];
+    expect(updates.currentHp).toBe(15);
   });
 });

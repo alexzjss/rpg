@@ -2,7 +2,8 @@ import React from 'react';
 import { Swords, X } from 'lucide-react';
 import type { Card, Character, Item, Seal, Weapon } from '../types';
 import type { CenaState, SceneState } from '../utils/cena';
-import { setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken } from '../utils/cena';
+import { setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken, updateNpcStats, appendLog } from '../utils/cena';
+import { actorActions, resolveAction, applyStatDelta, type ResolvedAction, type StatSnapshot } from '../utils/actions';
 import { startEncounter, endEncounter, advanceTurn, prevTurn } from '../utils/encounter';
 import { resolveCards, resolveSeals, resolveOwnedItems, resolveWeapons } from '../utils/items';
 import LogPanel from './cena/LogPanel';
@@ -27,8 +28,9 @@ export interface CenaTabProps {
 
 const col: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 };
 
-const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items, weapons, updateCena }) => {
+const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items, weapons, updateCena, updateCharacterStats }) => {
   const [active, setActive] = React.useState<ActiveRef | null>(null);
+  const [armed, setArmed] = React.useState<ResolvedAction | null>(null);
   const combat = cena.encounter.isActive;
 
   const party = characters.filter(c => (c.role ?? 'npc') === 'cast');
@@ -60,10 +62,55 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
   const activeItems = activeChar ? resolveOwnedItems(activeChar, items) : [];
   const activeWeapons = activeChar ? resolveWeapons(activeChar, weapons) : [];
 
+  const snapOf = (c: Character): StatSnapshot => ({
+    currentHp: c.currentHp, maxHp: c.maxHp, currentAura: c.currentAura, maxAura: c.maxAura,
+    currentAmmo: c.currentAmmo, maxAmmo: c.maxAmmo, defense: c.defense,
+    conditions: c.conditions ?? [],
+  });
+
+  const applyDeltaTo = (cur: CenaState, id: string, delta: { hp?: number; aura?: number; ammo?: number }, condition?: { name: string; duration: number }): CenaState => {
+    const c = byId(id); if (!c) return cur;
+    const stats = applyStatDelta(c, delta);
+    const conditions = condition ? [...(c.conditions ?? []), condition] : c.conditions;
+    const updates = { ...stats, ...(condition ? { conditions } : {}) };
+    if (party.some(p => p.id === id)) { updateCharacterStats(id, updates); return cur; }
+    return updateNpcStats(cur, id, updates);
+  };
+
+  const resolveOn = (targetId: string, action: ResolvedAction) => {
+    if (!turnActor) return;
+    const target = byId(targetId); if (!target) return;
+    const res = resolveAction(turnActor.name, snapOf(turnActor), target.name, snapOf(target), action);
+    let next = appendLog(cena, res.log);
+    if (turnActor.id === targetId) {
+      const merged = {
+        hp: ((res.actorDelta.hp ?? 0) + (res.targetDelta.hp ?? 0)) || undefined,
+        aura: ((res.actorDelta.aura ?? 0) + (res.targetDelta.aura ?? 0)) || undefined,
+        ammo: ((res.actorDelta.ammo ?? 0) + (res.targetDelta.ammo ?? 0)) || undefined,
+      };
+      next = applyDeltaTo(next, turnActor.id, merged, res.conditionApplied);
+    } else {
+      next = applyDeltaTo(next, turnActor.id, res.actorDelta);
+      next = applyDeltaTo(next, targetId, res.targetDelta, res.conditionApplied);
+    }
+    updateCena(next);
+    setArmed(null);
+  };
+
   const onSceneChange = (partial: Partial<SceneState>) => updateCena(setScene(cena, partial));
   const selectById = (id: string) => {
     if (party.some(c => c.id === id)) setActive({ id, side: 'party' });
     else if (cena.npcRoster.some(n => n.id === id)) setActive({ id, side: 'npc' });
+  };
+
+  const onSelectAction = (action: ResolvedAction) => {
+    if (action.targeting === 'self' && turnActor) resolveOn(turnActor.id, action);
+    else setArmed(action);
+  };
+
+  const onParticipantClick = (id: string) => {
+    if (combat && armed) resolveOn(id, armed);
+    else selectById(id);
   };
 
   const toggleBtn = (
@@ -85,12 +132,19 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       {/* ESQUERDA */}
       <div style={col}>
         <div style={{ flex: 1, minHeight: 0 }}><LogPanel log={cena.log} notes={cena.scene.notes} onNotesChange={notes => onSceneChange({ notes })} /></div>
-        <div style={{ height: 212, flex: 'none' }}><SealsPanel seals={activeSeals} /></div>
+        <div style={{ height: 212, flex: 'none' }}><SealsPanel seals={combat ? [] : activeSeals} /></div>
       </div>
 
       {/* CENTRO */}
       <div style={col}>
         {toggleBtn}
+        {combat && armed && (
+          <div style={{ flex: 'none', padding: '8px 12px', background: '#1d0e12', border: '1px solid #3a1620', color: '#E0102B',
+            fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '1px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>ESCOLHA O ALVO DE {armed.name.toUpperCase()}</span>
+            <button onClick={() => setArmed(null)} style={{ background: 'transparent', border: 'none', color: '#9a9aa1', cursor: 'pointer', fontSize: 12 }}>cancelar</button>
+          </div>
+        )}
         {combat
           ? <InitiativeTracker round={cena.encounter.round} participants={orderedParticipants} activeId={turnEntry?.refId ?? null}
               onPrev={() => updateCena({ ...cena, encounter: prevTurn(cena.encounter, isDefeatedEntry) })}
@@ -100,7 +154,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
           <MapBoard image={cena.scene.image} participants={participants} tokens={cena.tokens}
             activeId={combat ? (turnEntry?.refId ?? null) : (active?.id ?? null)}
             onMoveToken={(id, pos) => updateCena(setToken(cena, id, pos))}
-            onSelect={selectById}
+            onSelect={onParticipantClick}
             combat={combat} enemyIds={presentNpcs.map(n => n.id)} />
         </div>
         <ActiveBar active={activeChar} combat={combat} />
@@ -111,7 +165,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
         <div style={{ flex: 1, minHeight: 0 }}>
           <RosterPanel
             party={party} npcRoster={cena.npcRoster} importable={importable} active={active}
-            onSelectActive={setActive}
+            onSelectActive={ref => (combat && armed) ? onParticipantClick(ref.id) : setActive(ref)}
             onImportNpc={id => { const c = npcChars.find(x => x.id === id); if (c) updateCena(addNpcFromCharacter(cena, c)); }}
             onToggleHidden={id => updateCena(toggleNpcHidden(cena, id))}
             onTogglePresent={id => updateCena(toggleNpcPresent(cena, id))}
@@ -119,7 +173,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
           />
         </div>
         <div style={combat ? { flex: 1, minHeight: 0 } : { height: 212, flex: 'none' }}>
-          {combat ? <ActionMenu /> : <ActionsPanel cards={activeCards} items={activeItems} weapons={activeWeapons} />}
+          {combat ? <ActionMenu actions={actorActions({ cards: activeCards, seals: activeSeals, weapons: activeWeapons, items: activeItems })} onSelectAction={onSelectAction} /> : <ActionsPanel cards={activeCards} items={activeItems} weapons={activeWeapons} />}
         </div>
       </div>
     </div>
