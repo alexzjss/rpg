@@ -477,6 +477,8 @@ export interface PresetConditionTemplate {
   /** minimum roll needed (for Paralisado) */
   defaultMinRoll?: number;
   damageType?: DamageType;
+  /** Efeito aplicado no início do turno do portador. */
+  perTurn?: 'damage' | 'heal';
 }
 
 export const PRESET_CONDITIONS: PresetConditionTemplate[] = [
@@ -488,6 +490,7 @@ export const PRESET_CONDITIONS: PresetConditionTemplate[] = [
     defaultDuration: 3,
     defaultValue: 3,
     damageType: 'fogo',
+    perTurn: 'damage',
   },
   {
     name: 'Eletrocutado',
@@ -497,6 +500,7 @@ export const PRESET_CONDITIONS: PresetConditionTemplate[] = [
     defaultDuration: 2,
     defaultValue: 3,
     damageType: 'raio',
+    perTurn: 'damage',
   },
   {
     name: 'Molhado',
@@ -514,6 +518,7 @@ export const PRESET_CONDITIONS: PresetConditionTemplate[] = [
     color: '#a3e635',
     defaultDuration: 4,
     defaultValue: 2,
+    perTurn: 'damage',
   },
   {
     name: 'Paralisado',
@@ -547,6 +552,7 @@ export const PRESET_CONDITIONS: PresetConditionTemplate[] = [
     defaultDuration: 3,
     defaultValue: 2,
     damageType: 'sangue',
+    perTurn: 'damage',
   },
   {
     name: 'Amaldiçoado',
@@ -591,6 +597,7 @@ export const PRESET_CONDITIONS: PresetConditionTemplate[] = [
     color: '#22c55e',
     defaultDuration: 3,
     defaultValue: 3,
+    perTurn: 'heal',
   },
   {
     name: 'Protegido',
