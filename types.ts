@@ -232,6 +232,7 @@ export interface Character {
   maxAmmo: number;
   currentAmmo: number;
   baseInitiative: number;
+  defense?: number;   // defesa para teste de acerto (default DEFAULT_DEFENSE)
   deslocamento?: number;   // unidades de movimento (padrão: 6)
   cardIds: string[];
   pinnedCardIds?: string[];
@@ -247,6 +248,9 @@ export interface Character {
   stacks?: CharacterStack[];
   ownedItems?: OwnedItem[]; // posse referenciada (catálogo global)
 }
+
+/** Defesa padrão quando o personagem não tem `defense` definido. */
+export const DEFAULT_DEFENSE = 10;
 
 export interface Combatant extends Character {
   combatId: string;
