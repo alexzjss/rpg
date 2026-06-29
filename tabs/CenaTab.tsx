@@ -6,6 +6,7 @@ import { setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPre
 import { actorActions, resolveAction, applyStatDelta, type ResolvedAction, type StatSnapshot } from '../utils/actions';
 import { startEncounter, endEncounter, advanceTurn, prevTurn } from '../utils/encounter';
 import { resolveCards, resolveSeals, resolveOwnedItems, resolveWeapons } from '../utils/items';
+import { tickConditions } from '../utils/conditions';
 import LogPanel from './cena/LogPanel';
 import SceneTitle from './cena/SceneTitle';
 import MapBoard from './cena/MapBoard';
@@ -68,11 +69,12 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     conditions: c.conditions ?? [],
   });
 
-  const applyDeltaTo = (cur: CenaState, id: string, delta: { hp?: number; aura?: number; ammo?: number }, condition?: { name: string; duration: number }): CenaState => {
+  const applyDeltaTo = (cur: CenaState, id: string, delta: { hp?: number; aura?: number; ammo?: number }, condition?: { name: string; duration: number }, replaceConditions?: { name: string; duration: number }[]): CenaState => {
     const c = byId(id); if (!c) return cur;
     const stats = applyStatDelta(c, delta);
-    const conditions = condition ? [...(c.conditions ?? []), condition] : c.conditions;
-    const updates = { ...stats, ...(condition ? { conditions } : {}) };
+    const conditions = replaceConditions !== undefined ? replaceConditions : (condition ? [...(c.conditions ?? []), condition] : c.conditions);
+    const changedConds = replaceConditions !== undefined || !!condition;
+    const updates = { ...stats, ...(changedConds ? { conditions } : {}) };
     if (party.some(p => p.id === id)) { updateCharacterStats(id, updates); return cur; }
     return updateNpcStats(cur, id, updates);
   };
@@ -148,7 +150,18 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
         {combat
           ? <InitiativeTracker round={cena.encounter.round} participants={orderedParticipants} activeId={turnEntry?.refId ?? null}
               onPrev={() => updateCena({ ...cena, encounter: prevTurn(cena.encounter, isDefeatedEntry) })}
-              onNext={() => updateCena({ ...cena, encounter: advanceTurn(cena.encounter, isDefeatedEntry) })} />
+              onNext={() => {
+                const encNext = advanceTurn(cena.encounter, isDefeatedEntry);
+                const entry = encNext.order[encNext.turnIndex];
+                const actor = entry ? byId(entry.refId) : null;
+                let next: CenaState = { ...cena, encounter: encNext };
+                if (actor) {
+                  const tick = tickConditions(actor.name, actor.conditions ?? []);
+                  next = appendLog(next, tick.log);
+                  next = applyDeltaTo(next, actor.id, tick.delta, undefined, tick.conditions);
+                }
+                updateCena(next);
+              }} />
           : <SceneTitle scene={cena.scene} onSceneChange={onSceneChange} />}
         <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
           <MapBoard image={cena.scene.image} participants={participants} tokens={cena.tokens}
