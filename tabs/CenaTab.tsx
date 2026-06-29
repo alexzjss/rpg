@@ -132,7 +132,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       {/* ESQUERDA */}
       <div style={col}>
         <div style={{ flex: 1, minHeight: 0 }}><LogPanel log={cena.log} notes={cena.scene.notes} onNotesChange={notes => onSceneChange({ notes })} /></div>
-        <div style={{ height: 212, flex: 'none' }}><SealsPanel seals={combat ? [] : activeSeals} /></div>
+        <div style={{ height: 212, flex: 'none' }}><SealsPanel seals={activeSeals} /></div>
       </div>
 
       {/* CENTRO */}

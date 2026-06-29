@@ -33,7 +33,7 @@ describe('CenaTab — resolução (3B)', () => {
     const p1 = cast('p1', 'Shinkai', { currentHp: 10, sealIds: ['sh'] });
     render(<CenaTab {...props(cena, [p1], { seals: [heal], updateCharacterStats })} />);
     fireEvent.click(screen.getByText('HABILIDADE'));
-    fireEvent.click(screen.getByText('Cura'));
+    fireEvent.click(screen.getByRole('button', { name: /cura/i }));
     expect(updateCharacterStats).toHaveBeenCalled();
     const [, updates] = updateCharacterStats.mock.calls[0];
     expect(updates.currentHp).toBe(15);
