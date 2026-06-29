@@ -132,3 +132,8 @@ export function logEntry(kind: CenaLogEntry['kind'], text: string): CenaLogEntry
 export function appendLog(cena: CenaState, entries: CenaLogEntry[]): CenaState {
   return { ...cena, log: [...cena.log, ...entries] };
 }
+
+/** Mescla updates de stats/condições num NPC do roster (imutável). */
+export function updateNpcStats(cena: CenaState, npcId: string, updates: Partial<Character>): CenaState {
+  return { ...cena, npcRoster: cena.npcRoster.map(n => n.id === npcId ? { ...n, ...updates } : n) };
+}

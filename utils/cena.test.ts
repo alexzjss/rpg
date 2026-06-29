@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createDefaultCena, DEFAULT_SCENE, DEFAULT_ENCOUNTER, setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken, setEncounterActive, logEntry, appendLog } from './cena';
+import { createDefaultCena, DEFAULT_SCENE, DEFAULT_ENCOUNTER, setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken, setEncounterActive, logEntry, appendLog, updateNpcStats } from './cena';
 import type { Character } from '../types';
 
 function fakeChar(id: string, over: Partial<Character> = {}): Character {
@@ -125,5 +125,20 @@ describe('log helpers', () => {
     expect(next.log).toHaveLength(1);
     expect(cena.log).toHaveLength(0);
     expect(next).not.toBe(cena);
+  });
+});
+
+describe('updateNpcStats', () => {
+  it('mescla updates no NPC alvo sem mutar o original', () => {
+    const cena = addNpcFromCharacter(createDefaultCena(), fakeChar('a'));
+    const next = updateNpcStats(cena, 'a', { currentHp: 3, conditions: [{ name: 'Queimando', duration: 2 }] });
+    expect(next.npcRoster[0].currentHp).toBe(3);
+    expect(next.npcRoster[0].conditions).toEqual([{ name: 'Queimando', duration: 2 }]);
+    expect(cena.npcRoster[0].currentHp).toBe(10);
+    expect(next).not.toBe(cena);
+  });
+  it('no-op para id inexistente', () => {
+    const cena = createDefaultCena();
+    expect(updateNpcStats(cena, 'x', { currentHp: 1 }).npcRoster).toEqual([]);
   });
 });
