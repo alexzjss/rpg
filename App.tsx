@@ -3309,16 +3309,13 @@ const App: React.FC = () => {
   // Journey UI State
   const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
   const [quickEditChar, setQuickEditChar] = useState<Character | null>(null);
-  const [recipeModal, setRecipeModal] = useState<{ mode: 'new' | 'edit'; recipe?: Recipe; type: RecipeType } | null>(null);
   const [craftResult, setCraftResult] = useState<{ recipe: Recipe; character: Character } | null>(null);
-  const [editRecipeData, setEditRecipeData] = useState<Partial<Recipe>>({});
   // Upgrade shop UI state
   const [upgradePurchaseResult, setUpgradePurchaseResult] = useState<{ offer: UpgradeOffer; targetChar: Character } | null>(null);
   const [shopCurrency, setShopCurrency] = useState(0);
   // Per-character currencies (charId -> moedas)
   const [characterCurrencies, setCharacterCurrencies] = useState<Record<string, number>>({});
   // Active card item boost: which item (par/trinca/quadra/reroll) to apply when using a card
-  const [activeCardItemBoost, setActiveCardItemBoost] = useState<{ charId: string; itemName: 'par' | 'trinca' | 'quadra' | 'reroll' } | null>(null);
 
   // Items UI State
   const [selectedInventoryCharId, setSelectedInventoryCharId] = useState<string | null>(null);
@@ -3329,19 +3326,12 @@ const App: React.FC = () => {
 
   // Combat UI State
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [showEndCombatConfirm, setShowEndCombatConfirm] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ message: string; onConfirm: () => void } | null>(null);
-  const [showAddCombatantModal, setShowAddCombatantModal] = useState(false);
   // Turn change animation key — increments each turn to re-trigger CSS animations
   // (mobile mode removed)
   const [placingPin, setPlacingPin] = useState<{label: string; color: string} | null>(null);
   const [cardAnim, setCardAnim] = useState<CardAnimPayload | null>(null);
 
-  // ── NEW: Combat enhancements ──────────────────────────────────
-  // Turn timer
-  const [turnTimerEnabled, setTurnTimerEnabled] = useState(false);
-  const [turnTimerRemaining, setTurnTimerRemaining] = useState(60);
-  const [turnTimerRunning, setTurnTimerRunning] = useState(false);
   // Combat notes (GM only, per session)
   const [combatNotes, setCombatNotes] = useState('');
   // Mass damage tool
@@ -3349,16 +3339,10 @@ const App: React.FC = () => {
   // Etapa 2: selected action category in the turn panel (UI-only, never goes to CombatState)
   const [selectedAction, setSelectedAction] = useState<{ combatId: string; category: ActionCategory } | null>(null);
   useEffect(() => { setSelectedAction(null); }, [combat?.turnIndex, combat?.isActive]);
-  // Etapa 6A: floating combat panels (UI-only, never goes to CombatState)
-  const [combatRightPanelForcedOpen, setCombatRightPanelForcedOpen] = useState(false);
-  useEffect(() => {
-    if (!selectedAction) setCombatRightPanelForcedOpen(false);
-  }, [selectedAction]);
 
   // Union state
 
   // Stat animation popups: { id, combatId, type, delta, key }
-  const [statPopups, setStatPopups] = useState<StatPopup[]>([]);
 
   // Estados de "Pasta Oculta"
 
@@ -3366,43 +3350,20 @@ const App: React.FC = () => {
   const [cardTypeFilter, setCardTypeFilter] = useState<CardType | 'all'>('all');
 
   // ── Combination card state ──────────────────────────────────
-  const [comboCard, setComboCard] = useState<Card | null>(null); // card being combo'd
-  const [comboParticipants, setComboParticipants] = useState<string[]>([]); // combatIds participating
 
   // ── Level selection state (for zoomed card) ────────────────
-  const [zoomedCardLevel, setZoomedCardLevel] = useState<number>(1);
 
   // ── Acted combatants tracking ──────────────────────────────
-  const [actedCombatantIds, setActedCombatantIds] = useState<Set<string>>(new Set());
 
   // ── Forma card state ────────────────────────────────────────
-  const [formaAnimCard, setFormaAnimCard] = useState<Card | null>(null); // animação ativa de forma
-  const [formaAnimCombatantId, setFormaAnimCombatantId] = useState<string | null>(null);
 
   // ── Card Fusion state ────────────────────────────────────────
   // ── NPC special card state ──────────────────────────────────
-  const [npcWildcardModal, setNpcWildcardModal] = useState<{actor: any; command: string} | null>(null);
-  const [npcSpecialCardModal, setNpcSpecialCardModal] = useState<{actor: any; cardType: 'contra-ataque' | 'armadura'} | null>(null);
 
-  const [fusionStep, setFusionStep] = useState<'select' | 'rolling' | 'animating' | 'creating' | 'revealing' | null>(null);
-  const [fusionSelectedCards, setFusionSelectedCards] = useState<Card[]>([]);
-  const [fusionActor, setFusionActor] = useState<any | null>(null);
-  const [fusionRolls, setFusionRolls] = useState<number[]>([]);
-  const [fusionSuccess, setFusionSuccess] = useState<boolean>(false);
-  const [fusionNewCard, setFusionNewCard] = useState<Card | null>(null);
-  const [fusionRevealCard, setFusionRevealCard] = useState<Card | null>(null);
 
   // ── Pending item dice anim ───────────────────────────────────
 
   // ── Burn card state ──────────────────────────────────────────
-  const [burningCard, setBurningCard] = useState<Card | null>(null);
-  const [burnStep, setBurnStep] = useState<'targets' | 'config' | 'rolling' | 'destroyed'>('targets');
-  const [burnTargets, setBurnTargets] = useState<string[]>([]);
-  const [burnEffect, setBurnEffect] = useState<'damage' | 'healHp' | 'drainAura' | 'gainAura'>('damage');
-  const [burnFixedValue, setBurnFixedValue] = useState<number>(1);
-  const [burnDiceResult, setBurnDiceResult] = useState<number | null>(null);
-  const [burnFinalValue, setBurnFinalValue] = useState<number | null>(null);
-  const [burnActorCombatId, setBurnActorCombatId] = useState<string | null>(null);
 
   // Timer Effect
   useEffect(() => {
@@ -3537,17 +3498,6 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [placingPin]);
 
-  // ── Turn timer countdown ──────────────────────────────────────
-  useEffect(() => {
-    if (!turnTimerRunning || !turnTimerEnabled) return;
-    if (turnTimerRemaining <= 0) {
-      setTurnTimerRunning(false);
-      return;
-    }
-    const t = setInterval(() => setTurnTimerRemaining(p => Math.max(0, p - 1)), 1000);
-    return () => clearInterval(t);
-  }, [turnTimerRunning, turnTimerEnabled, turnTimerRemaining]);
-
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sealSearchTerm, setSealSearchTerm] = useState('');
@@ -3556,13 +3506,10 @@ const App: React.FC = () => {
   const [sealRitualAnim, setSealRitualAnim] = useState<{seal: Seal; effects: string[]} | null>(null);
   const [itemUseAnim, setItemUseAnim] = useState<Item | null>(null);
   const [openInventoryCharId, setOpenInventoryCharId] = useState<string | null>(null);
-  const [sealComboSelectModal, setSealComboSelectModal] = useState<{seal: Seal; actor: any} | null>(null);
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
-  const [setupCombatant, setSetupCombatant] = useState<Character | null>(null);
   const [assignCardModal, setAssignCardModal] = useState<Card | null>(null);
   const [assignWeaponModal, setAssignWeaponModal] = useState<Weapon | null>(null);
   const [assignSealModal, setAssignSealModal] = useState<Seal | null>(null);
-  const [itemTargetPickerItem, setItemTargetPickerItem] = useState<{ actor: any; item: any } | null>(null);
   const [showHideNpcs, setShowHideNpcs] = useState(false);
   // Initiative drag-to-reorder
   const [diceAnim, setDiceAnim] = useState<{ isVisible: boolean; result: number; defenderResult?: number; isSuccess: boolean; customLabel?: string; notation?: string; individualRolls?: number[]; numSides?: number; bonus?: number; dramatic?: boolean } | null>(null);
@@ -3585,21 +3532,12 @@ const App: React.FC = () => {
   };
   const handleCardAnimComplete = useCallback(() => setCardAnim(null), []);
   const handleDiceAnimComplete = useCallback(() => setDiceAnim(null), []);
-  const [selectingTargetFor, setSelectingTargetFor] = useState<Card | null>(null);
-  const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null);
   
   // Atualizado para suportar múltiplas reações
-  const [isReactionPrompt, setIsReactionPrompt] = useState<{ target: Combatant; availableReactions: Card[]; attacker: Combatant; activeCard: Card; } | null>(null);
   
-  const [impactTargetId, setImpactTargetId] = useState<string | null>(null);
-  const [turnBanner, setTurnBanner] = useState<{ name: string; icon: string; isFumbleTurnPass?: boolean } | null>(null);
-  const [conditionExpiryNotifs, setConditionExpiryNotifs] = useState<string[]>([]);
   // Area multi-target selection
-  const [areaSelectedTargets, setAreaSelectedTargets] = useState<string[]>([]);
   // Card zoom overlay state (when a card is clicked but before target is chosen)
-  const [zoomedCard, setZoomedCard] = useState<Card | null>(null);
 
-  const currentActor = combat?.isActive && combat.combatants.length > 0 ? combat.combatants[combat.turnIndex] : null;
   // Filtros de Cartas (Habilidades)
   const filteredCards = useMemo(() => cards.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
@@ -3835,26 +3773,6 @@ const App: React.FC = () => {
     saveCharacter(updatedChar);
   };
 
-  const WEATHER_FIELD_CONDITIONS: Record<string, { id: string; name: string; description?: string }> = {
-    rain:  { id: '__weather_rain__',  name: '🌧️ Chuva',          },
-    storm: { id: '__weather_storm__', name: '⚡ Tempestade',     },
-    fog:   { id: '__weather_fog__',   name: '🌫️ Névoa Densa',   },
-    snow:  { id: '__weather_snow__',  name: '❄️ Nevasca',         },
-  };
-
-  const syncWeatherFieldConditions = (effects: ('rain' | 'storm' | 'fog' | 'snow')[], currentCombat?: CombatState | null) => {
-    const c = currentCombat ?? combat;
-    if (!c) return;
-    // Remove all existing weather field conditions
-    const weatherIds = Object.values(WEATHER_FIELD_CONDITIONS).map(w => w.id);
-    let newFC = c.fieldConditions.filter(f => !weatherIds.includes(f.id));
-    // Add the new active weather effects
-    effects.forEach(eff => {
-      const wfc = WEATHER_FIELD_CONDITIONS[eff];
-      newFC.push({ id: wfc.id, name: wfc.name, duration: 999 });
-    });
-    updateCombat({ ...c, fieldConditions: newFC });
-  };
 
   const updateCena = (next: CenaState) => {
     setCena(next);
