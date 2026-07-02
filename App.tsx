@@ -3810,34 +3810,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Handler para fixar/desafixar carta na mão de um combatente
-  const handleTogglePinCard = (combatantId: string, cardId: string) => {
-    if (!combat) return;
-    const MAX_PINS = 7;
-    const combatant = combat.combatants.find(c => c.combatId === combatantId || c.id === combatantId);
-    if (!combatant) return;
-    const pinned = combatant.pinnedCardIds || [];
-    let newPinned: string[];
-    if (pinned.includes(cardId)) {
-      newPinned = pinned.filter(id => id !== cardId);
-    } else {
-      if (pinned.length >= MAX_PINS) {
-        alert(`Você já tem ${MAX_PINS} cartas fixadas na mão!`);
-        return;
-      }
-      newPinned = [...pinned, cardId];
-    }
-    const updatedCombatants = combat.combatants.map(c =>
-      (c.combatId === combatantId || c.id === combatantId) ? { ...c, pinnedCardIds: newPinned } : c
-    );
-    const newCombat = { ...combat, combatants: updatedCombatants };
-    DatabaseService.updateCombat(newCombat);
-    // Também salvar na ficha do personagem (Character)
-    const char = characters.find(ch => ch.id === combatant.id);
-    if (char) {
-      DatabaseService.saveCharacter({ ...char, pinnedCardIds: newPinned });
-    }
-  };
 
   /** Garante que existe um modelo no catálogo com aquele nome; cria se faltar. Retorna o itemId. */
   const ensureTemplate = (name: string, seed: Partial<Item>): string => {
@@ -3952,45 +3924,7 @@ const App: React.FC = () => {
     updateJourney({ recipes: newRecipes });
   };
 
-  const deleteRecipe = (id: string) => {
-    if (!journey) return;
-    updateJourney({ recipes: (journey.recipes || []).filter(r => r.id !== id) });
-  };
 
-  const executeRecipe = (recipe: Recipe, characterId: string) => {
-    const char = characters.find(c => c.id === characterId);
-    if (!char) { alert('Personagem não encontrado.'); return; }
-    const resolved = resolveOwnedItems(char, items);
-
-    // Confere ingredientes (por nome)
-    for (const ing of recipe.ingredients) {
-      const owned = resolved.find(it => it.name.toLowerCase() === ing.itemName.toLowerCase());
-      const available = owned?.quantity ?? 0;
-      if (available < ing.quantity) {
-        alert(`${char.name} não tem ${ing.quantity}x "${ing.itemName}" (tem ${available}).`);
-        return;
-      }
-    }
-
-    // Consome ingredientes
-    let owned = char.ownedItems ?? [];
-    for (const ing of recipe.ingredients) {
-      const match = resolved.find(it => it.name.toLowerCase() === ing.itemName.toLowerCase());
-      if (match) owned = consumeOwned({ ...char, ownedItems: owned }, match.id, ing.quantity);
-    }
-
-    // Produz resultado (garante modelo no catálogo, dá ao personagem)
-    const resultId = ensureTemplate(recipe.resultItemName, {
-      description: recipe.resultDescription || recipe.description,
-      image: recipe.resultImage || '',
-      category: recipe.resultCategory || (recipe.type === 'cozinhar' ? 'Comida' : 'Forjado'),
-    });
-    owned = giveOwned({ ...char, ownedItems: owned }, resultId, recipe.resultQuantity);
-
-    const updatedChar = { ...char, ownedItems: owned };
-    saveCharacter(updatedChar);
-    setCraftResult({ recipe, character: updatedChar });
-  };
 
   // ── UPGRADE SHOP ──────────────────────────────────────────────────────────
   const UPGRADE_OFFER_POOL: Array<{
@@ -4113,50 +4047,7 @@ const App: React.FC = () => {
     setUpgradeShopGenerated(true);
   };
 
-  const rerollUpgradeShop = () => {
-    setUpgradeShopGenerated(false);
-    setTimeout(() => generateUpgradeOffers(), 50);
-  };
 
-  const purchaseUpgrade = (offer: UpgradeOffer, charId: string) => {
-    const charCurr = characterCurrencies[charId] || 0;
-    if (charCurr < offer.finalPrice) { alert('Moedas insuficientes para este personagem!'); return; }
-    const char = characters.find(c => c.id === charId);
-    if (!char) return;
-    let updatedChar = { ...char };
-
-    if (offer.type === 'vitalidade') {
-      const gain = offer.value || 2;
-      updatedChar = { ...updatedChar, maxHp: updatedChar.maxHp + gain, currentHp: updatedChar.currentHp + gain };
-    } else if (offer.type === 'aura') {
-      const gain = offer.value || 1;
-      updatedChar = { ...updatedChar, maxAura: updatedChar.maxAura + gain, currentAura: updatedChar.currentAura + gain };
-    } else if (['par', 'trinca', 'quadra', 'reroll'].includes(offer.type)) {
-      // Add as inventory item
-      const itemName = offer.type === 'par' ? 'Par' : offer.type === 'trinca' ? 'Trinca' : offer.type === 'quadra' ? 'Quadra' : 'Reroll';
-      const itemDesc = offer.type === 'par' ? 'Rola 2 dados ao usar uma carta (+1 rolagem), usa o melhor resultado.'
-        : offer.type === 'trinca' ? 'Rola 3 dados ao usar uma carta (+2 rolagens), usa o melhor resultado.'
-        : offer.type === 'quadra' ? 'Rola 4 dados ao usar uma carta (+3 rolagens), usa o melhor resultado.'
-        : 'Em caso de falha ao usar uma carta, relança o dado uma vez.';
-      const upId = ensureTemplate(itemName, { description: itemDesc, category: 'Upgrade', consumeOnUse: true, usableInCombat: true });
-      updatedChar = { ...updatedChar, ownedItems: giveOwned(updatedChar, upId, 1) };
-    } else if (offer.type === 'nova_carta') {
-      // Redirect to card creation pre-assigned to this character
-      setUpgradePurchaseResult({ offer, targetChar: updatedChar });
-      setCharacterCurrencies(prev => ({ ...prev, [charId]: (prev[charId] || 0) - offer.finalPrice }));
-      setUpgradeShopOffers(prev => prev.filter(o => o.id !== offer.id));
-      // Open card creation modal for this character
-      setTimeout(() => {
-        setEditingCard({ id: '', name: '', image: '', auraCost: 1, type: 'ação' as CardType, description: 'Habilidade aleatória gerada pelo Destino.', conditions: [], items: [], _assignToCharId: charId } as any);
-      }, 400);
-      return;
-    }
-
-    saveCharacter(updatedChar);
-    setCharacterCurrencies(prev => ({ ...prev, [charId]: (prev[charId] || 0) - offer.finalPrice }));
-    setUpgradePurchaseResult({ offer, targetChar: updatedChar });
-    setUpgradeShopOffers(prev => prev.filter(o => o.id !== offer.id));
-  };
 
   const fireStatPopup = (combatId: string, type: 'hp'|'aura'|'ammo', delta: number) => {
     if (delta === 0) return;
@@ -4237,60 +4128,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Resolve a pending item action after dice roll (called when diceAnim completes)
-  const resolvePendingItemAction = () => {
-    if (!pendingItemAction || !combat) { setPendingItemAction(null); return; }
-    const { actor, item, targetId, targeting } = pendingItemAction;
-    setPendingItemAction(null);
-    const roll = rollDice(item.combatDiceRoll || '1d20', 0);
-    const dc = item.combatDc ?? 0;
-    const isSuccess = dc === 0 || roll.total >= dc;
-
-    showDiceAnimation(roll, {
-      isSuccess,
-      customLabel: isSuccess ? 'ACERTOU!' : 'FALHOU!',
-      dramatic: dc > 0,
-    });
-
-    if (!isSuccess) return; // Effects only apply on success
-
-    if (targeting === 'area') {
-      // Ammo cost and consume once
-      if ((item.combatAmmoCost ?? 0) > 0 && (actor.maxAmmo ?? 0) > 0) {
-        const newAmmoActor = Math.max(0, (actor.currentAmmo ?? 0) - item.combatAmmoCost);
-        updateCharacterStats(actor.id, { currentAmmo: newAmmoActor });
-      }
-      if (item.consumeOnUse) {
-        const char = characters.find((c: any) => c.id === actor.id);
-        if (char) {
-          updateCharacterStats(actor.id, { ownedItems: consumeOwned(char, item.id, 1) });
-        }
-      }
-      combat.combatants.forEach((c: any) => {
-        let newHp = c.currentHp, newAura = c.currentAura;
-        let diceBonus = 0;
-        if (item.combatDiceRoll) {
-          try {
-            const itemAreaRoll = rollDice(item.combatDiceRoll, 0);
-            diceBonus = itemAreaRoll.total;
-            showDiceAnimation(itemAreaRoll, { customLabel: `${item.name} AREA` });
-          } catch {}
-        }
-        if ((item.combatHeal ?? 0) > 0) newHp = Math.min(c.maxHp, newHp + item.combatHeal + diceBonus);
-        else if ((item.combatDamage ?? 0) > 0) newHp = Math.max(0, newHp - item.combatDamage - diceBonus);
-        if ((item.combatAuraRecover ?? 0) > 0) newAura = Math.min(c.maxAura, newAura + item.combatAuraRecover);
-        const upd: Partial<Character> = {};
-        if (newHp !== c.currentHp) { upd.currentHp = newHp; fireStatPopup(c.combatId, 'hp', newHp - c.currentHp); }
-        if (newAura !== c.currentAura) { upd.currentAura = newAura; fireStatPopup(c.combatId, 'aura', newAura - c.currentAura); }
-        if (Object.keys(upd).length > 0) updateCharacterStats(c.id, upd);
-        if (item.combatConditionEffect) updateCharacterStats(c.id, { conditions: [...(c.conditions||[]), { name: item.combatConditionEffect, duration: item.combatConditionDuration ?? 3 }] });
-      });
-    } else {
-      // self or specific target
-      const targetCombatant = targetId ? combat.combatants.find((c: any) => c.combatId === targetId) : null;
-      applyItemEffects(actor, item, targetCombatant ?? undefined);
-    }
-  };
 
   const handleUseItem = (actor: any, item: any, preSelectedTargetId?: string) => {
     if (!combat) return;
@@ -4401,17 +4238,6 @@ const App: React.FC = () => {
   };
 
 
-  // ─── Activate Seal (from combat panel) ──────────────────────
-  const handleActivateSeal = (seal: Seal, actorCombatId: string) => {
-    if (!combat) return;
-    const modes = seal.executionModes ?? (seal.executionMode ? [seal.executionMode] : ['immediate']);
-    if (modes.includes('combo')) {
-      const actor = combat.combatants.find(c => c.combatId === actorCombatId);
-      if (actor) setSealComboSelectModal({ seal, actor });
-    } else {
-      executeSeal(seal, actorCombatId, [actorCombatId]);
-    }
-  };
 
   // ─── Execute Seal ────────────────────────────────────────────
   const executeSeal = (seal: Seal, actorCombatId: string, participantIds: string[]) => {
@@ -4561,39 +4387,7 @@ const App: React.FC = () => {
     DatabaseService.updateCombat(newState);
   };
 
-  const adjustCombatantStat = (combatId: string, stat: 'hp' | 'aura' | 'ammo', delta: number) => {
-    if (!combat) return;
-    const idx = combat.combatants.findIndex(c => c.combatId === combatId);
-    if (idx === -1) return;
-    const c = combat.combatants[idx];
-    let newVal: number;
-    if (stat === 'hp')   newVal = Math.max(0, Math.min(c.maxHp, c.currentHp + delta));
-    else if (stat === 'aura') newVal = Math.max(0, Math.min(c.maxAura, c.currentAura + delta));
-    else newVal = Math.max(0, Math.min(c.maxAmmo ?? 0, (c.currentAmmo ?? 0) + delta));
-    const realDelta = stat === 'hp' ? newVal - c.currentHp
-                    : stat === 'aura' ? newVal - c.currentAura
-                    : newVal - (c.currentAmmo ?? 0);
-    if (realDelta === 0) return;
-    const pid = Math.random().toString(36).substr(2, 9);
-    const popup = { id: pid, combatId, type: stat, delta: realDelta };
-    setStatPopups(prev => [...prev, popup]);
-    setTimeout(() => setStatPopups(prev => prev.filter(p => p.id !== pid)), 1800);
-    const updated = combat.combatants.map((cb, i) => {
-      if (i !== idx) return cb;
-      if (stat === 'hp')   return { ...cb, currentHp: newVal };
-      if (stat === 'aura') return { ...cb, currentAura: newVal };
-      return { ...cb, currentAmmo: newVal };
-    });
-    DatabaseService.updateCombat({ ...combat, combatants: updated });
-  };
 
-  const startCombat = () => {
-    if (!combat) return;
-    updateCombat({ ...combat, isActive: true, round: 1, turnIndex: 0 });
-    setTurnChangeKey(k => k + 1);
-    setTurnFlashing(true);
-    setTimeout(() => setTurnFlashing(false), 700);
-  };
 
   // Field Condition Handlers
   const removeFieldCondition = (id: string) => {
@@ -4604,17 +4398,6 @@ const App: React.FC = () => {
     });
   };
 
-  const updateFieldCondition = (id: string, newDuration: number) => {
-    if (!combat) return;
-    if (newDuration <= 0) {
-      removeFieldCondition(id);
-    } else {
-      updateCombat({
-        ...combat,
-        fieldConditions: combat.fieldConditions.map(f => f.id === id ? { ...f, duration: newDuration } : f)
-      });
-    }
-  };
 
   const endTurn = () => {
     if (!combat) return;
@@ -4790,61 +4573,8 @@ const App: React.FC = () => {
     setTimeout(() => setTurnFlashing(false), 700);
   };
 
-  const handleInitiativeStripClick = (combatId: string) => {
-    if (!combat) return;
-    if (itemTargetPickerItem) {
-      if (combatId !== itemTargetPickerItem.actor.combatId) {
-        const pending = itemTargetPickerItem;
-        setItemTargetPickerItem(null);
-        handleUseItem(pending.actor, pending.item, combatId);
-      }
-      return;
-    }
-    if (selectingTargetFor) {
-      const target = combat.combatants.find(c => c.combatId === combatId);
-      if (target) {
-        if (selectingTargetFor.isAreaEffect) {
-          setAreaSelectedTargets(prev =>
-            prev.includes(combatId)
-              ? prev.filter(id => id !== combatId)
-              : [...prev, combatId]
-          );
-        } else {
-          executeCardOnTarget(selectingTargetFor, 'other', target.combatId);
-        }
-      }
-      return;
-    }
-    // Union selection mode
-    if (unionMode) {
-      setUnionSelecting(prev => prev.includes(combatId) ? prev.filter(id => id !== combatId) : [...prev, combatId]);
-      return;
-    }
-    setSelectedCombatantId(prev => prev === combatId ? null : combatId);
-  };
 
-  const createUnion = () => {
-    if (!combat || unionSelecting.length < 2) return;
-    const newUnion: CombatantUnion = {
-      id: Math.random().toString(36).substr(2, 9),
-      combatantIds: [...unionSelecting],
-      color: unionColor,
-    };
-    // Move all to same position as first member
-    const leader = combat.combatants.find(c => c.combatId === unionSelecting[0]);
-    if (!leader) return;
-    const newCombatants = combat.combatants.map(c =>
-      unionSelecting.includes(c.combatId) ? { ...c, gridPos: { ...leader.gridPos } } : c
-    );
-    updateCombat({ ...combat, unions: [...(combat.unions || []), newUnion], combatants: newCombatants });
-    setUnionSelecting([]);
-    setUnionMode(false);
-  };
 
-  const breakUnion = (unionId: string) => {
-    if (!combat) return;
-    updateCombat({ ...combat, unions: (combat.unions || []).filter(u => u.id !== unionId) });
-  };
 
   const initiateCardUsage = (card: Card) => {
     if (!combat) return;
@@ -5459,34 +5189,7 @@ const App: React.FC = () => {
     });
   };
 
-  // ── Deactivate an active forma (called from initiative strip) ──
-  const deactivateForma = (combatantId: string) => {
-    if (!combat) return;
-    const existingForms = combat.activeForms || [];
-    const existingForma = existingForms.find(f => f.combatantId === combatantId);
-    if (!existingForma) return;
 
-    let newCombatants = [...combat.combatants];
-    const cIdx = newCombatants.findIndex(c => c.combatId === combatantId);
-    if (cIdx !== -1 && (existingForma.hpBonus || existingForma.auraBonus)) {
-      const hpBonus = existingForma.hpBonus || 0;
-      const auraBonus = existingForma.auraBonus || 0;
-      const newMaxHp = Math.max(1, newCombatants[cIdx].maxHp - hpBonus);
-      const newMaxAura = Math.max(0, newCombatants[cIdx].maxAura - auraBonus);
-      const newCurrentHp = Math.min(newCombatants[cIdx].currentHp, newMaxHp);
-      const newCurrentAura = Math.min(newCombatants[cIdx].currentAura, newMaxAura);
-      newCombatants = newCombatants.map((c, i) => i === cIdx ? { ...c, maxHp: newMaxHp, maxAura: newMaxAura, currentHp: newCurrentHp, currentAura: newCurrentAura } : c);
-      updateCharacterStats(newCombatants[cIdx].id, { maxHp: newMaxHp, maxAura: newMaxAura, currentHp: newCurrentHp, currentAura: newCurrentAura });
-    }
-
-    const newForms = existingForms.filter(f => f.combatantId !== combatantId);
-    updateCombat({ ...combat, combatants: newCombatants, activeForms: newForms });
-  };
-
-  const endCombat = () => {
-    if (!combat) return;
-    setShowEndCombatConfirm(true);
-  };
 
   const confirmEndCombat = () => {
     if (!combat) return;
@@ -5501,46 +5204,8 @@ const App: React.FC = () => {
     setActiveTab('journey');
   };
 
-  // ── Mass damage/heal handler ────────────────────────────────
-  const applyMassDamage = () => {
-    if (!combat || !massDmgAmount || massDmgTargets.length === 0) return;
-    const amount = parseInt(massDmgAmount);
-    if (isNaN(amount) || amount <= 0) return;
-    const newCombatants = combat.combatants.map(c => {
-      if (!massDmgTargets.includes(c.combatId)) return c;
-      const delta = massDmgMode === 'damage' ? -amount : amount;
-      const newHp = Math.max(0, Math.min(c.maxHp, c.currentHp + delta));
-      return { ...c, currentHp: newHp };
-    });
-    updateCombat({ ...combat, combatants: newCombatants });
-    // Visual feedback
-    massDmgTargets.forEach(id => {
-      const delta = massDmgMode === 'damage' ? -amount : amount;
-      setStatPopups(prev => [...prev, { id: Math.random().toString(36), combatId: id, type: 'hp', delta }]);
-    });
-    setMassDmgAmount('');
-    setMassDmgTargets([]);
-    setShowMassDmgPanel(false);
-  };
 
-  // ── Quick combat dice roll ──────────────────────────────────
-  const doQuickCombatRoll = (sides: number) => {
-    const result = Math.floor(Math.random() * sides) + 1;
-    setCombatQuickRoll({ sides, result, timestamp: Date.now() });
-    showDiceAnimation({ total: result, notation: `1d${sides}`, individualRolls: [result], numSides: sides, bonus: 0 }, {
-      customLabel: `D${sides}`,
-      dramatic: sides >= 20,
-    });
-  };
 
-  // ── Reset turn timer on endTurn ─────────────────────────────
-  const endTurnWithTimer = () => {
-    if (turnTimerEnabled) {
-      setTurnTimerRemaining(turnTimerSeconds);
-      setTurnTimerRunning(true);
-    }
-    endTurn();
-  };
 
   const addCombatantToCombatFinal = (char: Character, hp: number, aura: number, initiative: number, ammo?: number) => {
     if (!combat) return;
@@ -5577,20 +5242,6 @@ const App: React.FC = () => {
     setShowAddCombatantModal(false);
   };
 
-  const handleManualRoll = (sides: number, label: string) => {
-    const roll = Math.floor(Math.random() * sides) + 1;
-    showDiceAnimation({ total: roll, notation: `1d${sides}`, individualRolls: [roll], numSides: sides, bonus: 0 }, {
-      customLabel: label || 'RESULTADO',
-    });
-    
-    const newHistoryItem = {
-      id: Math.random().toString(36).substr(2, 9),
-      result: roll,
-      type: label,
-      timestamp: Date.now()
-    };
-    setRollHistory(prev => [newHistoryItem, ...prev]);
-  };
 
   const formatTime = (totalSeconds: number) => {
     const h = Math.floor(totalSeconds / 3600);
