@@ -5,12 +5,10 @@ import {
   Swords,
   Users,
   Layers,
-  Plus, 
-  Trash2, 
-  Edit3, 
+  Plus,
+  Trash2,
+  Edit3,
   X,
-  Target,
-  ShieldAlert,
   Check,
   Zap,
   Save,
@@ -19,10 +17,8 @@ import {
 
   Sparkles,
   Image as ImageIcon,
-  Flame,
   Heart,
   Database,
-  XCircle,
   Shield,
   Download,
   Upload,
@@ -47,17 +43,14 @@ import {
   Package2,
   Trophy,
   Eye,
-  EyeOff,
-  Hammer,
-  ChefHat
+  EyeOff
 } from 'lucide-react';
-import { Card, CardLevel, CardBonus, Character, Combatant, CombatState, CardType, CombatHistoryItem, Condition, Item, OwnedItem, JourneyState, ActiveForma, ConditionEffect, ConditionEffectType, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, RecipeType, RecipeIngredient, UpgradeOffer, UpgradeOfferType, StatPopup, Weapon } from './types';
+import { Card, CardLevel, CardBonus, Character, CombatState, CardType, Condition, Item, JourneyState, ConditionEffect, ConditionEffectType, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, UpgradeOffer, UpgradeOfferType, Weapon } from './types';
 import { DatabaseService } from './utils/database';
-import { rollDice, type RollResult } from './utils/dice';
+import type { RollResult } from './utils/dice';
 import DiceAnimation from './components/DiceAnimation';
 import CardRevealAnimation, { CardAnimPayload } from './components/CardRevealAnimation';
-import FusionOverlay from './components/FusionOverlay';
-import { DAMAGE_TYPES, CARD_TYPE_THEME, type CardTypeStyle } from './utils/theme';
+import { DAMAGE_TYPES } from './utils/theme';
 import { resolveOwnedItems, giveOwned, consumeOwned, setOwnedQuantity, removeOwned, type ResolvedItem } from './utils/items';
 import type { ActionCategory } from './components/combat/ActionIconRail';
 import { migrateCombatState } from './utils/combatMigration';
@@ -2844,10 +2837,6 @@ const App: React.FC = () => {
   // Combat notes (GM only, per session)
   const [combatNotes, setCombatNotes] = useState('');
   // Mass damage tool
-  // Quick dice roll in combat sidebar
-  // Etapa 2: selected action category in the turn panel (UI-only, never goes to CombatState)
-  const [selectedAction, setSelectedAction] = useState<{ combatId: string; category: ActionCategory } | null>(null);
-  useEffect(() => { setSelectedAction(null); }, [combat?.turnIndex, combat?.isActive]);
 
   // Union state
 
@@ -3355,10 +3344,6 @@ const App: React.FC = () => {
         }
       }
     });
-  };
-
-  const updateCombat = (newState: CombatState) => {
-    DatabaseService.updateCombat(newState);
   };
 
 
