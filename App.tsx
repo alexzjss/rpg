@@ -2304,8 +2304,7 @@ const CharacterCard: React.FC<{
   isCharInCombat: (id: string) => boolean;
   setEditingCharacter: (c: Character) => void;
   deleteCharacter: (id: string) => void;
-  setSetupCombatant: (c: Character) => void;
-}> = ({ char, idx, isCharInCombat, setEditingCharacter, deleteCharacter, setSetupCombatant }) => {
+}> = ({ char, idx, isCharInCombat, setEditingCharacter, deleteCharacter }) => {
   const isNpc = (char.role ?? 'npc') === 'npc';
   const accentColor = isNpc ? 'rgba(120,150,200,0.85)' : '#5a9ae8';
   const inCombat = isCharInCombat(char.id);
@@ -2384,9 +2383,6 @@ const CharacterCard: React.FC<{
         <div className="mp-character-actions">
           <button onClick={() => setEditingCharacter(char)} className="mp-character-action-btn mp-character-action-btn--edit" title="Editar">
             <Edit3 />
-          </button>
-          <button onClick={() => setSetupCombatant(char)} className="mp-character-action-btn mp-character-action-btn--combat" title="Adicionar ao Combate">
-            <Swords />
           </button>
           <button onClick={() => deleteCharacter(char.id)} className="mp-character-action-btn mp-character-action-btn--delete" title="Excluir">
             <Trash2 />
@@ -4212,7 +4208,7 @@ const App: React.FC = () => {
                     </span>
                   </div>
                   {filteredCharacters.filter(c => (c.role ?? 'npc') === 'cast').map((char, idx) => (
-                    <CharacterCard key={char.id} char={char} idx={idx} isCharInCombat={isCharInCombat} setEditingCharacter={setEditingCharacter} deleteCharacter={deleteCharacter} setSetupCombatant={setSetupCombatant} />
+                    <CharacterCard key={char.id} char={char} idx={idx} isCharInCombat={isCharInCombat} setEditingCharacter={setEditingCharacter} deleteCharacter={deleteCharacter} />
                   ))}
                 </>
               )}
@@ -4236,7 +4232,7 @@ const App: React.FC = () => {
                     </span>
                   </button>
                   {!showHideNpcs && filteredCharacters.filter(c => (c.role ?? 'npc') === 'npc').map((char, idx) => (
-                    <CharacterCard key={char.id} char={char} idx={idx} isCharInCombat={isCharInCombat} setEditingCharacter={setEditingCharacter} deleteCharacter={deleteCharacter} setSetupCombatant={setSetupCombatant} />
+                    <CharacterCard key={char.id} char={char} idx={idx} isCharInCombat={isCharInCombat} setEditingCharacter={setEditingCharacter} deleteCharacter={deleteCharacter} />
                   ))}
                 </>
               )}
