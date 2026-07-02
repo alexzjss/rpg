@@ -51,7 +51,7 @@ import {
   Hammer,
   ChefHat
 } from 'lucide-react';
-import { Card, CardLevel, CardBonus, Character, Combatant, CombatState, CardType, CombatHistoryItem, Condition, CombatantUnion, Item, OwnedItem, JourneyState, ActiveForma, ConditionEffect, ConditionEffectType, ConditionEffectMap, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, RecipeType, RecipeIngredient, UpgradeOffer, UpgradeOfferType, UpgradeLuck, StatPopup, Weapon } from './types';
+import { Card, CardLevel, CardBonus, Character, Combatant, CombatState, CardType, CombatHistoryItem, Condition, Item, OwnedItem, JourneyState, ActiveForma, ConditionEffect, ConditionEffectType, ConditionEffectMap, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, RecipeType, RecipeIngredient, UpgradeOffer, UpgradeOfferType, UpgradeLuck, StatPopup, Weapon } from './types';
 import { DatabaseService } from './utils/database';
 import { rollDice, type RollResult } from './utils/dice';
 import DiceAnimation from './components/DiceAnimation';
@@ -3331,7 +3331,6 @@ const App: React.FC = () => {
 
   // Items UI State
   const [selectedInventoryCharId, setSelectedInventoryCharId] = useState<string | null>(null);
-  const [inventorySearchTerm, setInventorySearchTerm] = useState('');
   const [editingItem, setEditingItem] = useState<Item | null>(null);
 
   // Conditions UI State
@@ -3811,21 +3810,6 @@ const App: React.FC = () => {
   };
 
 
-  /** Garante que existe um modelo no catálogo com aquele nome; cria se faltar. Retorna o itemId. */
-  const ensureTemplate = (name: string, seed: Partial<Item>): string => {
-    const existing = items.find(i => i.name.toLowerCase() === name.toLowerCase());
-    if (existing) return existing.id;
-    const newItem: Item = {
-      id: Math.random().toString(36).substr(2, 9),
-      name,
-      description: seed.description ?? '',
-      image: seed.image ?? '',
-      ...seed,
-    } as Item;
-    DatabaseService.saveItem(newItem);
-    return newItem.id;
-  };
-
   const handleSaveItem = (item: Item) => {
     if (!selectedInventoryChar) return;
     const id = item.id || Math.random().toString(36).substr(2, 9);
@@ -3963,89 +3947,6 @@ const App: React.FC = () => {
     { type:'nova_carta', label:'Nova Carta', descFn: () => 'Habilidade aleatória — uma nova carta misteriosa é adicionada diretamente ao personagem', basePrice:120, weight:4, valueFn: () => 0, rarity:'rare' },
     { type:'desejo',     label:'Desejo',     descFn: () => 'Desejo especial do personagem — efeito único e poderoso, definido pelo Mestre com base nos anseios do herói', basePrice:400, weight:1, valueFn: () => 0, rarity:'legendary' },
   ];
-
-  const RARITY_COLORS: Record<string, { border: string; bg: string; label: string; glow: string }> = {
-    common:    { border:'rgba(148,163,184,0.4)', bg:'rgba(15,20,30,0.9)',    label:'#94a3b8', glow:'rgba(148,163,184,0.15)' },
-    uncommon:  { border:'rgba(52,211,153,0.5)',  bg:'rgba(5,25,18,0.92)',    label:'#34d399', glow:'rgba(52,211,153,0.2)' },
-    rare:      { border:'rgba(99,102,241,0.6)',  bg:'rgba(8,8,28,0.94)',     label:'#818cf8', glow:'rgba(99,102,241,0.25)' },
-    legendary: { border:'rgba(251,191,36,0.8)',  bg:'rgba(20,14,2,0.96)',    label:'#fbbf24', glow:'rgba(251,191,36,0.4)' },
-  };
-
-  const generateUpgradeOffers = () => {
-    const count = upgradeShopOfferCount;
-    const luck = upgradeShopLuck;
-    const offers: UpgradeOffer[] = [];
-
-    // Build weighted pool based on luck
-    const adjustedPool = UPGRADE_OFFER_POOL.map(item => {
-      let w = item.weight;
-      if (luck === 'sorte') {
-        // Low-weight items get boosted, high-weight get reduced
-        w = item.weight <= 4 ? item.weight * 5 : item.weight <= 8 ? item.weight * 2.5 : item.weight * 0.6;
-      } else if (luck === 'azar') {
-        // High-weight items get boosted, low-weight get reduced
-        w = item.weight >= 20 ? item.weight * 2 : item.weight >= 12 ? item.weight * 1.4 : item.weight * 0.3;
-      }
-      return { ...item, adjustedWeight: Math.max(0.5, w) };
-    });
-
-    const totalWeight = adjustedPool.reduce((s, i) => s + i.adjustedWeight, 0);
-
-    for (let i = 0; i < count; i++) {
-      // Weighted random pick (no repeats of same type if possible)
-      const used = offers.map(o => o.type);
-      const available = adjustedPool.filter(p => !used.includes(p.type) || adjustedPool.length <= used.length);
-      const pool = available.length > 0 ? available : adjustedPool;
-      const poolTotal = pool.reduce((s, p) => s + p.adjustedWeight, 0);
-      let rand = Math.random() * poolTotal;
-      let chosen = pool[pool.length - 1];
-      for (const item of pool) { rand -= item.adjustedWeight; if (rand <= 0) { chosen = item; break; } }
-
-      // Price modifier based on luck
-      let priceModifier = 1.0;
-      if (luck === 'sorte') {
-        // Rarer items get discount more often
-        const discountChance = chosen.rarity === 'legendary' ? 0.7 : chosen.rarity === 'rare' ? 0.5 : 0.3;
-        if (Math.random() < discountChance) priceModifier = 0.6 + Math.random() * 0.3; // 60-90%
-      } else if (luck === 'azar') {
-        // Common items get price hike more often
-        const hikeChance = chosen.rarity === 'common' ? 0.7 : chosen.rarity === 'uncommon' ? 0.5 : 0.2;
-        if (Math.random() < hikeChance) priceModifier = 1.1 + Math.random() * 0.5; // 110-160%
-      } else {
-        // Neutro: small random variation ±20%
-        priceModifier = 0.85 + Math.random() * 0.35;
-      }
-      priceModifier = Math.round(priceModifier * 20) / 20; // round to 0.05 steps
-
-      const value = chosen.valueFn();
-      // For vitalidade/aura, price scales proportionally with value
-      // HP: min=2 (base 15🪙) max=20 (base 150🪙), linear
-      // Aura: min=1 (base 15🪙) max=10 (base 150🪙), linear
-      let effectiveBasePrice = chosen.basePrice;
-      if (chosen.type === 'vitalidade' && value > 0) {
-        // 2 HP = 15 coins (minimum/azar), 20 HP = 150 coins (maximum/sorte)
-        effectiveBasePrice = Math.round(15 + (value - 2) / 18 * 135);
-      } else if (chosen.type === 'aura' && value > 0) {
-        // 1 Aura = 15 coins, 10 Aura = 150 coins
-        effectiveBasePrice = Math.round(15 + (value - 1) / 9 * 135);
-      }
-      const finalPrice = Math.max(10, Math.round(effectiveBasePrice * priceModifier / 5) * 5);
-
-      offers.push({
-        id: Math.random().toString(36).substr(2,9),
-        type: chosen.type,
-        label: chosen.label,
-        description: chosen.type === 'vitalidade' ? `+${value} HP Máximo` : chosen.type === 'aura' ? `+${value} Aura Máxima` : chosen.descFn(value),
-        basePrice: effectiveBasePrice,
-        finalPrice,
-        priceModifier,
-        value,
-        rarity: chosen.rarity,
-      });
-    }
-    setUpgradeShopOffers(offers);
-    setUpgradeShopGenerated(true);
-  };
 
 
 
@@ -4389,189 +4290,7 @@ const App: React.FC = () => {
 
 
 
-  // Field Condition Handlers
-  const removeFieldCondition = (id: string) => {
-    if (!combat) return;
-    updateCombat({ 
-      ...combat, 
-      fieldConditions: combat.fieldConditions.filter(f => f.id !== id) 
-    });
-  };
 
-
-  const endTurn = () => {
-    if (!combat) return;
-    
-    // Reset contextual action selection on turn change.
-    setSelectedAction(null);
-    
-    // Mark current actor as having acted
-    if (currentActor) {
-      setActedCombatantIds(prev => new Set([...prev, currentActor.combatId]));
-    }
-    
-    let nextIndex = combat.turnIndex;
-    let nextRound = combat.round;
-    let newCombatants = [...combat.combatants];
-    let newFieldConditions = [...combat.fieldConditions];
-    let attempts = 0;
-    const maxAttempts = newCombatants.length * 2;
-    const expiryNotifs: string[] = [];
-
-    do {
-        nextIndex++;
-        if (nextIndex >= newCombatants.length) {
-          nextIndex = 0;
-          nextRound += 1;
-          setActedCombatantIds(new Set()); // Reset acted set on new round
-          // Collect expiring conditions before decrement
-          newCombatants.forEach(c => {
-            c.conditions.forEach(cond => {
-              if (cond.duration === 1) expiryNotifs.push(`${cond.name} (${c.name}) expirou!`);
-            });
-          });
-          newFieldConditions.forEach(f => {
-            if (f.duration === 1) expiryNotifs.push(`Campo: ${f.name} expirou!`);
-          });
-          // Apply condition effects BEFORE decrementing (effects fire while condition is still active)
-          newCombatants = newCombatants.map(c => {
-            // Build a merged map of condition effects from all cards that the character owns
-            const effectMap: ConditionEffectMap = {};
-            const charCards = cards.filter(card => c.cardIds?.includes(card.id) && card.conditionEffects);
-            charCards.forEach(card => {
-              if (card.conditionEffects) {
-                Object.entries(card.conditionEffects).forEach(([condName, effects]) => {
-                  if (!effectMap[condName]) effectMap[condName] = [];
-                  effectMap[condName].push(...effects);
-                });
-              }
-            });
-            // Also include conditionEffects stored directly on the character's card list at global level
-            cards.forEach(card => {
-              if (card.conditionEffects) {
-                Object.entries(card.conditionEffects).forEach(([condName, effects]) => {
-                  if (!effectMap[condName]) effectMap[condName] = [];
-                  // Only add if not already from char cards
-                  if (!c.cardIds?.includes(card.id)) return;
-                  // already handled above
-                });
-              }
-            });
-
-            let newHp = c.currentHp;
-            let newAura = c.currentAura;
-            let newAmmo = c.currentAmmo ?? 0;
-            const condEffectNotifs: string[] = [];
-
-            c.conditions.forEach(cond => {
-              let effects = effectMap[cond.name];
-              // Fallback: auto-apply preset condition effects if no custom effectMap is set
-              if (!effects || effects.length === 0) {
-                const preset = PRESET_CONDITIONS.find(p => p.name === cond.name);
-                if (preset && preset.defaultValue !== undefined) {
-                  // Only apply damage/heal presets automatically (not paralysis, sleep, etc.)
-                  if (['Queimando','Eletrocutado','Envenenado','Sangrando'].includes(cond.name)) {
-                    effects = [{ type: 'damage', value: preset.defaultValue }];
-                  } else if (cond.name === 'Regenerando') {
-                    effects = [{ type: 'heal', value: preset.defaultValue }];
-                  }
-                }
-              }
-              if (!effects || effects.length === 0) return;
-              effects.forEach(eff => {
-                let val = eff.value;
-                if (eff.diceRoll) {
-                  try {
-                    const conditionRoll = rollDice(eff.diceRoll, 0);
-                    val = conditionRoll.total;
-                    showDiceAnimation(conditionRoll, { customLabel: cond.name });
-                  } catch {}
-                }
-                switch (eff.type) {
-                  case 'damage':     newHp   = Math.max(0, newHp - val);   condEffectNotifs.push(`${c.name}: ${cond.name} causou -${val}♥`); break;
-                  case 'heal':       newHp   = Math.min(c.maxHp, newHp + val); condEffectNotifs.push(`${c.name}: ${cond.name} curou +${val}♥`); break;
-                  case 'drainAura':  newAura = Math.max(0, newAura - val); condEffectNotifs.push(`${c.name}: ${cond.name} drenou -${val}⚡`); break;
-                  case 'recoverAura':newAura = Math.min(c.maxAura, newAura + val); condEffectNotifs.push(`${c.name}: ${cond.name} recuperou +${val}⚡`); break;
-                  case 'drainAmmo':  newAmmo = Math.max(0, newAmmo - val); break;
-                  case 'recoverAmmo':newAmmo = Math.min(c.maxAmmo ?? 0, newAmmo + val); break;
-                  default: break;
-                }
-              });
-            });
-
-            if (condEffectNotifs.length > 0) expiryNotifs.push(...condEffectNotifs);
-
-            // Persist to character DB
-            if (newHp !== c.currentHp || newAura !== c.currentAura || newAmmo !== (c.currentAmmo ?? 0)) {
-              const upd: Partial<Character> = {};
-              if (newHp !== c.currentHp)                  upd.currentHp   = newHp;
-              if (newAura !== c.currentAura)              upd.currentAura = newAura;
-              if (newAmmo !== (c.currentAmmo ?? 0))       upd.currentAmmo = newAmmo;
-              updateCharacterStats(c.id, upd);
-            }
-
-            return { ...c, currentHp: newHp, currentAura: newAura, currentAmmo: newAmmo };
-          });
-
-          // Decrement conditions
-          newCombatants = newCombatants.map(c => ({
-            ...c,
-            conditions: c.conditions.map(cond => ({ ...cond, duration: cond.duration - 1 })).filter(cond => cond.duration > 0)
-          }));
-          newFieldConditions = newFieldConditions.map(f => ({ ...f, duration: f.duration - 1 })).filter(f => f.duration > 0);
-        }
-        attempts++;
-    } while (newCombatants[nextIndex].currentHp <= 0 && attempts < maxAttempts);
-
-    // Decrement forma durations (only at round end, which was tracked above via nextRound)
-    let newActiveForms = [...(combat.activeForms || [])];
-    const roundAdvanced = nextRound > combat.round;
-    if (roundAdvanced) {
-      const expiredForms: ActiveForma[] = [];
-      newActiveForms = newActiveForms.map(f => {
-        if (!f.duration || f.duration <= 0) return f; // 0 = permanent
-        const newDuration = f.duration - 1;
-        if (newDuration <= 0) { expiredForms.push(f); return { ...f, duration: 0 }; }
-        return { ...f, duration: newDuration };
-      });
-      // Revert stat bonuses for expired formas
-      expiredForms.forEach(ef => {
-        const cIdx = newCombatants.findIndex(c => c.combatId === ef.combatantId);
-        if (cIdx !== -1 && (ef.hpBonus || ef.auraBonus)) {
-          const hpBonus = ef.hpBonus || 0;
-          const auraBonus = ef.auraBonus || 0;
-          const newMaxHp = Math.max(1, newCombatants[cIdx].maxHp - hpBonus);
-          const newMaxAura = Math.max(0, newCombatants[cIdx].maxAura - auraBonus);
-          newCombatants[cIdx] = { ...newCombatants[cIdx], maxHp: newMaxHp, maxAura: newMaxAura, currentHp: Math.min(newCombatants[cIdx].currentHp, newMaxHp), currentAura: Math.min(newCombatants[cIdx].currentAura, newMaxAura) };
-        }
-        expiryNotifs.push(`Forma de ${newCombatants.find(c=>c.combatId===ef.combatantId)?.name||'?'} expirou!`);
-      });
-      newActiveForms = newActiveForms.filter(f => !f.duration || f.duration > 0 || expiredForms.every(ef => ef.combatantId !== f.combatantId || ef.cardId !== f.cardId));
-    }
-
-    if (attempts >= maxAttempts) {
-        nextIndex = 0; 
-    }
-
-    // Show condition expiry notifications
-    if (expiryNotifs.length > 0) {
-      setConditionExpiryNotifs(expiryNotifs);
-      setTimeout(() => setConditionExpiryNotifs([]), 4000);
-    }
-
-    const nextActor = newCombatants[nextIndex];
-    if (nextActor) {
-      setTurnBanner({ name: nextActor.name, icon: nextActor.icon || '' });
-      setTimeout(() => setTurnBanner(null), 2800);
-    }
-    updateCombat({ ...combat, turnIndex: nextIndex, round: nextRound, combatants: newCombatants, fieldConditions: newFieldConditions, activeForms: newActiveForms });
-    setSelectedCombatantId(null);
-    setSelectingTargetFor(null);
-    // Trigger turn-change animation
-    setTurnChangeKey(k => k + 1);
-    setTurnFlashing(true);
-    setTimeout(() => setTurnFlashing(false), 700);
-  };
 
 
 
@@ -7567,7 +7286,6 @@ const App: React.FC = () => {
         const rarityConf2 = { common:'#94a3b8', uncommon:'#34d399', rare:'#818cf8', legendary:'#fbbf24' };
         const offerIcons2: Record<UpgradeOfferType, string> = { vitalidade:'❤', aura:'⚡', reroll:'🎲', par:'✌', trinca:'🔱', quadra:'♦', nova_carta:'🃏', desejo:'✨' };
         const rc = rarityConf2[offer.rarity];
-        const isNovaCartaOrDesejo = offer.type === 'nova_carta' || offer.type === 'desejo';
         const isItem = ['par','trinca','quadra','reroll'].includes(offer.type);
         return (
           <Modal title="✦ Upgrade Adquirido!" onClose={() => setUpgradePurchaseResult(null)}>
