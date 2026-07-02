@@ -51,7 +51,7 @@ import {
   Hammer,
   ChefHat
 } from 'lucide-react';
-import { Card, CardLevel, CardBonus, Character, Combatant, CombatState, CardType, CombatHistoryItem, Condition, Item, OwnedItem, JourneyState, ActiveForma, ConditionEffect, ConditionEffectType, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, RecipeType, RecipeIngredient, UpgradeOffer, UpgradeOfferType, UpgradeLuck, StatPopup, Weapon } from './types';
+import { Card, CardLevel, CardBonus, Character, Combatant, CombatState, CardType, CombatHistoryItem, Condition, Item, OwnedItem, JourneyState, ActiveForma, ConditionEffect, ConditionEffectType, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, RecipeType, RecipeIngredient, UpgradeOffer, UpgradeOfferType, StatPopup, Weapon } from './types';
 import { DatabaseService } from './utils/database';
 import { rollDice, type RollResult } from './utils/dice';
 import DiceAnimation from './components/DiceAnimation';
@@ -3318,7 +3318,6 @@ const App: React.FC = () => {
   const [craftResult, setCraftResult] = useState<{ recipe: Recipe; character: Character } | null>(null);
   const [editRecipeData, setEditRecipeData] = useState<Partial<Recipe>>({});
   // Upgrade shop UI state
-  const [upgradeShopLuck, setUpgradeShopLuck] = useState<UpgradeLuck>('neutro');
   const [upgradePurchaseResult, setUpgradePurchaseResult] = useState<{ offer: UpgradeOffer; targetChar: Character } | null>(null);
   const [shopCurrency, setShopCurrency] = useState(0);
   // Per-character currencies (charId -> moedas)
