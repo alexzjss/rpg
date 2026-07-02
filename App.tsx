@@ -51,7 +51,7 @@ import {
   Hammer,
   ChefHat
 } from 'lucide-react';
-import { Card, CardLevel, CardBonus, Character, Combatant, CombatState, CardType, CombatHistoryItem, Condition, Item, OwnedItem, JourneyState, ActiveForma, ConditionEffect, ConditionEffectType, ConditionEffectMap, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, RecipeType, RecipeIngredient, UpgradeOffer, UpgradeOfferType, UpgradeLuck, StatPopup, Weapon } from './types';
+import { Card, CardLevel, CardBonus, Character, Combatant, CombatState, CardType, CombatHistoryItem, Condition, Item, OwnedItem, JourneyState, ActiveForma, ConditionEffect, ConditionEffectType, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, RecipeType, RecipeIngredient, UpgradeOffer, UpgradeOfferType, UpgradeLuck, StatPopup, Weapon } from './types';
 import { DatabaseService } from './utils/database';
 import { rollDice, type RollResult } from './utils/dice';
 import DiceAnimation from './components/DiceAnimation';
@@ -3318,10 +3318,7 @@ const App: React.FC = () => {
   const [craftResult, setCraftResult] = useState<{ recipe: Recipe; character: Character } | null>(null);
   const [editRecipeData, setEditRecipeData] = useState<Partial<Recipe>>({});
   // Upgrade shop UI state
-  const [upgradeShopOfferCount, setUpgradeShopOfferCount] = useState(4);
   const [upgradeShopLuck, setUpgradeShopLuck] = useState<UpgradeLuck>('neutro');
-  const [upgradeShopOffers, setUpgradeShopOffers] = useState<UpgradeOffer[]>([]);
-  const [upgradeShopGenerated, setUpgradeShopGenerated] = useState(false);
   const [upgradePurchaseResult, setUpgradePurchaseResult] = useState<{ offer: UpgradeOffer; targetChar: Character } | null>(null);
   const [shopCurrency, setShopCurrency] = useState(0);
   // Per-character currencies (charId -> moedas)
@@ -3342,8 +3339,6 @@ const App: React.FC = () => {
   const [confirmModal, setConfirmModal] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [showAddCombatantModal, setShowAddCombatantModal] = useState(false);
   // Turn change animation key — increments each turn to re-trigger CSS animations
-  const [turnChangeKey, setTurnChangeKey] = useState(0);
-  const [turnFlashing, setTurnFlashing] = useState(false);
   // (mobile mode removed)
   const [placingPin, setPlacingPin] = useState<{label: string; color: string} | null>(null);
   const [cardAnim, setCardAnim] = useState<CardAnimPayload | null>(null);
@@ -3351,33 +3346,22 @@ const App: React.FC = () => {
   // ── NEW: Combat enhancements ──────────────────────────────────
   // Turn timer
   const [turnTimerEnabled, setTurnTimerEnabled] = useState(false);
-  const [turnTimerSeconds, setTurnTimerSeconds] = useState(60);
   const [turnTimerRemaining, setTurnTimerRemaining] = useState(60);
   const [turnTimerRunning, setTurnTimerRunning] = useState(false);
   // Combat notes (GM only, per session)
   const [combatNotes, setCombatNotes] = useState('');
   // Mass damage tool
-  const [massDmgAmount, setMassDmgAmount] = useState('');
-  const [massDmgMode, setMassDmgMode] = useState<'damage'|'heal'>('damage');
-  const [massDmgTargets, setMassDmgTargets] = useState<string[]>([]);
-  const [showMassDmgPanel, setShowMassDmgPanel] = useState(false);
   // Quick dice roll in combat sidebar
-  const [combatQuickRoll, setCombatQuickRoll] = useState<{sides:number;result:number;timestamp:number}|null>(null);
   // Etapa 2: selected action category in the turn panel (UI-only, never goes to CombatState)
   const [selectedAction, setSelectedAction] = useState<{ combatId: string; category: ActionCategory } | null>(null);
   useEffect(() => { setSelectedAction(null); }, [combat?.turnIndex, combat?.isActive]);
   // Etapa 6A: floating combat panels (UI-only, never goes to CombatState)
-  const [combatLeftPanelOpen, setCombatLeftPanelOpen] = useState(true);
-  const [combatRightPanelOpen, setCombatRightPanelOpen] = useState(true);
   const [combatRightPanelForcedOpen, setCombatRightPanelForcedOpen] = useState(false);
   useEffect(() => {
     if (!selectedAction) setCombatRightPanelForcedOpen(false);
   }, [selectedAction]);
 
   // Union state
-  const [unionMode, setUnionMode] = useState(false);
-  const [unionSelecting, setUnionSelecting] = useState<string[]>([]); // combatIds being selected
-  const [unionColor, setUnionColor] = useState('#a855f7');
 
   // Stat animation popups: { id, combatId, type, delta, key }
   const [statPopups, setStatPopups] = useState<StatPopup[]>([]);
@@ -3415,7 +3399,6 @@ const App: React.FC = () => {
   const [fusionRevealCard, setFusionRevealCard] = useState<Card | null>(null);
 
   // ── Pending item dice anim ───────────────────────────────────
-  const [pendingItemAction, setPendingItemAction] = useState<{actor: any; item: any; targetId?: string; targeting: string} | null>(null);
 
   // ── Burn card state ──────────────────────────────────────────
   const [burningCard, setBurningCard] = useState<Card | null>(null);
@@ -3574,7 +3557,6 @@ const App: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sealSearchTerm, setSealSearchTerm] = useState('');
-  const [combatantSearchTerm, setCombatantSearchTerm] = useState('');
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [editingSeal, setEditingSeal] = useState<Seal | null>(null);
   const [sealRitualAnim, setSealRitualAnim] = useState<{seal: Seal; effects: string[]} | null>(null);
@@ -3624,8 +3606,6 @@ const App: React.FC = () => {
   const [zoomedCard, setZoomedCard] = useState<Card | null>(null);
 
   const currentActor = combat?.isActive && combat.combatants.length > 0 ? combat.combatants[combat.turnIndex] : null;
-  const combatTargetingActive = Boolean(selectingTargetFor || itemTargetPickerItem);
-  const combatContextListOpen = Boolean(selectedAction);
   // Filtros de Cartas (Habilidades)
   const filteredCards = useMemo(() => cards.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
@@ -3909,44 +3889,6 @@ const App: React.FC = () => {
   };
 
 
-
-  // ── UPGRADE SHOP ──────────────────────────────────────────────────────────
-  const UPGRADE_OFFER_POOL: Array<{
-    type: UpgradeOfferType;
-    label: string;
-    descFn: (v: number) => string;
-    basePrice: number;
-    weight: number; // total 100
-    valueFn: () => number;
-    rarity: UpgradeOffer['rarity'];
-  }> = [
-    { type:'vitalidade', label:'Vitalidade', descFn: v => `+${v} HP Máximo (azar=2, normal=5-10, sorte=até 20)`, basePrice:30, weight:28, valueFn: () => {
-        const luck = upgradeShopLuck;
-        if (luck === 'azar') return 2;
-        if (luck === 'sorte') {
-          // Scale up: uniform between 2 and 20, skewed toward higher values
-          const r = Math.random();
-          return Math.round(2 + r * r * 18); // quadratic skew toward high
-        }
-        // neutro: 2-10 linear
-        return Math.floor(Math.random() * 5 + 3) * 2; // 6,8,10,12 range
-      }, rarity:'common' },
-    { type:'aura',       label:'Aura',       descFn: v => `+${v} Aura Máxima (azar=1, normal=2-5, sorte=até 10)`, basePrice:30, weight:25, valueFn: () => {
-        const luck = upgradeShopLuck;
-        if (luck === 'azar') return 1;
-        if (luck === 'sorte') {
-          const r = Math.random();
-          return Math.round(1 + r * r * 9); // 1 to 10, skewed high
-        }
-        return Math.floor(Math.random() * 3 + 2); // 2-4 range
-      }, rarity:'common' },
-    { type:'reroll',     label:'Reroll',     descFn: () => 'Item de Reroll: em caso de falha na rolagem de uma carta, você pode consumir este item para rolar novamente', basePrice:50, weight:16, valueFn: () => 0, rarity:'uncommon' },
-    { type:'par',        label:'Par',        descFn: () => 'Item Par: ao usar uma carta com dado, rola 2 dados e usa o maior (+1 rolagem)', basePrice:70, weight:12, valueFn: () => 0, rarity:'uncommon' },
-    { type:'trinca',     label:'Trinca',     descFn: () => 'Item Trinca: ao usar uma carta com dado, rola 3 dados e usa o maior (+2 rolagens)', basePrice:110, weight:8, valueFn: () => 0, rarity:'rare' },
-    { type:'quadra',     label:'Quadra',     descFn: () => 'Item Quadra: ao usar uma carta com dado, rola 4 dados e usa o maior (+3 rolagens)', basePrice:160, weight:6, valueFn: () => 0, rarity:'rare' },
-    { type:'nova_carta', label:'Nova Carta', descFn: () => 'Habilidade aleatória — uma nova carta misteriosa é adicionada diretamente ao personagem', basePrice:120, weight:4, valueFn: () => 0, rarity:'rare' },
-    { type:'desejo',     label:'Desejo',     descFn: () => 'Desejo especial do personagem — efeito único e poderoso, definido pelo Mestre com base nos anseios do herói', basePrice:400, weight:1, valueFn: () => 0, rarity:'legendary' },
-  ];
 
 
 
