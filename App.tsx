@@ -59,13 +59,8 @@ import CardRevealAnimation, { CardAnimPayload } from './components/CardRevealAni
 import FusionOverlay from './components/FusionOverlay';
 import { DAMAGE_TYPES, CARD_TYPE_THEME, type CardTypeStyle } from './utils/theme';
 import { resolveOwnedItems, giveOwned, consumeOwned, setOwnedQuantity, removeOwned, type ResolvedItem } from './utils/items';
-import TurnOrderPanel from './components/combat/TurnOrderPanel';
 import type { ActionCategory } from './components/combat/ActionIconRail';
-import ContextCardList from './components/combat/ContextCardList';
 import CardDetailOverlay from './components/combat/CardDetailOverlay';
-import CombatControlPanel from './components/combat/CombatControlPanel';
-import CardFusionPanel from './components/combat/CardFusionPanel';
-import CombatArena from './components/combat/grid/CombatArena';
 import { migrateCombatState } from './utils/combatMigration';
 import { applySectionTheme } from './utils/sectionTheme';
 import type { CenaState } from './utils/cena';
@@ -75,11 +70,6 @@ import { useKeyboardNav } from './components/nav';
 import CenaTab from './tabs/CenaTab';
 import { getUserReducedMotion, setUserReducedMotion } from './utils/motionPref';
 
-// Command icons (base64)
-const ATTACK_ICON_B64 = "data:image/png;base64,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";
-const VINCULO_ICON_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAZCAYAAAArK+5dAAAECElEQVRIS62VbUxTVxjH7xX6Aty2Ujqg5Zq+0AqjIK4U27HaWIWGtxgSDSRG98EEogmiJoRowmbCmsUwsixAjN+WmCYmbh8ImkrU0C8LC2Z0kRfTimlptC/WUrUipYzbq89NTtN0VEE8X869557+f8/5P895imNfaNyy24sJX2wV5FZKcnJhbjeZgviX0Adx0HnjemqIb8Q1nGyOQ1Cm/GvHABB+Njs3DuKvwy9zOf/q1PBM1c7c/tpo7NoRAInH7itqvX7i3XJ8kbEFhrzRGdS1tmp2BBgdHf359YTsMhL3vVnAIqtPGctrG0m6rbNDAs+flQOIfm5y8gFY4vAEaBBny2fwcDhML3uzEwZ5z66mc1g75GHbABAPLSz0pEcv3LeYkCoMlvvWyRMiQq08dUl5tVCtHt4WAMShUvyhoDXr4TccsGc2NMZ4X3LgGaZUlpJzDu+liFPcbejIYvKwbQBUTWpiwZ4SgRrjaf92FhWJ6gFmt9vv7VntqgCbtgxItQZEUpOLAB0Nx/XNJ5ujTfUdwzn8je4mc+PWAMiaF3fEfyBxmKE0mRN8sKdQoh2oqRTNQ2JvjoxM8Hm72VVVFcZPnmBoaEgkIASHMGHu8IsbAjFEjuodAUqNaxhfKB2AdUnhf0+cTr8V3pUy1mgSYLPa+Oltw7HkKKcoqi0Wi12+yOPT4yppEEGS0X/wn1s9g7FY687SUpnFH2LtjUa8P1ZUkHoul+vGQdi34jNDD0lGtrxcCc/RaFTLYrHEJEnSxe6f8KDiB5ppCxMyHNU/+A+DLrs7u7+62uZ2e9tyeKpbR/XVv0I+cIvFcsAbenlN6m6oST1BqhUF5ok8gExNzWP6rHHslersut/3nP32LY7xeDQGcyDgmi1Tm8fIYsoGkff29oaZmwweT09P11GPzWPpFhVwVEz7hSGVrORB1FL5OVyeL6Q9ryL4d3sF2MGC87SVIP5ZXHxnO3xMfx36T6oOk4O+vj4JXJCcQH03vCNhEP1fXti/07G1tcSSx73rIJeDm00BTBRq+MUmkfw2ODjoT9+fTHJLS4siEScukJGzpzcTRj9Mb248mR8rEqpGqjTSqx8FgABA9sgN35NLVVfSI8kEgPXKQ+xHNRpNV39//8OMJ0AfwK7oan7XZhCUeNT74ZLBgEoqNIWZukfJRXqbXjSAwAYAUVPf9iLLMgFgL1y28nLJSa1CewfK86OA1NN4PB7tBkUNiJZ6lGg9/QTwRyPMVdIAMRlr2jvPdP65JQDaBLmhPA11iTh2geDmJS8kfEc2IQi0abFYvC95DzIlc7N1BIJvAIMZgAiC8lFwZN6Rz+Uchar6ZLPLBHK5XOvwbTfJMcD8VXZlHdpL5Cce6HS6KTjFe01dI6Sj+VCUAAAAAElFTkSuQmCC";
-const ITEMS_ICON_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAAaCAYAAABVX2cEAAAELUlEQVQ4T4WUb0wbZRzH70qhXYVS2qMeDMtmsSO21g266ZYiEglKl/GK4eImkiXNiE5GMlzwhb5oTFSCBtAXCu4FZJkOTSQzdhshY0iZYNuBDTCKpdtYgYMVQq9y0lqK/V3y3K6F4b3p9Xme3+e+39+fB8f+57Feskp71noimqBGMp02zbSfaWeeFILvxOr4pqNyMDx4tp+ySY7SZmtIMxU5kmKcgpj0fXm2qpISih//RBgo8q56G0XKjBrL2Ee+fzwMZTKWSY9p38mTGY10xl33D6PDI5N23G5FandUZrFY3srKVzdn5eZ7Lt6okTjW16IlpJGpeumcQLRfR4CqiMPR9/N4ZyMAd4SBuh9XrtSZtNW1ewnCN+oeVw1SN6aRtSLydQ18qHukNaqhNRd2hEFQc3MzgSenWKVZihwEoReWfX/iDq4QwdXRVJmsoGdbWJi69/JNr1/juTOS74zaGd1mYQWAEACCERisl5JFV5NFoi+3wADU+2ClyT08JIYAUHRgn24W3gduDQhaFlswKMauPAmJINA2DQ0N/i2wa0NDbb65+5UyBRndlSrzIgWkWJhyz+/P+WWi02O19dKwfnpPdW1TU9M8OhMHu/b76B7fw8nbkGSo2NFDBet94XBOxtQUjZIPFsEaApTnlr66bWsAbPKPwW7IDVQK7BXq9awKp8slBZuwB00Ma9AmSRjed1z+ZpvplInmlAEI34y8ctnx1Wk4CDCwihSsLlMCUIyUQd6KdJnZxnRz1C0eZ9XFwf5mVmyQkxc3DRJIPMAQBKkBCNdnMdhr8jO9rmTXJ1tgfItI1ez4xDyyxgex6mMwk7LuM3Ot+Sf4/1hZrIrfO7/V8y2CKmhQW6BDAElPhMGsnpCfqIB8cTB+Fe8U+oqJ3VyzY6qr2MAstlg8Q/1l58Ogz+qfrsfOn6s7FNca12/bq3/1rbZ1Ex+kZorkSWjzUWhlgxsh73JU+qxCQMd+CW/ymEH8lIBv8bGymMXPnZb37+oWNwC2JDwbVEa+TuPD4DCAAAhnSuY+DJSH/1UhiyxsZmZGddM5PFxHNxKSbMt6kiIdicHwNQvbTwBBi6BKTT53sFJw7FOlVtvGvyBxmMXzv3mudz245Rdq85QItrEcwLC5gJDBvxACgPtC7KWYPGw4ZaiveePIwS7+Oge7HJhISdKrImgTYMz8x+ywJ8Ig8c/oX6jYcm2DMtci3dLpXsq/khsUQDCAhOJWCbLHh4HFk2T1grnqZDZfFVcABIRhbt19MWsh8HYwMuFZCmd0qRJVHS9Ie74s+7t3Ey3GNS0LpIJlj9aCBFxBA5SV9GF+HPoLKQBV72kvzKVK5Mbywwfub6uMv4gG/qFrjAlFQgWhjWgp7KNZ3avIbDfs11sSQXHKttvs7u8nYT1NLGMLoVFK2RZRq9XszZv4/AdmXEo4FZQZ5gAAAABJRU5ErkJggg==";
-const FOCO_ICON_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAEEUlEQVRIS42WbUxTVxjHe8ttKaAWWm0qNhBfUNkII3vRidVEM4SQiAwz9+IMM+qWsWG2xWijiS8xGiWabG7zw6ZZljhUPjDRaYprENAZJ2HpOrJaNBgdb7MUZAXbHkq7/k94mkOpwP1y7z333P/vPP/nOc+9kmKax+1wWCdOzZek/um8Kk02iUT9CsU7mDfK2Kc4J6jV3+CsUSgu4DwZ7LkAiEOYRFmrw2TtfBqCYMmG1d0EmgoSFxArHrC39VVbe422ooDRUG1Ur1k57J8uZAIgVhwrvVzXnH7jtxSN/nB/Ytstt7f/UG/79s1my9ZK8x9kHyKJZ1VcwDBjtyg3tHp9ttrgKApo73UnK56U/96q8bSV+h781Ckmf0rAVKsH1Olk3lHPoEKMghYzJWB3XTi9oIjZVE5Xttvj7mr2hGbAGniO1RMAZ+QiVzfw+E2zJjlpRmqHPBo6E5bk5hs/n2dVVVW8CHBwi5IWbTbxG+NwcWnBjl2O/rQMmtBT6GI55jkz6R45SNBzlmLU8Vie27ZMiWvA8J7p17vbm1hLI8ZgYRSgfM1n1WxZn4GXs7PVUUESFgG4lhdkTpgTHnzqBXS4PvdLyX729DiAX59zyfDj8lfw8tL0Z7G60XuKQNKmcgDNRfI5IJKfwhZDb0rarIrvd66ySUjs4B37rK+2NZnrZ/o+m3NqyWJuV0QgFuTyzhsYudakkVflJuEZ7kOdD2WI8qNrkFt2/G0VS1rxqmWtJJ3mANRyX2NjbfmOMzIiIUg8ECKAPcGOR14IcuF52iCJHyjx9aWazf+hnWBvcADqHgPWPXsufV3bpRx5odyu2zekFn1SmuYHw96BNLKBniFnlGwSp2cparVZagiHK9BvAAjcsV8r23IiiGpSFSz8MO/zNTwn0QRffODDalUv5XEYxgFEycaK49k4AAYAIasQxcpzTD9OfMwOrFqMyL3T1X7l1LpniXk5s8UFcQBZFA05AqmpPGY4nzn0ft5HKxZiHL5zv+H12AEIVRJaxyeVlpoNb7EPRJ1xORDJPxyzyeic2A+8NURqm8SjmyxSORTJv2XWjoPF7Hq+xVIaFyD2fTQ3S3VgmftjfyIm82rBMVaCuOzJuRtKyM3g0SAK/8Wrre+6Z/+y8eQXmwgAe9Cb+E4Wm5wIoFJEbaMVaLOKO2TZ9rrHyZ7UtKp02vV/J2NPBG86fIXdWZ1bLW9wKJVoFCBClH/+9e13df/cr0+/bxKFyzayaH9Kc7ouHD9y2H61Z8TIdBVHAXpP+yLDR0gU5xGK3lMknoaGveikq/XKIWwacQ4JYPfXtgwtMg00rO3N2v9ySebtdm1+/kHMFdt23A8OCdLXCvf07RUFYv80YsUnRCCulGyjsXgfEwJM9lfxP3fGeTvZcIHLAAAAAElFTkSuQmCC";
 
 // --- Portal de Confirmação (escapa stacking context de backdrop-filter/overflow) ---
 const ConfirmPortal: React.FC<{
@@ -3324,10 +3314,8 @@ const App: React.FC = () => {
   // Journey UI State
   const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
   const [quickEditChar, setQuickEditChar] = useState<Character | null>(null);
-  const [journeySubTab, setJourneySubTab] = useState<'mapa' | 'cozinhar' | 'forjar' | 'upgrades'>('mapa');
   const [recipeModal, setRecipeModal] = useState<{ mode: 'new' | 'edit'; recipe?: Recipe; type: RecipeType } | null>(null);
   const [craftResult, setCraftResult] = useState<{ recipe: Recipe; character: Character } | null>(null);
-  const [craftCharacterId, setCraftCharacterId] = useState<string>('');
   const [editRecipeData, setEditRecipeData] = useState<Partial<Recipe>>({});
   // Upgrade shop UI state
   const [upgradeShopOfferCount, setUpgradeShopOfferCount] = useState(4);
@@ -3335,7 +3323,6 @@ const App: React.FC = () => {
   const [upgradeShopOffers, setUpgradeShopOffers] = useState<UpgradeOffer[]>([]);
   const [upgradeShopGenerated, setUpgradeShopGenerated] = useState(false);
   const [upgradePurchaseResult, setUpgradePurchaseResult] = useState<{ offer: UpgradeOffer; targetChar: Character } | null>(null);
-  const [upgradeTargetCharId, setUpgradeTargetCharId] = useState<string>('');
   const [shopCurrency, setShopCurrency] = useState(0);
   // Per-character currencies (charId -> moedas)
   const [characterCurrencies, setCharacterCurrencies] = useState<Record<string, number>>({});
@@ -3354,19 +3341,11 @@ const App: React.FC = () => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showEndCombatConfirm, setShowEndCombatConfirm] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ message: string; onConfirm: () => void } | null>(null);
-  const [showDeckModal, setShowDeckModal] = useState(false);
-  const [deckSearchTerm, setDeckSearchTerm] = useState('');
-  const [deckTypeFilter, setDeckTypeFilter] = useState<CardType | 'all'>('all');
   const [showAddCombatantModal, setShowAddCombatantModal] = useState(false);
-  const [initiativeStripPinned, setInitiativeStripPinned] = useState(false);
-  const [initiativeStripHovered, setInitiativeStripHovered] = useState(false);
   // Turn change animation key — increments each turn to re-trigger CSS animations
   const [turnChangeKey, setTurnChangeKey] = useState(0);
   const [turnFlashing, setTurnFlashing] = useState(false);
   // (mobile mode removed)
-  const [showCustomPinModal, setShowCustomPinModal] = useState(false);
-  const [newPinLabel, setNewPinLabel] = useState('');
-  const [newPinColor, setNewPinColor] = useState('#ef4444');
   const [placingPin, setPlacingPin] = useState<{label: string; color: string} | null>(null);
   const [cardAnim, setCardAnim] = useState<CardAnimPayload | null>(null);
 
@@ -3602,9 +3581,6 @@ const App: React.FC = () => {
   const [sealRitualAnim, setSealRitualAnim] = useState<{seal: Seal; effects: string[]} | null>(null);
   const [itemUseAnim, setItemUseAnim] = useState<Item | null>(null);
   const [openInventoryCharId, setOpenInventoryCharId] = useState<string | null>(null);
-  const [sealCodeInput, setSealCodeInput] = useState('');
-  const [sealCodeModal, setSealCodeModal] = useState<{actor: any} | null>(null);
-  const [activeSealPrep, setActiveSealPrep] = useState<{sealId: string; actorCombatId: string; roundsLeft: number; comboParticipants?: string[]} | null>(null);
   const [sealComboSelectModal, setSealComboSelectModal] = useState<{seal: Seal; actor: any} | null>(null);
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
   const [setupCombatant, setSetupCombatant] = useState<Character | null>(null);
@@ -3614,8 +3590,6 @@ const App: React.FC = () => {
   const [itemTargetPickerItem, setItemTargetPickerItem] = useState<{ actor: any; item: any } | null>(null);
   const [showHideNpcs, setShowHideNpcs] = useState(false);
   // Initiative drag-to-reorder
-  const [dragSrcIdx, setDragSrcIdx] = useState<number | null>(null);
-  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [diceAnim, setDiceAnim] = useState<{ isVisible: boolean; result: number; defenderResult?: number; isSuccess: boolean; customLabel?: string; notation?: string; individualRolls?: number[]; numSides?: number; bonus?: number; dramatic?: boolean } | null>(null);
   const showDiceAnimation = (
     roll: RollResult | { total: number; notation?: string; individualRolls?: number[]; numSides?: number; bonus?: number },
@@ -3643,10 +3617,8 @@ const App: React.FC = () => {
   const [isReactionPrompt, setIsReactionPrompt] = useState<{ target: Combatant; availableReactions: Card[]; attacker: Combatant; activeCard: Card; } | null>(null);
   
   const [impactTargetId, setImpactTargetId] = useState<string | null>(null);
-  const [collapsedCardGroups, setCollapsedCardGroups] = useState<Record<string, boolean>>({});
   const [turnBanner, setTurnBanner] = useState<{ name: string; icon: string; isFumbleTurnPass?: boolean } | null>(null);
   const [conditionExpiryNotifs, setConditionExpiryNotifs] = useState<string[]>([]);
-  const [hoveredCardIdx, setHoveredCardIdx] = useState<number | null>(null);
   // Area multi-target selection
   const [areaSelectedTargets, setAreaSelectedTargets] = useState<string[]>([]);
   // Card zoom overlay state (when a card is clicked but before target is chosen)
@@ -3655,20 +3627,6 @@ const App: React.FC = () => {
   const currentActor = combat?.isActive && combat.combatants.length > 0 ? combat.combatants[combat.turnIndex] : null;
   const combatTargetingActive = Boolean(selectingTargetFor || itemTargetPickerItem);
   const combatContextListOpen = Boolean(selectedAction);
-  const showCombatLeftPanel = combatLeftPanelOpen && !combatTargetingActive;
-  const showCombatContextList = combatContextListOpen && !combatTargetingActive;
-  const showCombatRightPanel =
-    combatRightPanelOpen &&
-    !combatTargetingActive &&
-    (!combatContextListOpen || combatRightPanelForcedOpen);
-  const showLegacyInitiativeStrip = false;
-  const showLegacyBottomHud = false;
-
-  const openCombatRightPanel = () => {
-    setCombatRightPanelOpen(true);
-    if (combatContextListOpen) setCombatRightPanelForcedOpen(true);
-  };
-
   // Filtros de Cartas (Habilidades)
   const filteredCards = useMemo(() => cards.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
@@ -3687,20 +3645,6 @@ const App: React.FC = () => {
   
   // Filtros de Personagens
   const filteredCharacters = useMemo(() => characters.filter(c => !!c.id), [characters]);
-
-  const groupedCards = useMemo(() => {
-    const groups: Record<CardType, Card[]> = { 'ataque': [], 'reação': [], 'ação': [], 'reforço': [], 'vínculo': [], 'combinação': [], 'forma': [] };
-    cards.forEach(card => { groups[card.type].push(card); });
-    return groups;
-  }, [cards]);
-
-  const filteredCombatants = useMemo(() => {
-    if (!combat) return [];
-    return combat.combatants.filter(c => c.name.toLowerCase().includes(combatantSearchTerm.toLowerCase()));
-  }, [combat, combatantSearchTerm]);
-
-
-  const inventoryCharacters = useMemo(() => characters.filter(c => c.name.toLowerCase().includes(inventorySearchTerm.toLowerCase())), [characters, inventorySearchTerm]);
 
   const selectedInventoryChar = useMemo(() => characters.find(c => c.id === selectedInventoryCharId), [characters, selectedInventoryCharId]);
 
