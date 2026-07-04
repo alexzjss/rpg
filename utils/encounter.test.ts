@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { sortInitiative, startEncounter, advanceTurn, prevTurn, endEncounter, type InitiativeParticipant } from './encounter';
 import { createDefaultCena, createDefaultEncounter, type EncounterEntry, type EncounterState } from './cena';
+import {
+  addBuff, buffTotal, canReact, markReaction, markSlot, slotAvailable, tickBuffs,
+} from './encounter';
 
 const P = (id: string, side: 'party' | 'npc', baseInitiative: number): InitiativeParticipant =>
   ({ id, side, name: id, baseInitiative });
@@ -75,5 +78,90 @@ describe('endEncounter', () => {
     expect(ended.encounter.isActive).toBe(false);
     expect(ended.encounter.order).toEqual([]);
     expect(ended.encounter.round).toBe(1);
+  });
+});
+
+function enc2(overrides: Partial<ReturnType<typeof createDefaultEncounter>> = {}) {
+  return { ...createDefaultEncounter(), isActive: true, ...overrides };
+}
+
+describe('slots de ação', () => {
+  it('principal e menor começam livres; reação não consome slot', () => {
+    const e = enc2();
+    expect(slotAvailable(e, 'principal')).toBe(true);
+    expect(slotAvailable(e, 'menor')).toBe(true);
+    expect(slotAvailable(e, 'reação')).toBe(true);
+  });
+
+  it('markSlot consome o slot correspondente', () => {
+    let e = markSlot(enc2(), 'principal');
+    expect(slotAvailable(e, 'principal')).toBe(false);
+    expect(slotAvailable(e, 'menor')).toBe(true);
+    e = markSlot(e, 'menor');
+    expect(slotAvailable(e, 'menor')).toBe(false);
+  });
+
+  it('advanceTurn reseta os slots', () => {
+    const base = enc2({
+      order: [
+        { refId: 'a', side: 'party', initiative: 15 },
+        { refId: 'b', side: 'npc', initiative: 10 },
+      ],
+    });
+    const used = markSlot(markSlot(base, 'principal'), 'menor');
+    const next = advanceTurn(used, () => false);
+    expect(next.turn).toEqual({ majorUsed: false, minorUsed: false });
+  });
+});
+
+describe('reações', () => {
+  it('canReact/markReaction controlam 1 reação por rodada', () => {
+    let e = enc2();
+    expect(canReact(e, 'a')).toBe(true);
+    e = markReaction(e, 'a');
+    expect(canReact(e, 'a')).toBe(false);
+    expect(canReact(e, 'b')).toBe(true);
+  });
+
+  it('nova rodada (wrap do advanceTurn) limpa as reações', () => {
+    const base = enc2({
+      order: [
+        { refId: 'a', side: 'party', initiative: 15 },
+        { refId: 'b', side: 'npc', initiative: 10 },
+      ],
+      turnIndex: 1,
+    });
+    const used = markReaction(base, 'a');
+    const next = advanceTurn(used, () => false); // volta ao índice 0 → round++
+    expect(next.round).toBe(2);
+    expect(next.reactionsUsed).toEqual({});
+  });
+});
+
+describe('buffs', () => {
+  it('addBuff registra e buffTotal soma por alvo e stat', () => {
+    let e = addBuff(enc2(), { targetId: 'a', stat: 'defesa', value: 2, roundsRemaining: 1, source: 'Guarda' });
+    e = addBuff(e, { targetId: 'a', stat: 'defesa', value: 1, roundsRemaining: 2, source: 'Selo' });
+    e = addBuff(e, { targetId: 'a', stat: 'acerto', value: 3, roundsRemaining: 1, source: 'Benção' });
+    expect(buffTotal(e, 'a', 'defesa')).toBe(3);
+    expect(buffTotal(e, 'a', 'acerto')).toBe(3);
+    expect(buffTotal(e, 'b', 'defesa')).toBe(0);
+  });
+
+  it('tickBuffs decrementa só os buffs do dono e expira em 0 com log', () => {
+    let e = addBuff(enc2(), { targetId: 'a', stat: 'defesa', value: 2, roundsRemaining: 1, source: 'Guarda' });
+    e = addBuff(e, { targetId: 'b', stat: 'dano', value: 1, roundsRemaining: 1, source: 'Fúria' });
+    const r = tickBuffs(e, 'a', 'Alice');
+    expect(buffTotal(r.enc, 'a', 'defesa')).toBe(0);
+    expect(buffTotal(r.enc, 'b', 'dano')).toBe(1); // intocado
+    expect(r.log[0].text).toContain('Guarda');
+    expect(r.log[0].text).toContain('expirou');
+  });
+
+  it('buff com mais rodadas sobrevive ao tick', () => {
+    const e = addBuff(enc2(), { targetId: 'a', stat: 'defesa', value: 1, roundsRemaining: 2, source: 'Selo' });
+    const r = tickBuffs(e, 'a', 'Alice');
+    expect(buffTotal(r.enc, 'a', 'defesa')).toBe(1);
+    expect(r.log).toEqual([]);
   });
 });
