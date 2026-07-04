@@ -57,6 +57,7 @@ import { migrateCombatState } from './utils/combatMigration';
 import { applySectionTheme } from './utils/sectionTheme';
 import type { CenaState } from './utils/cena';
 import { createDefaultCena } from './utils/cena';
+import type { GrimoireEntry } from './utils/grimoire';
 import { TabSweep, Title, ImagePickerButton } from './components/ui';
 import { useKeyboardNav } from './components/nav';
 import CenaTab from './tabs/CenaTab';
@@ -2764,6 +2765,7 @@ const App: React.FC = () => {
   const [extrasTab, setExtrasTab] = useState<'dice' | 'timer' | 'progress' | 'names' | 'loot' | 'notes'>('dice');
   
   const [cards, setCards] = useState<Card[]>([]);
+  const [grimoire, setGrimoire] = useState<GrimoireEntry[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [seals, setSeals] = useState<Seal[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -2880,13 +2882,14 @@ const App: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
 
-    DatabaseService.initialize().then(({ characters: chars, cards: cds, items: its, seals: sls, weapons: wps, combat: cbt, journey: jny, cena: cn, extras }) => {
+    DatabaseService.initialize().then(({ characters: chars, cards: cds, items: its, seals: sls, weapons: wps, grimoire: grim, combat: cbt, journey: jny, cena: cn, extras }) => {
       if (cancelled) return;
       setCharacters(chars);
       setCards(cds);
       setItems(its);
       setSeals(sls);
       setWeapons(wps);
+      setGrimoire(grim);
       setCombat(migrateCombatState(cbt));
       setJourney(jny);
       setCena(cn);
@@ -2911,6 +2914,7 @@ const App: React.FC = () => {
     const unsubItems = DatabaseService.syncItems((data) => { if (!cancelled) setItems(data); });
     const unsubSeals = DatabaseService.syncSeals((data) => { if (!cancelled) setSeals(data); });
     const unsubWeapons = DatabaseService.syncWeapons((data) => { if (!cancelled) setWeapons(data); });
+    const unsubGrimoire = DatabaseService.syncGrimoire((data) => { if (!cancelled) setGrimoire(data); });
     const unsubCombat = DatabaseService.syncCombatState((data) => { if (!cancelled) setCombat(migrateCombatState(data)); });
     const unsubJourney = DatabaseService.syncJourneyState((data) => { if (!cancelled) setJourney(data); });
     const unsubCena = DatabaseService.syncCenaState((data) => { if (!cancelled) setCena(data); });
@@ -2922,7 +2926,7 @@ const App: React.FC = () => {
 
     return () => {
       cancelled = true;
-      unsubChars(); unsubCards(); unsubItems(); unsubSeals(); unsubWeapons(); unsubCombat(); unsubJourney(); unsubCena(); unsubReq();
+      unsubChars(); unsubCards(); unsubItems(); unsubSeals(); unsubWeapons(); unsubGrimoire(); unsubCombat(); unsubJourney(); unsubCena(); unsubReq();
     };
   }, []);
 
@@ -2936,13 +2940,14 @@ const App: React.FC = () => {
       try {
         setAutoSaveStatus('saving');
         await DatabaseService.saveFullSnapshot({
-          version: 4,
+          version: 5,
           savedAt: new Date().toISOString(),
           characters,
           cards,
           items,
           seals,
           weapons,
+          grimoire,
           combat: combat!,
           journey: journey!,
           cena,
@@ -2966,7 +2971,7 @@ const App: React.FC = () => {
       }
     }, INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [isLoading, characters, cards, seals, combat, journey, gmNotes, combatNotes, shopCurrency, characterCurrencies, progressBars, rollHistory, lootList, nameStyle]);
+  }, [isLoading, characters, cards, seals, grimoire, combat, journey, gmNotes, combatNotes, shopCurrency, characterCurrencies, progressBars, rollHistory, lootList, nameStyle]);
 
   // ── Salva extras no IDB em tempo real quando mudam ─────────────
   // (debounce 2s para não sobrecarregar o IDB a cada keystroke)
@@ -3010,12 +3015,14 @@ const App: React.FC = () => {
   const [assignSealModal, setAssignSealModal] = useState<Seal | null>(null);
   const [showHideNpcs, setShowHideNpcs] = useState(false);
   // Initiative drag-to-reorder
-  const [diceAnim, setDiceAnim] = useState<{ isVisible: boolean; result: number; defenderResult?: number; isSuccess: boolean; customLabel?: string; notation?: string; individualRolls?: number[]; numSides?: number; bonus?: number; dramatic?: boolean } | null>(null);
+  const [diceAnimQueue, setDiceAnimQueue] = useState<Array<{ id: string; isVisible: boolean; result: number; defenderResult?: number; isSuccess: boolean; customLabel?: string; notation?: string; individualRolls?: number[]; numSides?: number; bonus?: number; dramatic?: boolean; actorLabel?: string; defenderLabel?: string; onReveal?: () => void }>>([]);
+  const diceAnim = diceAnimQueue[0] ?? null;
   const showDiceAnimation = (
     roll: RollResult | { total: number; notation?: string; individualRolls?: number[]; numSides?: number; bonus?: number },
-    options: { isSuccess?: boolean; customLabel?: string; defenderResult?: number; dramatic?: boolean } = {},
+    options: { isSuccess?: boolean; customLabel?: string; defenderResult?: number; dramatic?: boolean; actorLabel?: string; defenderLabel?: string; onReveal?: () => void } = {},
   ) => {
-    setDiceAnim({
+    setDiceAnimQueue(queue => [...queue, {
+      id: `dice-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       isVisible: true,
       result: roll.total,
       isSuccess: options.isSuccess ?? true,
@@ -3026,10 +3033,13 @@ const App: React.FC = () => {
       bonus: roll.bonus || 0,
       defenderResult: options.defenderResult,
       dramatic: options.dramatic,
-    });
+      actorLabel: options.actorLabel,
+      defenderLabel: options.defenderLabel,
+      onReveal: options.onReveal,
+    }]);
   };
   const handleCardAnimComplete = useCallback(() => setCardAnim(null), []);
-  const handleDiceAnimComplete = useCallback(() => setDiceAnim(null), []);
+  const handleDiceAnimComplete = useCallback(() => setDiceAnimQueue(queue => queue.slice(1)), []);
   
   // Atualizado para suportar múltiplas reações
   
@@ -3129,13 +3139,14 @@ const App: React.FC = () => {
     try {
       setAutoSaveStatus('saving');
       await DatabaseService.saveFullSnapshot({
-        version: 4,
+        version: 5,
         savedAt: new Date().toISOString(),
         characters,
         cards,
         items,
         seals,
         weapons,
+        grimoire,
         combat,
         journey,
         cena,
@@ -3560,6 +3571,7 @@ const App: React.FC = () => {
             weapons={weapons}
             updateCena={updateCena}
             updateCharacterStats={updateCharacterStats}
+            onDiceRoll={showDiceAnimation}
           />
         )}
 
@@ -4450,7 +4462,8 @@ const App: React.FC = () => {
 
 
       {/* ROLAGEM DE DADOS (fallback para ações sem carta) */}
-      <DiceAnimation 
+      <DiceAnimation
+        key={diceAnim?.id ?? 'dice-idle'}
         isVisible={!!diceAnim?.isVisible} 
         result={diceAnim?.result || 0} 
         defenderResult={diceAnim?.defenderResult} 
@@ -4461,6 +4474,9 @@ const App: React.FC = () => {
         numSides={diceAnim?.numSides || 20}
         bonus={diceAnim?.bonus || 0}
         dramatic={diceAnim?.dramatic}
+        actorLabel={diceAnim?.actorLabel}
+        defenderLabel={diceAnim?.defenderLabel}
+        onReveal={diceAnim?.onReveal}
         onComplete={handleDiceAnimComplete}
       />
 

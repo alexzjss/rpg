@@ -12,6 +12,7 @@
 
 import { Card, Character, CombatState, Item, JourneyState, Seal, Weapon } from '../types';
 import { CenaState, createDefaultCena } from './cena';
+import type { GrimoireEntry } from './grimoire';
 
 // ─────────────────────────────────────────────────────────────────
 // AppExtras — dados do GM / ferramentas que antes ficavam de fora
@@ -50,13 +51,14 @@ export interface AppSnapshot {
   items: Item[];
   seals: Seal[];
   weapons: Weapon[];
+  grimoire: GrimoireEntry[];
   combat: CombatState;
   journey: JourneyState;
   cena: CenaState;
   extras: AppExtras;
 }
 
-export const SNAPSHOT_VERSION = 4;
+export const SNAPSHOT_VERSION = 5;
 
 // ─────────────────────────────────────────────────────────────────
 // Defaults
@@ -95,10 +97,10 @@ export const DEFAULT_CENA: CenaState = createDefaultCena();
 // IndexedDB internals
 // ─────────────────────────────────────────────────────────────────
 const IDB_NAME = 'rpg_master_db';
-// bump para 6 → cria o store 'weapons'
-const IDB_VERSION = 6;
+// bump para 7 → cria o store 'grimoire'
+const IDB_VERSION = 7;
 
-const ALL_STORES = ['characters', 'cards', 'seals', 'items', 'weapons', 'meta'] as const;
+const ALL_STORES = ['characters', 'cards', 'seals', 'items', 'weapons', 'grimoire', 'meta'] as const;
 type Store = typeof ALL_STORES[number];
 
 let _idbPromise: Promise<IDBDatabase> | null = null;
@@ -186,7 +188,7 @@ async function _replaceAll(store: Store, items: any[]): Promise<void> {
 // Sanitizers / coercions
 // ─────────────────────────────────────────────────────────────────
 function ensureChar(c: any): Character {
-  return { ...c, items: c.items ?? [], ownedItems: c.ownedItems ?? [], conditions: c.conditions ?? [], cardIds: c.cardIds ?? [], weaponIds: c.weaponIds ?? [], sealIds: c.sealIds ?? [] };
+  return { ...c, items: c.items ?? [], ownedItems: c.ownedItems ?? [], conditions: c.conditions ?? [], cardIds: c.cardIds ?? [], weaponIds: c.weaponIds ?? [], sealIds: c.sealIds ?? [], grimoire: c.grimoire ?? [] };
 }
 
 function ensureSeal(s: any): Seal {
@@ -216,7 +218,11 @@ function ensureCena(raw: any): CenaState {
     scene: { ...base.scene, ...(raw.scene ?? {}) },
     npcRoster: Array.isArray(raw.npcRoster) ? raw.npcRoster : [],
     encounter: { ...base.encounter, ...(raw.encounter ?? {}),
-      order: Array.isArray(raw.encounter?.order) ? raw.encounter.order : [] },
+      order: Array.isArray(raw.encounter?.order) ? raw.encounter.order : [],
+      activeBuffs: Array.isArray(raw.encounter?.activeBuffs) ? raw.encounter.activeBuffs : [],
+      activeFormas: Array.isArray(raw.encounter?.activeFormas) ? raw.encounter.activeFormas : [],
+      preparations: Array.isArray(raw.encounter?.preparations) ? raw.encounter.preparations : [],
+      reactionsUsed: (raw.encounter?.reactionsUsed && typeof raw.encounter.reactionsUsed === 'object') ? raw.encounter.reactionsUsed : {} },
     log: Array.isArray(raw.log) ? raw.log : [],
     tokens: (raw.tokens && typeof raw.tokens === 'object') ? raw.tokens : {},
   };
@@ -237,9 +243,9 @@ function ensureExtras(raw: any): AppExtras {
 // ─────────────────────────────────────────────────────────────────
 // In-memory listener registry
 // ─────────────────────────────────────────────────────────────────
-type ListenerKey = 'characters' | 'cards' | 'items' | 'seals' | 'weapons' | 'combat' | 'journey' | 'cena' | 'extras';
+type ListenerKey = 'characters' | 'cards' | 'items' | 'seals' | 'weapons' | 'grimoire' | 'combat' | 'journey' | 'cena' | 'extras';
 const _listeners: Record<ListenerKey, Function[]> = {
-  characters: [], cards: [], items: [], seals: [], weapons: [], combat: [], journey: [], cena: [], extras: [],
+  characters: [], cards: [], items: [], seals: [], weapons: [], grimoire: [], combat: [], journey: [], cena: [], extras: [],
 };
 
 function _notify(key: ListenerKey, data: any) {
@@ -307,12 +313,13 @@ async function runMigrations() {
 // Load all from IDB
 // ─────────────────────────────────────────────────────────────────
 async function loadAll() {
-  const [chars, cards, items, seals, weapons, combatRec, journeyRec, cenaRec, extrasRec] = await Promise.all([
+  const [chars, cards, items, seals, weapons, grimoire, combatRec, journeyRec, cenaRec, extrasRec] = await Promise.all([
     _getAll<any>('characters'),
     _getAll<any>('cards'),
     _getAll<any>('items'),
     _getAll<any>('seals'),
     _getAll<any>('weapons'),
+    _getAll<any>('grimoire'),
     _get<any>('meta', '__combat'),
     _get<any>('meta', '__journey'),
     _get<any>('meta', '__cena'),
@@ -324,6 +331,7 @@ async function loadAll() {
     items: items as Item[],
     seals: seals.map(ensureSeal) as Seal[],
     weapons: weapons as Weapon[],
+    grimoire: grimoire as GrimoireEntry[],
     combat: ensureCombat(combatRec?.value),
     journey: ensureJourney(journeyRec?.value),
     cena: ensureCena(cenaRec?.value),
@@ -343,6 +351,7 @@ export const DatabaseService = {
     items: Item[];
     seals: Seal[];
     weapons: Weapon[];
+    grimoire: GrimoireEntry[];
     combat: CombatState;
     journey: JourneyState;
     cena: CenaState;
@@ -372,6 +381,10 @@ export const DatabaseService = {
   syncWeapons: (cb: (d: Weapon[]) => void) => {
     _getAll<Weapon>('weapons').then(d => cb(d)).catch(() => cb([]));
     return _subscribe<Weapon[]>('weapons', cb);
+  },
+  syncGrimoire: (cb: (d: GrimoireEntry[]) => void) => {
+    _getAll<GrimoireEntry>('grimoire').then(d => cb(d)).catch(() => cb([]));
+    return _subscribe<GrimoireEntry[]>('grimoire', cb);
   },
   syncCombatState: (cb: (d: CombatState) => void) => {
     _get<any>('meta', '__combat').then(r => cb(ensureCombat(r?.value))).catch(() => cb({ ...DEFAULT_COMBAT }));
@@ -437,6 +450,15 @@ export const DatabaseService = {
     _notify('weapons', await _getAll<Weapon>('weapons'));
   },
 
+  saveGrimoireEntry: async (entry: GrimoireEntry) => {
+    await _put('grimoire', entry);
+    _notify('grimoire', await _getAll<GrimoireEntry>('grimoire'));
+  },
+  deleteGrimoireEntry: async (id: string) => {
+    await _delete('grimoire', id);
+    _notify('grimoire', await _getAll<GrimoireEntry>('grimoire'));
+  },
+
   updateCombat: async (state: CombatState) => {
     await _put('meta', { id: '__combat', value: state });
     _notify('combat', state);
@@ -489,6 +511,7 @@ export const DatabaseService = {
       _replaceAll('items', snapshot.items),
       _replaceAll('seals', snapshot.seals.map(ensureSeal)),
       _replaceAll('weapons', snapshot.weapons ?? []),
+      _replaceAll('grimoire', snapshot.grimoire ?? []),
       _put('meta', { id: '__combat', value: snapshot.combat }),
       _put('meta', { id: '__journey', value: snapshot.journey }),
       _put('meta', { id: '__cena', value: snapshot.cena }),
@@ -501,6 +524,7 @@ export const DatabaseService = {
     _notify('items', snapshot.items);
     _notify('seals', snapshot.seals.map(ensureSeal));
     _notify('weapons', snapshot.weapons ?? []);
+    _notify('grimoire', snapshot.grimoire ?? []);
     _notify('combat', snapshot.combat);
     _publishCombat(snapshot.combat);
     _notify('journey', snapshot.journey);
@@ -531,6 +555,7 @@ export const DatabaseService = {
         items: Array.isArray(raw.items) ? raw.items : [],
         seals: Array.isArray(raw.seals) ? raw.seals : [],
         weapons: Array.isArray(raw.weapons) ? raw.weapons : [],
+        grimoire: Array.isArray(raw.grimoire) ? raw.grimoire : [],
         combat: ensureCombat(raw.combat),
         journey: ensureJourney(raw.journey),
         cena: ensureCena(raw.cena),
