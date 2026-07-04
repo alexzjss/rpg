@@ -199,13 +199,16 @@ export function applyEffects(
   for (const ef of effects) {
     if (ef.kind === 'damage') {
       const rolled = roll(ef.dice);
+      // damageBonus entra ANTES dos multiplicadores (decisão de design):
+      // buff de dano é amplificado por fraqueza/interação, como o dado.
       let dmg = (opts.crit ? rolled.dieRoll * 2 + rolled.bonus : rolled.total) + (opts.damageBonus ?? 0);
       const interaction = elementInteraction(ef.element, conditions);
       dmg = Math.floor(dmg * interaction.multiplier) + interaction.flatBonus;
       const affinity = target.affinities?.[ef.element];
       dmg = Math.floor(dmg * affinityMultiplier(affinity));
       const isProtected = conditions.some(c => c.name === 'Protegido');
-      if (isProtected && dmg > 0) dmg = Math.max(0, dmg - PROTECT_VALUE);
+      const protApplied = isProtected && dmg > 0;
+      if (protApplied) dmg = Math.max(0, dmg - PROTECT_VALUE);
 
       for (const rem of interaction.removeConditions) conditions = conditions.filter(c => c.name !== rem);
       for (const ren of interaction.renewConditions) conditions = upsertCondition(conditions, ren.name, ren.duration);
@@ -215,7 +218,7 @@ export function applyEffects(
       damages.push({ dice: ef.dice, element: ef.element, rolled, interaction, affinity, final: dmg });
 
       const affNote = affinity === 'fraco' ? ' — FRAQUEZA!' : affinity === 'resistente' ? ' — resistiu' : affinity === 'imune' ? ' — IMUNE' : '';
-      const protNote = isProtected && dmg >= 0 ? ` (Protegido −${PROTECT_VALUE})` : '';
+      const protNote = protApplied ? ` (Protegido −${PROTECT_VALUE})` : '';
       log.push(logEntry('damage',
         `${target.name} sofre ${dmg} de dano de ${ef.element} [${rolled.notation}: ${rolled.individualRolls.join('+')}]${affNote}${protNote}.`));
       for (const n of interaction.notes) log.push(logEntry('condition', `${n}.`));
@@ -225,6 +228,7 @@ export function applyEffects(
       const label = ef.stat === 'hp' ? 'HP' : ef.stat === 'aura' ? 'Aura' : 'Munição';
       log.push(logEntry('damage', `${target.name} recupera ${value} de ${label}.`));
     } else if (ef.kind === 'condition') {
+      // ef.value é ignorado de propósito na v1: o tick usa os defaults dos presets.
       conditions = upsertCondition(conditions, ef.name, ef.duration);
       log.push(logEntry('condition', `${target.name} recebe ${ef.name} (${ef.duration} rodada(s)).`));
     } else if (ef.kind === 'buff') {

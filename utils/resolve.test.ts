@@ -264,4 +264,33 @@ describe('applyEffects', () => {
     expect(r.targetDelta).toEqual({ hp: -6 });
     expect(r.targetConditions).toEqual([{ name: 'Queimando', duration: 3 }]);
   });
+
+  it('damageBonus entra antes dos multiplicadores (amplificado por fraqueza)', () => {
+    const roll = seqRoller([{ total: 6, dieRoll: 6 }]);
+    const target = snap({ id: 'b', affinities: { fogo: 'fraco' } });
+    const r = applyEffects('A', target, [{ kind: 'damage', dice: '2d6', element: 'fogo' }], { roll, damageBonus: 2 });
+    expect(r.damages[0].final).toBe(12); // floor((6+2)*1.5)
+  });
+
+  it('crítico combina com afinidade (dobra antes do multiplicador)', () => {
+    const roll = seqRoller([{ total: 7, dieRoll: 7 }]);
+    const target = snap({ id: 'b', affinities: { fogo: 'fraco' } });
+    const r = applyEffects('A', target, [{ kind: 'damage', dice: '2d6', element: 'fogo' }], { roll, crit: true });
+    expect(r.damages[0].final).toBe(21); // floor(7*2*1.5)
+  });
+
+  it('dois efeitos de dano na mesma ação: o segundo vê as condições do primeiro', () => {
+    const roll = seqRoller([
+      { total: 4, dieRoll: 4 }, // água
+      { total: 6, dieRoll: 6 }, // raio
+    ]);
+    const r = applyEffects('A', snap({ id: 'b' }), [
+      { kind: 'damage', dice: '1d6', element: 'água' },
+      { kind: 'damage', dice: '2d6', element: 'raio' },
+    ], { roll });
+    expect(r.damages[0].final).toBe(4);
+    expect(r.damages[1].final).toBe(11); // 6 + 5 do Molhado aplicado pela água
+    expect(r.targetDelta).toEqual({ hp: -15 });
+    expect(r.targetConditions).toEqual([]); // raio consumiu o Molhado
+  });
 });
