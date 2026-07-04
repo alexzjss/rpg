@@ -2,6 +2,21 @@ export type CardType = 'ataque' | 'reação' | 'ação' | 'reforço' | 'vínculo
 
 export type DamageType = 'normal' | 'fogo' | 'raio' | 'água' | 'terra' | 'vento' | 'escuridão' | 'luminoso' | 'sangue' | 'aura';
 
+/** Elemento de dano do sistema unificado (mesma união do DamageType legado). */
+export type Element = DamageType;
+
+/** Afinidade elemental de uma ficha: fraco ×1.5, resistente ×0.5, imune ×0. */
+export type Affinity = 'fraco' | 'resistente' | 'imune';
+
+/** Posse de uma entrada do grimório por um personagem. */
+export interface GrimoireHolding {
+  entryId: string;
+  /** Unidades possuídas (consumíveis). Ausente = 1. */
+  quantity?: number;
+  /** Nível escolhido no módulo de níveis da entrada. Ausente = perfil base. */
+  level?: number;
+}
+
 export interface ArsenalBase {
   id: string;
   name: string;
@@ -247,6 +262,10 @@ export interface Character {
   bonds?: string[]; // list of vínculo names this character has
   stacks?: CharacterStack[];
   ownedItems?: OwnedItem[]; // posse referenciada (catálogo global)
+  /** Acervo unificado do grimório (substituirá cardIds/sealIds/weaponIds/ownedItems na Fase 3). */
+  grimoire?: GrimoireHolding[];
+  /** Afinidades elementais: fraco / resistente / imune por elemento. */
+  affinities?: Partial<Record<Element, Affinity>>;
 }
 
 /** Defesa padrão quando o personagem não tem `defense` definido. */
