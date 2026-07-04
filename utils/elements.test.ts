@@ -45,6 +45,16 @@ describe('elementInteraction', () => {
     expect(r.renewConditions).toEqual([{ name: 'Queimando', duration: 3 }]); // defaultDuration do preset
   });
 
+  it('fogo em alvo Molhado E Queimando: reduz, consome Molhado e renova Queimando', () => {
+    const r = elementInteraction('fogo', [
+      { name: 'Molhado', duration: 2 },
+      { name: 'Queimando', duration: 1 },
+    ]);
+    expect(r.multiplier).toBe(0.5);
+    expect(r.removeConditions).toContain('Molhado');
+    expect(r.renewConditions).toEqual([{ name: 'Queimando', duration: 3 }]);
+  });
+
   it('elemento neutro não interage', () => {
     const r = elementInteraction('normal', [{ name: 'Molhado', duration: 2 }]);
     expect(r).toEqual({ multiplier: 1, flatBonus: 0, removeConditions: [], renewConditions: [], addConditions: [], notes: [] });

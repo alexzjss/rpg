@@ -35,6 +35,7 @@ export function elementInteraction(element: Element, targetConditions: Condition
   };
 
   if (element === 'água') {
+    // 2 rodadas de propósito (spec combate v2): mais curto que o defaultDuration do preset (4).
     res.addConditions.push({ name: 'Molhado', duration: 2 });
     res.notes.push('a água encharca o alvo (Molhado, 2 rodadas)');
     if (has('Queimando')) {
