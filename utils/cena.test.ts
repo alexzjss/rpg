@@ -142,3 +142,23 @@ describe('updateNpcStats', () => {
     expect(updateNpcStats(cena, 'x', { currentHp: 1 }).npcRoster).toEqual([]);
   });
 });
+
+describe('EncounterState v2 defaults', () => {
+  it('createDefaultCena traz os campos novos do encounter', () => {
+    const c = createDefaultCena();
+    expect(c.encounter.turn).toEqual({ majorUsed: false, minorUsed: false });
+    expect(c.encounter.reactionsUsed).toEqual({});
+    expect(c.encounter.activeBuffs).toEqual([]);
+    expect(c.encounter.activeFormas).toEqual([]);
+    expect(c.encounter.preparations).toEqual([]);
+  });
+
+  it('instâncias default são independentes (sem referência compartilhada)', () => {
+    const a = createDefaultCena();
+    a.encounter.activeBuffs.push({ targetId: 'x', stat: 'defesa', value: 1, roundsRemaining: 1, source: 't' });
+    a.encounter.reactionsUsed['x'] = true;
+    expect(DEFAULT_ENCOUNTER.activeBuffs).toEqual([]);
+    expect(DEFAULT_ENCOUNTER.reactionsUsed).toEqual({});
+    expect(createDefaultCena().encounter.activeBuffs).toEqual([]);
+  });
+});

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { sortInitiative, startEncounter, advanceTurn, prevTurn, endEncounter, type InitiativeParticipant } from './encounter';
-import { createDefaultCena, type EncounterEntry, type EncounterState } from './cena';
+import { createDefaultCena, createDefaultEncounter, type EncounterEntry, type EncounterState } from './cena';
 
 const P = (id: string, side: 'party' | 'npc', baseInitiative: number): InitiativeParticipant =>
   ({ id, side, name: id, baseInitiative });
@@ -35,6 +35,7 @@ describe('startEncounter', () => {
 
 describe('advanceTurn / prevTurn', () => {
   const enc = (turnIndex: number, round = 1): EncounterState => ({
+    ...createDefaultEncounter(),
     isActive: true, round, turnIndex,
     order: [
       { refId: 'a', side: 'party', initiative: 30 },

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import CenaTab from './CenaTab';
-import { createDefaultCena } from '../utils/cena';
+import { createDefaultCena, createDefaultEncounter } from '../utils/cena';
 import { startEncounter } from '../utils/encounter';
 import type { Character, Seal } from '../types';
 
@@ -38,7 +38,7 @@ describe('CenaTab — iniciar/encerrar + resolução (3A/3B intactos)', () => {
 
 describe('CenaTab — condições automáticas (3C)', () => {
   it('avançar para o turno aplica o dano de condição ao ator do novo turno', () => {
-    const cena = { ...createDefaultCena(), encounter: { isActive: true, round: 1, turnIndex: 0, order: [
+    const cena = { ...createDefaultCena(), encounter: { ...createDefaultEncounter(), isActive: true, round: 1, turnIndex: 0, order: [
       { refId: 'p1', side: 'party' as const, initiative: 20 },
       { refId: 'p2', side: 'party' as const, initiative: 10 },
     ] } };

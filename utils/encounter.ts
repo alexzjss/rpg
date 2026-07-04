@@ -1,6 +1,6 @@
 import { rollDice } from './dice';
 import type { CenaState, CenaLogEntry, EncounterEntry, EncounterState } from './cena';
-import { appendLog, logEntry } from './cena';
+import { appendLog, logEntry, createDefaultEncounter } from './cena';
 
 export interface InitiativeParticipant {
   id: string;
@@ -34,7 +34,11 @@ export function startEncounter(cena: CenaState, participants: InitiativeParticip
       .sort((a, b) => b.total - a.total || b.baseInitiative - a.baseInitiative)
       .map(r => logEntry('roll', `${r.name} rolou iniciativa ${r.total}.`)),
   ];
-  return appendLog({ ...cena, encounter: { isActive: true, round: 1, turnIndex: 0, order } }, logs);
+  return appendLog({ ...cena, encounter: {
+    isActive: true, round: 1, turnIndex: 0, order,
+    turn: { majorUsed: false, minorUsed: false },
+    reactionsUsed: {}, activeBuffs: [], activeFormas: [], preparations: [],
+  } }, logs);
 }
 
 /** Próximo turno: pula caídos; ao dar a volta, round++. Se todos caídos, não move. */
@@ -67,5 +71,5 @@ export function prevTurn(enc: EncounterState, isDefeated: (e: EncounterEntry) =>
 
 /** Encerra o combate: desliga e limpa a ordem. */
 export function endEncounter(cena: CenaState): CenaState {
-  return { ...cena, encounter: { isActive: false, round: 1, turnIndex: 0, order: [] } };
+  return { ...cena, encounter: createDefaultEncounter() };
 }

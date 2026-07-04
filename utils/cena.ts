@@ -1,4 +1,5 @@
 import type { Character } from '../types';
+import type { BuffStat } from './grimoire';
 
 /** Clima da cena (mesma união usada na jornada legada, mantida por familiaridade). */
 export type SceneWeather = 'sunny' | 'rain' | 'storm' | 'fog' | 'snow' | 'night';
@@ -31,12 +32,41 @@ export interface EncounterEntry {
   initiative: number;
 }
 
-/** Estado de combate-lite (sem grid). */
+/** Slots de ação do turno atual. */
+export interface EncounterTurnState { majorUsed: boolean; minorUsed: boolean }
+
+/** Buff temporário registrado no encounter. */
+export interface ActiveBuff {
+  targetId: string;
+  stat: BuffStat;
+  value: number;
+  roundsRemaining: number;
+  source: string;
+}
+
+/** Forma (transformação) ativa. roundsRemaining 0 = permanente até o fim do combate. */
+export interface ActiveFormaState { ownerId: string; entryId: string; roundsRemaining: number }
+
+/** Combo em preparação (dispara quando roundsRemaining chega a 0). */
+export interface PreparationState {
+  ownerId: string;
+  entryId: string;
+  roundsRemaining: number;
+  participantIds: string[];
+}
+
+/** Estado de combate v2. */
 export interface EncounterState {
   isActive: boolean;
   round: number;
   turnIndex: number;
   order: EncounterEntry[];
+  turn: EncounterTurnState;
+  /** id → já reagiu nesta rodada. */
+  reactionsUsed: Record<string, boolean>;
+  activeBuffs: ActiveBuff[];
+  activeFormas: ActiveFormaState[];
+  preparations: PreparationState[];
 }
 
 /** Uma linha do log automático (rolagens, dano, condições, sistema). */
@@ -71,14 +101,32 @@ export const DEFAULT_ENCOUNTER: EncounterState = {
   round: 1,
   turnIndex: 0,
   order: [],
+  turn: { majorUsed: false, minorUsed: false },
+  reactionsUsed: {},
+  activeBuffs: [],
+  activeFormas: [],
+  preparations: [],
 };
+
+/** Cópia profunda e independente do encounter default. */
+export function createDefaultEncounter(): EncounterState {
+  return {
+    ...DEFAULT_ENCOUNTER,
+    order: [],
+    turn: { majorUsed: false, minorUsed: false },
+    reactionsUsed: {},
+    activeBuffs: [],
+    activeFormas: [],
+    preparations: [],
+  };
+}
 
 /** Cria um CenaState novo com cópias independentes de scene e encounter. */
 export function createDefaultCena(): CenaState {
   return {
     scene: { ...DEFAULT_SCENE },
     npcRoster: [],
-    encounter: { ...DEFAULT_ENCOUNTER, order: [] },
+    encounter: createDefaultEncounter(),
     log: [],
     tokens: {},
   };
