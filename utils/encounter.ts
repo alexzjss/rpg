@@ -34,11 +34,7 @@ export function startEncounter(cena: CenaState, participants: InitiativeParticip
       .sort((a, b) => b.total - a.total || b.baseInitiative - a.baseInitiative)
       .map(r => logEntry('roll', `${r.name} rolou iniciativa ${r.total}.`)),
   ];
-  return appendLog({ ...cena, encounter: {
-    isActive: true, round: 1, turnIndex: 0, order,
-    turn: { majorUsed: false, minorUsed: false },
-    reactionsUsed: {}, activeBuffs: [], activeFormas: [], preparations: [],
-  } }, logs);
+  return appendLog({ ...cena, encounter: { ...createDefaultEncounter(), isActive: true, order } }, logs);
 }
 
 /** Próximo turno: pula caídos; ao dar a volta, round++. Se todos caídos, não move. */
