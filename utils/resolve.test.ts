@@ -345,4 +345,28 @@ describe('resolveV2', () => {
     expect(r.outcome?.crit).toBe(true);
     expect(r.effects?.damages[0].final).toBe(14); // 7*2
   });
+
+  it('reação pelo resolveV2: 3 rolagens na ordem acerto→reação→dano', () => {
+    const roll = seqRoller([
+      { total: 15, individualRolls: [15] }, // acerto do atacante
+      { total: 18, individualRolls: [18] }, // reação do alvo (substitui defesa)
+      { total: 9, dieRoll: 9 },             // dano (não deve ser puxado: errou)
+    ]);
+    const r = resolveV2(snap({ id: 'a' }), snap({ id: 'b', defense: 5 }), fireball, { roll, reactionDice: '1d20' });
+    expect(r.outcome?.reactionRoll?.total).toBe(18);
+    expect(r.outcome?.hit).toBe(false); // 15 < 18
+    expect(r.actorDelta).toEqual({ aura: -2 }); // custo pago mesmo errando
+    expect(r.effects).toBeUndefined();
+  });
+
+  it('buff pelo resolveV2 é coletado em effects.buffs', () => {
+    const guard: ActionInput = {
+      name: 'Guarda',
+      profile: { actionType: 'menor', targeting: 'self', effects: [{ kind: 'buff', stat: 'defesa', value: 2, duration: 1 }] },
+    };
+    const self = snap({ id: 'a', name: 'Herói' });
+    const r = resolveV2(self, self, guard); // self-target: ator é o próprio alvo
+    expect(r.outcome?.attempted).toBe(false); // sem teste de acerto
+    expect(r.effects?.buffs).toEqual([{ stat: 'defesa', value: 2, duration: 1 }]);
+  });
 });

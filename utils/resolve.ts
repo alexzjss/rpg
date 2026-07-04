@@ -256,6 +256,9 @@ export interface FullResolution {
  * etapas individualmente; este wrapper serve o botão "resolver tudo" e testes.
  * Requisitos (checkRequirements) são verificados ANTES, pelo chamador, pois
  * dependem do acervo (holdings) — fora do escopo do snapshot.
+ *
+ * Os efeitos sempre incidem sobre `target`. Para ações `targeting: 'self'`
+ * (auto-buff/cura), o chamador deve passar o próprio ator como `target`.
  */
 export function resolveV2(
   actor: CombatantSnapshot,
