@@ -101,6 +101,12 @@ describe('slots de ação', () => {
     expect(slotAvailable(e, 'menor')).toBe(false);
   });
 
+  it('markSlot é idempotente (chamar duas vezes não quebra)', () => {
+    const e = markSlot(markSlot(enc2(), 'principal'), 'principal');
+    expect(slotAvailable(e, 'principal')).toBe(false);
+    expect(slotAvailable(e, 'menor')).toBe(true);
+  });
+
   it('advanceTurn reseta os slots', () => {
     const base = enc2({
       order: [
@@ -163,5 +169,15 @@ describe('buffs', () => {
     const r = tickBuffs(e, 'a', 'Alice');
     expect(buffTotal(r.enc, 'a', 'defesa')).toBe(1);
     expect(r.log).toEqual([]);
+  });
+
+  it('um buff expira e outro do mesmo dono sobrevive no mesmo tick', () => {
+    let e = addBuff(enc2(), { targetId: 'a', stat: 'defesa', value: 2, roundsRemaining: 1, source: 'Guarda' });
+    e = addBuff(e, { targetId: 'a', stat: 'acerto', value: 1, roundsRemaining: 2, source: 'Selo' });
+    const r = tickBuffs(e, 'a', 'Alice');
+    expect(buffTotal(r.enc, 'a', 'defesa')).toBe(0);
+    expect(buffTotal(r.enc, 'a', 'acerto')).toBe(1);
+    expect(r.log).toHaveLength(1);
+    expect(r.log[0].text).toContain('Guarda');
   });
 });

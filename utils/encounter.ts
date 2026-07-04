@@ -59,7 +59,11 @@ export function advanceTurn(enc: EncounterState, isDefeated: (e: EncounterEntry)
   return enc;
 }
 
-/** Turno anterior: pula caídos; ao dar a volta, round-- (mín 1). */
+/**
+ * Turno anterior: pula caídos; ao dar a volta, round-- (mín 1).
+ * Limitação conhecida: `reactionsUsed` não é revertido ao voltar de rodada
+ * (não há histórico por rodada) — uso é para correção manual do mestre.
+ */
 export function prevTurn(enc: EncounterState, isDefeated: (e: EncounterEntry) => boolean): EncounterState {
   const n = enc.order.length;
   if (n === 0) return enc;
@@ -108,7 +112,8 @@ export function markReaction(enc: EncounterState, id: string): EncounterState {
   return { ...enc, reactionsUsed: { ...enc.reactionsUsed, [id]: true } };
 }
 
-/** Registra um buff temporário. */
+/** Registra um buff temporário. Empilha de propósito: usar a mesma fonte
+ *  duas vezes soma os dois efeitos (sem dedup por `source`). */
 export function addBuff(enc: EncounterState, buff: ActiveBuff): EncounterState {
   return { ...enc, activeBuffs: [...enc.activeBuffs, buff] };
 }
