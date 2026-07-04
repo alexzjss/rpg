@@ -1,7 +1,7 @@
 import { rollDice, type RollResult } from './dice';
 import { DEFAULT_DEFENSE, PRESET_CONDITIONS } from '../types';
 import type { Affinity, Condition, Element } from '../types';
-import type { BuffStat, CombatProfile } from './grimoire';
+import type { BuffStat, CombatProfile, Effect } from './grimoire';
 import { affinityMultiplier, elementInteraction, type InteractionResult } from './elements';
 import { logEntry, type CenaLogEntry } from './cena';
 
@@ -130,4 +130,108 @@ export function rollAttack(
     `${actor.name} usa ${action.name}: rola ${attackTotal}${mods ? ` (${mods})` : ''} vs ${defLabel} — ${verdict}.`)];
 
   return { attempted: true, roll: r, natural, attackTotal, defenseValue, reactionRoll, crit, fumble, hit, log };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Etapa 3 — efeitos (dano, cura, condições, buffs)
+// ─────────────────────────────────────────────────────────────────
+
+/** '5' → flat 5; senão rola a notation. */
+function rollAmount(dice: string, roll: Roller): { value: number; rolled?: RollResult } {
+  if (/^\s*\d+\s*$/.test(dice)) return { value: parseInt(dice, 10) };
+  const r = roll(dice);
+  return { value: r.total, rolled: r };
+}
+
+/** Adiciona ou renova (maior duração vence) uma condição. */
+function upsertCondition(list: Condition[], name: string, duration: number): Condition[] {
+  const idx = list.findIndex(c => c.name === name);
+  if (idx >= 0) {
+    const next = [...list];
+    next[idx] = { name, duration: Math.max(next[idx].duration, duration) };
+    return next;
+  }
+  return [...list, { name, duration }];
+}
+
+export interface DamageBreakdown {
+  dice: string;
+  element: Element;
+  rolled: RollResult;
+  interaction: InteractionResult;
+  affinity?: Affinity;
+  final: number;
+}
+
+export interface EffectsResult {
+  damages: DamageBreakdown[];
+  targetDelta: StatDelta;
+  /** Lista FINAL de condições do alvo (após interações e aplicações). */
+  targetConditions: Condition[];
+  /** Buffs para o chamador registrar no encounter (alvo = target). */
+  buffs: { stat: BuffStat; value: number; duration: number }[];
+  log: CenaLogEntry[];
+}
+
+export interface EffectOptions {
+  crit?: boolean;
+  /** Buffs de dano do atacante (soma no dano rolado). */
+  damageBonus?: number;
+  roll?: Roller;
+}
+
+const PROTECT_VALUE = PRESET_CONDITIONS.find(p => p.name === 'Protegido')?.defaultValue ?? 0;
+
+/** Aplica a lista de efeitos de uma ação que conectou no alvo. */
+export function applyEffects(
+  actorName: string,
+  target: CombatantSnapshot,
+  effects: Effect[],
+  opts: EffectOptions = {},
+): EffectsResult {
+  const roll = opts.roll ?? rollDice;
+  let conditions = [...target.conditions];
+  const delta: StatDelta = {};
+  const damages: DamageBreakdown[] = [];
+  const buffs: EffectsResult['buffs'] = [];
+  const log: CenaLogEntry[] = [];
+
+  for (const ef of effects) {
+    if (ef.kind === 'damage') {
+      const rolled = roll(ef.dice);
+      let dmg = (opts.crit ? rolled.dieRoll * 2 + rolled.bonus : rolled.total) + (opts.damageBonus ?? 0);
+      const interaction = elementInteraction(ef.element, conditions);
+      dmg = Math.floor(dmg * interaction.multiplier) + interaction.flatBonus;
+      const affinity = target.affinities?.[ef.element];
+      dmg = Math.floor(dmg * affinityMultiplier(affinity));
+      const isProtected = conditions.some(c => c.name === 'Protegido');
+      if (isProtected && dmg > 0) dmg = Math.max(0, dmg - PROTECT_VALUE);
+
+      for (const rem of interaction.removeConditions) conditions = conditions.filter(c => c.name !== rem);
+      for (const ren of interaction.renewConditions) conditions = upsertCondition(conditions, ren.name, ren.duration);
+      for (const add of interaction.addConditions) conditions = upsertCondition(conditions, add.name, add.duration);
+
+      delta.hp = (delta.hp ?? 0) - dmg;
+      damages.push({ dice: ef.dice, element: ef.element, rolled, interaction, affinity, final: dmg });
+
+      const affNote = affinity === 'fraco' ? ' — FRAQUEZA!' : affinity === 'resistente' ? ' — resistiu' : affinity === 'imune' ? ' — IMUNE' : '';
+      const protNote = isProtected && dmg >= 0 ? ` (Protegido −${PROTECT_VALUE})` : '';
+      log.push(logEntry('damage',
+        `${target.name} sofre ${dmg} de dano de ${ef.element} [${rolled.notation}: ${rolled.individualRolls.join('+')}]${affNote}${protNote}.`));
+      for (const n of interaction.notes) log.push(logEntry('condition', `${n}.`));
+    } else if (ef.kind === 'heal') {
+      const { value } = rollAmount(ef.dice, roll);
+      delta[ef.stat] = (delta[ef.stat] ?? 0) + value;
+      const label = ef.stat === 'hp' ? 'HP' : ef.stat === 'aura' ? 'Aura' : 'Munição';
+      log.push(logEntry('damage', `${target.name} recupera ${value} de ${label}.`));
+    } else if (ef.kind === 'condition') {
+      conditions = upsertCondition(conditions, ef.name, ef.duration);
+      log.push(logEntry('condition', `${target.name} recebe ${ef.name} (${ef.duration} rodada(s)).`));
+    } else if (ef.kind === 'buff') {
+      buffs.push({ stat: ef.stat, value: ef.value, duration: ef.duration });
+      log.push(logEntry('condition', `${target.name} ganha ${ef.value >= 0 ? '+' : ''}${ef.value} de ${ef.stat} por ${ef.duration} rodada(s).`));
+    }
+  }
+
+  return { damages, targetDelta: delta, targetConditions: conditions, buffs, log };
 }

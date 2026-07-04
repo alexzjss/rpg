@@ -158,4 +158,110 @@ describe('rollAttack', () => {
     expect(out.attempted).toBe(false);
     expect(out.hit).toBe(true);
   });
+
+  it('attackDice multi-dado não tem crítico nem fumble', () => {
+    const roll = seqRoller([{ total: 20, dieRoll: 20, individualRolls: [10, 10], numDice: 2, numSides: 10 }]);
+    const atk2 = { name: 'Rajada', profile: { actionType: 'principal', targeting: 'inimigo', attackDice: '2d10', effects: [] } } as ActionInput;
+    const out = rollAttack(snap({ id: 'a' }), snap({ id: 'b', defense: 15 }), atk2, { roll });
+    expect(out.natural).toBeUndefined();
+    expect(out.crit).toBe(false);
+    expect(out.fumble).toBe(false);
+    expect(out.hit).toBe(true); // 20 >= 15 normalmente
+  });
+});
+
+import { applyEffects } from './resolve';
+
+describe('applyEffects', () => {
+  it('rola o dano e aplica como delta negativo de HP', () => {
+    const roll = seqRoller([{ total: 8, dieRoll: 8 }]);
+    const r = applyEffects('A', snap({ id: 'b' }), [{ kind: 'damage', dice: '2d6', element: 'normal' }], { roll });
+    expect(r.damages[0].final).toBe(8);
+    expect(r.targetDelta).toEqual({ hp: -8 });
+  });
+
+  it('crítico dobra os dados (não o bônus fixo)', () => {
+    const roll = seqRoller([{ total: 10, dieRoll: 7, bonus: 3 }]); // 2d6+3 → dados 7
+    const r = applyEffects('A', snap({ id: 'b' }), [{ kind: 'damage', dice: '2d6+3', element: 'normal' }], { roll, crit: true });
+    expect(r.damages[0].final).toBe(17); // 7*2 + 3
+  });
+
+  it('afinidade fraco ×1.5 (arredonda para baixo)', () => {
+    const roll = seqRoller([{ total: 7, dieRoll: 7 }]);
+    const target = snap({ id: 'b', affinities: { fogo: 'fraco' } });
+    const r = applyEffects('A', target, [{ kind: 'damage', dice: '2d6', element: 'fogo' }], { roll });
+    expect(r.damages[0].final).toBe(10); // floor(7*1.5)
+  });
+
+  it('imune zera o dano', () => {
+    const roll = seqRoller([{ total: 12, dieRoll: 12 }]);
+    const target = snap({ id: 'b', affinities: { raio: 'imune' } });
+    const r = applyEffects('A', target, [{ kind: 'damage', dice: '3d6', element: 'raio' }], { roll });
+    expect(r.damages[0].final).toBe(0);
+    expect(r.targetDelta.hp).toBe(0);
+  });
+
+  it('raio em alvo Molhado: +5 flat e consome Molhado', () => {
+    const roll = seqRoller([{ total: 6, dieRoll: 6 }]);
+    const target = snap({ id: 'b', conditions: [{ name: 'Molhado', duration: 2 }] });
+    const r = applyEffects('A', target, [{ kind: 'damage', dice: '2d6', element: 'raio' }], { roll });
+    expect(r.damages[0].final).toBe(11);
+    expect(r.targetConditions).toEqual([]);
+  });
+
+  it('água aplica Molhado e apaga Queimando', () => {
+    const roll = seqRoller([{ total: 4, dieRoll: 4 }]);
+    const target = snap({ id: 'b', conditions: [{ name: 'Queimando', duration: 3 }] });
+    const r = applyEffects('A', target, [{ kind: 'damage', dice: '1d6', element: 'água' }], { roll });
+    expect(r.targetConditions).toEqual([{ name: 'Molhado', duration: 2 }]);
+  });
+
+  it('Protegido reduz o dano final (valor do preset = 3, mínimo 0)', () => {
+    const roll = seqRoller([{ total: 2, dieRoll: 2 }]);
+    const target = snap({ id: 'b', conditions: [{ name: 'Protegido', duration: 2 }] });
+    const r = applyEffects('A', target, [{ kind: 'damage', dice: '1d4', element: 'normal' }], { roll });
+    expect(r.damages[0].final).toBe(0); // max(0, 2-3)
+  });
+
+  it('ordem: interação → afinidade (fogo ÷2 em Molhado, depois fraco ×1.5)', () => {
+    const roll = seqRoller([{ total: 10, dieRoll: 10 }]);
+    const target = snap({ id: 'b', conditions: [{ name: 'Molhado', duration: 2 }], affinities: { fogo: 'fraco' } });
+    const r = applyEffects('A', target, [{ kind: 'damage', dice: '3d6', element: 'fogo' }], { roll });
+    expect(r.damages[0].final).toBe(7); // floor(floor(10*0.5)*1.5)
+  });
+
+  it('cura rolada e cura flat', () => {
+    const roll = seqRoller([{ total: 5, dieRoll: 5 }]);
+    const r1 = applyEffects('A', snap({ id: 'b' }), [{ kind: 'heal', stat: 'hp', dice: '1d8' }], { roll });
+    expect(r1.targetDelta).toEqual({ hp: 5 });
+    const r2 = applyEffects('A', snap({ id: 'b' }), [{ kind: 'heal', stat: 'aura', dice: '4' }], { roll });
+    expect(r2.targetDelta).toEqual({ aura: 4 });
+  });
+
+  it('condição nova é aplicada; repetida renova para a maior duração', () => {
+    const target = snap({ id: 'b', conditions: [{ name: 'Queimando', duration: 1 }] });
+    const r = applyEffects('A', target, [
+      { kind: 'condition', name: 'Queimando', duration: 3 },
+      { kind: 'condition', name: 'Envenenado', duration: 4 },
+    ]);
+    expect(r.targetConditions).toEqual([
+      { name: 'Queimando', duration: 3 },
+      { name: 'Envenenado', duration: 4 },
+    ]);
+  });
+
+  it('buffs são coletados para o encounter registrar', () => {
+    const r = applyEffects('A', snap({ id: 'b' }), [{ kind: 'buff', stat: 'defesa', value: 2, duration: 1 }]);
+    expect(r.buffs).toEqual([{ stat: 'defesa', value: 2, duration: 1 }]);
+  });
+
+  it('múltiplos efeitos acumulam num só resultado', () => {
+    const roll = seqRoller([{ total: 6, dieRoll: 6 }]);
+    const r = applyEffects('A', snap({ id: 'b' }), [
+      { kind: 'damage', dice: '2d6', element: 'fogo' },
+      { kind: 'condition', name: 'Queimando', duration: 3 },
+    ], { roll });
+    expect(r.targetDelta).toEqual({ hp: -6 });
+    expect(r.targetConditions).toEqual([{ name: 'Queimando', duration: 3 }]);
+  });
 });
