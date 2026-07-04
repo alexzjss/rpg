@@ -12,7 +12,9 @@ export function snap(partial: Partial<CombatantSnapshot> = {}): CombatantSnapsho
   };
 }
 
-/** Roller determinístico: devolve a fila de resultados na ordem chamada. */
+/** Roller determinístico: devolve a fila de resultados na ordem chamada.
+ *  Atenção: passe individualRolls/dieRoll explícitos quando total incluir bônus,
+ *  senão o default [total] pode disparar crítico/fumble acidental. */
 export function seqRoller(seq: Array<Partial<RollResult> & { total: number }>): Roller {
   let i = 0;
   return (notation: string): RollResult => {
@@ -63,5 +65,97 @@ describe('payCosts', () => {
   it('sem custos, delta vazio', () => {
     const free: ActionInput = { name: 'Livre', profile: { actionType: 'menor', targeting: 'self', effects: [] } };
     expect(payCosts(snap(), free)).toEqual({ actorDelta: {}, log: [] });
+  });
+
+  it('custo igual à aura/munição atual é permitido (zera o recurso)', () => {
+    const r = payCosts(snap({ currentAura: 3, currentAmmo: 1 }), strike);
+    expect(r.blocked).toBeUndefined();
+    expect(r.actorDelta).toEqual({ aura: -3, ammo: -1 });
+  });
+});
+
+import { rollAttack } from './resolve';
+
+describe('rollAttack', () => {
+  const atk: ActionInput = {
+    name: 'Golpe',
+    profile: { actionType: 'principal', targeting: 'inimigo', attackDice: '1d20', effects: [] },
+  };
+
+  it('acerta quando total >= defesa (com bônus e penalidade nomeados)', () => {
+    const roll = seqRoller([{ total: 12, individualRolls: [12] }]);
+    const out = rollAttack(snap({ id: 'a', name: 'Atacante' }), snap({ id: 'b', defense: 12 }), atk, { roll });
+    expect(out.attempted).toBe(true);
+    expect(out.hit).toBe(true);
+    expect(out.attackTotal).toBe(12);
+    expect(out.defenseValue).toBe(12);
+  });
+
+  it('erra quando total < defesa', () => {
+    const roll = seqRoller([{ total: 9, individualRolls: [9] }]);
+    const out = rollAttack(snap({ id: 'a' }), snap({ id: 'b', defense: 10 }), atk, { roll });
+    expect(out.hit).toBe(false);
+  });
+
+  it('usa DEFAULT_DEFENSE (10) quando o alvo não tem defesa', () => {
+    const roll = seqRoller([{ total: 10, individualRolls: [10] }]);
+    const out = rollAttack(snap({ id: 'a' }), snap({ id: 'b' }), atk, { roll });
+    expect(out.defenseValue).toBe(10);
+    expect(out.hit).toBe(true);
+  });
+
+  it('buff de defesa entra na defesa efetiva', () => {
+    const roll = seqRoller([{ total: 11, individualRolls: [11] }]);
+    const out = rollAttack(snap({ id: 'a' }), snap({ id: 'b', defense: 10 }), atk, { roll, defenseBonus: 2 });
+    expect(out.defenseValue).toBe(12);
+    expect(out.hit).toBe(false);
+  });
+
+  it('buff de acerto soma no total', () => {
+    const roll = seqRoller([{ total: 9, individualRolls: [9] }]);
+    const out = rollAttack(snap({ id: 'a' }), snap({ id: 'b', defense: 10 }), atk, { roll, attackBonus: 1 });
+    expect(out.attackTotal).toBe(10);
+    expect(out.hit).toBe(true);
+  });
+
+  it('Amaldiçoado penaliza a rolagem (valor do preset = 2)', () => {
+    const roll = seqRoller([{ total: 11, individualRolls: [11] }]);
+    const actor = snap({ id: 'a', conditions: [{ name: 'Amaldiçoado', duration: 2 }] });
+    const out = rollAttack(actor, snap({ id: 'b', defense: 10 }), atk, { roll });
+    expect(out.attackTotal).toBe(9);
+    expect(out.hit).toBe(false);
+  });
+
+  it('nat 20 é crítico e acerta mesmo abaixo da defesa', () => {
+    const roll = seqRoller([{ total: 20, individualRolls: [20], numSides: 20 }]);
+    const out = rollAttack(snap({ id: 'a' }), snap({ id: 'b', defense: 30 }), atk, { roll });
+    expect(out.crit).toBe(true);
+    expect(out.hit).toBe(true);
+  });
+
+  it('nat 1 é erro automático mesmo acima da defesa', () => {
+    const roll = seqRoller([{ total: 21, dieRoll: 1, bonus: 20, individualRolls: [1], numSides: 20 }]);
+    const out = rollAttack(snap({ id: 'a' }), snap({ id: 'b', defense: 5 }), atk, { roll });
+    expect(out.fumble).toBe(true);
+    expect(out.hit).toBe(false);
+  });
+
+  it('reação substitui a defesa fixa pela rolagem do alvo', () => {
+    const roll = seqRoller([
+      { total: 15, individualRolls: [15] }, // acerto do atacante
+      { total: 16, individualRolls: [16] }, // reação do alvo
+    ]);
+    const out = rollAttack(snap({ id: 'a' }), snap({ id: 'b', defense: 5 }), atk, { roll, reactionDice: '1d20+3' });
+    expect(out.reactionRoll?.total).toBe(16);
+    expect(out.defenseValue).toBe(16);
+    expect(out.hit).toBe(false);
+  });
+
+  it('sem attackDice ou em si mesmo não há teste (auto-acerto)', () => {
+    const heal: ActionInput = { name: 'Cura', profile: { actionType: 'principal', targeting: 'self', effects: [] } };
+    const self = snap({ id: 'a' });
+    const out = rollAttack(self, self, heal);
+    expect(out.attempted).toBe(false);
+    expect(out.hit).toBe(true);
   });
 });
