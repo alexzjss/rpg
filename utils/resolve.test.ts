@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RollResult } from './dice';
-import { payCosts, type ActionInput, type CombatantSnapshot, type Roller } from './resolve';
+import { payCosts, resolveV2, type ActionInput, type CombatantSnapshot, type Roller } from './resolve';
 
 /** Snapshot de combatente com defaults convenientes. */
 export function snap(partial: Partial<CombatantSnapshot> = {}): CombatantSnapshot {
@@ -292,5 +292,57 @@ describe('applyEffects', () => {
     expect(r.damages[1].final).toBe(11); // 6 + 5 do Molhado aplicado pela água
     expect(r.targetDelta).toEqual({ hp: -15 });
     expect(r.targetConditions).toEqual([]); // raio consumiu o Molhado
+  });
+});
+
+describe('resolveV2', () => {
+  const fireball: ActionInput = {
+    name: 'Bola de Fogo',
+    profile: {
+      actionType: 'principal', targeting: 'inimigo', attackDice: '1d20',
+      costs: { aura: 2 },
+      effects: [
+        { kind: 'damage', dice: '2d6', element: 'fogo' },
+        { kind: 'condition', name: 'Queimando', duration: 3 },
+      ],
+    },
+  };
+
+  it('bloqueio de custo interrompe tudo', () => {
+    const r = resolveV2(snap({ id: 'a', currentAura: 1 }), snap({ id: 'b' }), fireball);
+    expect(r.blocked).toBe('Aura insuficiente');
+    expect(r.outcome).toBeUndefined();
+    expect(r.effects).toBeUndefined();
+  });
+
+  it('erro no acerto: paga custos, sem efeitos', () => {
+    const roll = seqRoller([{ total: 3, individualRolls: [3] }]);
+    const r = resolveV2(snap({ id: 'a' }), snap({ id: 'b', defense: 15 }), fireball, { roll });
+    expect(r.blocked).toBeUndefined();
+    expect(r.actorDelta).toEqual({ aura: -2 });
+    expect(r.outcome?.hit).toBe(false);
+    expect(r.effects).toBeUndefined();
+  });
+
+  it('acerto completo: custos + dano + condição, log encadeado', () => {
+    const roll = seqRoller([
+      { total: 15, individualRolls: [15] }, // acerto
+      { total: 7, dieRoll: 7 },             // dano
+    ]);
+    const r = resolveV2(snap({ id: 'a', name: 'Mago' }), snap({ id: 'b', name: 'Ogro', defense: 10 }), fireball, { roll });
+    expect(r.actorDelta).toEqual({ aura: -2 });
+    expect(r.effects?.targetDelta).toEqual({ hp: -7 });
+    expect(r.effects?.targetConditions).toEqual([{ name: 'Queimando', duration: 3 }]);
+    expect(r.log.length).toBeGreaterThanOrEqual(3); // acerto + dano + condição
+  });
+
+  it('crítico propaga para o dano', () => {
+    const roll = seqRoller([
+      { total: 20, individualRolls: [20], numSides: 20 },
+      { total: 7, dieRoll: 7 },
+    ]);
+    const r = resolveV2(snap({ id: 'a' }), snap({ id: 'b', defense: 10 }), fireball, { roll });
+    expect(r.outcome?.crit).toBe(true);
+    expect(r.effects?.damages[0].final).toBe(14); // 7*2
   });
 });

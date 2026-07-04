@@ -239,3 +239,37 @@ export function applyEffects(
 
   return { damages, targetDelta: delta, targetConditions: conditions, buffs, log };
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Conveniência — resolve as 3 etapas de uma vez ("resolver tudo")
+// ─────────────────────────────────────────────────────────────────
+export interface FullResolution {
+  blocked?: string;
+  actorDelta: StatDelta;
+  outcome?: AttackOutcome;
+  effects?: EffectsResult;
+  log: CenaLogEntry[];
+}
+
+/**
+ * Encadeia custos → acerto → efeitos. A UI passo a passo (Fase 3) chama as
+ * etapas individualmente; este wrapper serve o botão "resolver tudo" e testes.
+ * Requisitos (checkRequirements) são verificados ANTES, pelo chamador, pois
+ * dependem do acervo (holdings) — fora do escopo do snapshot.
+ */
+export function resolveV2(
+  actor: CombatantSnapshot,
+  target: CombatantSnapshot,
+  action: ActionInput,
+  opts: AttackOptions & EffectOptions = {},
+): FullResolution {
+  const costs = payCosts(actor, action);
+  if (costs.blocked) return { blocked: costs.blocked, actorDelta: {}, log: costs.log };
+
+  const outcome = rollAttack(actor, target, action, opts);
+  const log = [...costs.log, ...outcome.log];
+  if (!outcome.hit) return { actorDelta: costs.actorDelta, outcome, log };
+
+  const effects = applyEffects(actor.name, target, action.profile.effects, { ...opts, crit: outcome.crit });
+  return { actorDelta: costs.actorDelta, outcome, effects, log: [...log, ...effects.log] };
+}
