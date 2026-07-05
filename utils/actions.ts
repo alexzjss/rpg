@@ -18,6 +18,8 @@ export interface ResolvedAction {
   auraCost?: number;
   ammoCost?: number;
   targeting: 'self' | 'other';
+  /** Arte da carta/arma/item, exibida no cabeçalho do card de detalhes. */
+  image?: string;
 }
 
 export function normalizeCard(card: Card): ResolvedAction {
@@ -29,6 +31,7 @@ export function normalizeCard(card: Card): ResolvedAction {
     conditionName: card.conditionEffect, conditionDuration: card.conditionDuration,
     auraCost: card.auraCost, ammoCost: card.ammoCost,
     targeting: 'other',
+    image: card.image,
   };
 }
 
@@ -42,6 +45,7 @@ export function normalizeSeal(seal: Seal): ResolvedAction {
     conditionName: seal.conditionEffect, conditionDuration: seal.conditionDuration,
     auraCost: seal.cost?.aura, ammoCost: seal.cost?.ammo,
     targeting: isHeal ? 'self' : 'other',
+    image: seal.image,
   };
 }
 
@@ -55,6 +59,7 @@ export function normalizeWeapon(w: Weapon): ResolvedAction {
     conditionName: w.combatConditionEffect, conditionDuration: w.combatConditionDuration,
     ammoCost: w.combatAmmoCost,
     targeting: w.combatTargeting === 'self' || isHeal ? 'self' : 'other',
+    image: w.image,
   };
 }
 
@@ -68,6 +73,7 @@ export function normalizeItem(i: ResolvedItem): ResolvedAction {
     conditionName: i.combatConditionEffect, conditionDuration: i.combatConditionDuration,
     ammoCost: i.combatAmmoCost,
     targeting: i.combatTargeting === 'self' || isHeal ? 'self' : 'other',
+    image: i.image,
   };
 }
 

@@ -45,6 +45,21 @@ describe('normalizeWeapon / normalizeItem', () => {
   });
 });
 
+describe('normalizeCard / normalizeWeapon / normalizeItem — imagem', () => {
+  it('normalizeCard propaga card.image', () => {
+    expect(normalizeCard(card({ image: 'https://x/card.png' })).image).toBe('https://x/card.png');
+  });
+  it('normalizeWeapon propaga w.image', () => {
+    expect(normalizeWeapon(weapon({ image: 'https://x/weapon.png' })).image).toBe('https://x/weapon.png');
+  });
+  it('normalizeItem propaga i.image', () => {
+    expect(normalizeItem(item({ image: 'https://x/item.png' })).image).toBe('https://x/item.png');
+  });
+  it('normalizeSeal propaga seal.image', () => {
+    expect(normalizeSeal(seal({ image: 'https://x/seal.png' })).image).toBe('https://x/seal.png');
+  });
+});
+
 describe('actorActions', () => {
   it('agrupa por categoria e sempre inclui GUARDA', () => {
     const groups = actorActions({
