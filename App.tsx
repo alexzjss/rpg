@@ -2981,24 +2981,12 @@ const App: React.FC = () => {
     setTooltipPos({ x: e.clientX, y: e.clientY });
   };
 
-  // ── Export completo (inclui TODOS os dados + extras) ─────────────
+  // ── Export completo (inclui TODOS os dados) ─────────────
   const handleDownloadBackup = async () => {
     try {
       setAutoSaveStatus('saving');
       // Constrói snapshot direto do IDB (fonte da verdade)
-      // mas sobrescreve extras com o estado React atual (pode ser mais novo que o IDB)
       const snapshot = await DatabaseService.buildSnapshot();
-      // Sobrescreve extras com o estado atual do React (pode não ter sido salvo ainda)
-      snapshot.extras = {
-        gmNotes,
-        combatNotes,
-        shopCurrency,
-        characterCurrencies,
-        progressBars,
-        rollHistory,
-        lootList,
-        nameStyle,
-      };
       // Garante que os dados do React (mais recentes) são usados para as entidades principais também
       snapshot.characters = characters;
       snapshot.cards = cards;
@@ -3095,16 +3083,6 @@ const App: React.FC = () => {
     if (result.ok) {
       setAutoSaveStatus('saved');
       setTimeout(() => setAutoSaveStatus('idle'), 2500);
-      // Recarrega os extras no estado React após import
-      const extras = importConfirmData.extras ?? {};
-      if (extras.gmNotes !== undefined) setGmNotes(extras.gmNotes);
-      if (extras.combatNotes !== undefined) setCombatNotes(extras.combatNotes);
-      if (extras.shopCurrency !== undefined) setShopCurrency(extras.shopCurrency);
-      if (extras.characterCurrencies) setCharacterCurrencies(extras.characterCurrencies);
-      if (extras.progressBars?.length) setProgressBars(extras.progressBars);
-      if (extras.rollHistory?.length) setRollHistory(extras.rollHistory);
-      if (extras.lootList?.length) setLootList(extras.lootList);
-      if (extras.nameStyle) setNameStyle(extras.nameStyle);
     } else {
       setAutoSaveStatus('error');
       setImportError(result.error ?? 'Erro desconhecido ao importar.');
