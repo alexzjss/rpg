@@ -30,6 +30,23 @@ describe('ActionMenu', () => {
     fireEvent.click(screen.getByRole('button', { name: 'USAR' }));
     expect(onSelectAction).toHaveBeenCalledWith(expect.objectContaining({ name: 'Bola de Fogo' }));
   });
+
+  it('mostra a arte da carta selecionada quando existe imagem', () => {
+    render(<ActionMenu actions={groups({ atacar: [ra({ name: 'Bola de Fogo', image: 'https://x/fogo.png' })] })} />);
+    fireEvent.click(screen.getByText('ATACAR'));
+    fireEvent.click(screen.getByText('Bola de Fogo'));
+    const art = document.querySelector('.cena-ability-card__art') as HTMLElement;
+    expect(art).toBeTruthy();
+    expect(art.style.backgroundImage).toContain('https://x/fogo.png');
+  });
+
+  it('sem imagem, cai no cabeçalho neutro', () => {
+    render(<ActionMenu actions={groups({ atacar: [ra({ name: 'Golpe Simples' })] })} />);
+    fireEvent.click(screen.getByText('ATACAR'));
+    fireEvent.click(screen.getByText('Golpe Simples'));
+    expect(document.querySelector('.cena-ability-card__art')).toBeNull();
+    expect(document.querySelector('.cena-floating-card__heading')).toBeTruthy();
+  });
 });
 
 describe('ActionMenu — equipamento', () => {

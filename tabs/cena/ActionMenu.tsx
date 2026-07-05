@@ -68,9 +68,16 @@ const ActionMenu: React.FC<ActionMenuProps> = ({ actions = EMPTY, onSelectAction
         })}
       </div>
       {selected && createPortal(
-        <div className={`cena-floating-card cena-ability-card`} role="dialog" aria-label={`Detalhes de ${selected.name}`}>
+        <div className={`cena-floating-card cena-ability-card ${selected.image ? 'has-art' : ''}`} role="dialog" aria-label={`Detalhes de ${selected.name}`}>
           <button className="cena-ability-card__close" aria-label="Fechar detalhes" onClick={() => setSelected(null)}><X size={14}/></button>
-          <div className="cena-floating-card__heading"><span>{CAT_LABEL[selected.category]}</span><strong>{selected.name}</strong></div>
+          {selected.image ? (
+            <div className="cena-ability-card__art" style={{ backgroundImage: `url(${selected.image})` }}>
+              <div className="cena-ability-card__art-fade" />
+              <div className="cena-ability-card__art-heading"><span>{CAT_LABEL[selected.category]}</span><strong>{selected.name}</strong></div>
+            </div>
+          ) : (
+            <div className="cena-floating-card__heading"><span>{CAT_LABEL[selected.category]}</span><strong>{selected.name}</strong></div>
+          )}
           {selected.description && <p className="cena-ability-card__desc">{selected.description}</p>}
           <div className="cena-floating-card__stats">
             <span><b>ALVO</b>{targetLabelOf(selected)}</span>
