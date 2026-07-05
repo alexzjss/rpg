@@ -1,12 +1,10 @@
 import React from 'react';
-import type { SceneWeather } from '../../utils/cena';
+interface SceneBackdropProps { image: string; combat: boolean }
 
-interface SceneBackdropProps { image: string; weather: SceneWeather; combat: boolean }
-
-const SceneBackdrop: React.FC<SceneBackdropProps> = ({ image, weather, combat }) => (
-  <div className={`cena-backdrop cena-backdrop--${weather} ${combat ? 'cena-backdrop--combat' : ''}`} aria-hidden>
+const SceneBackdrop: React.FC<SceneBackdropProps> = ({ image, combat }) => (
+  <div className={`cena-backdrop ${combat ? 'cena-backdrop--combat' : ''}`} aria-hidden>
     {image && <div className="cena-backdrop__image" style={{ backgroundImage: `url(${image})` }} />}
-    <div className="cena-backdrop__wash" /><div className="cena-backdrop__weather" /><div className="cena-backdrop__grain" />
+    <div className="cena-backdrop__wash" /><div className="cena-backdrop__grain" />
     <style>{`
       :root { --cena-ink:#090b0f; --cena-stone:#15181e; --cena-iron:#343a44; --cena-ash:#aeb3bc; --cena-bone:#f0ede7; --cena-gold:#c49a58; --cena-blood:#a52335; --cena-spirit:#7f8793; }
       .cena-shell { isolation:isolate; display:block; height:100%; min-height:0; color:var(--cena-bone); position:relative; overflow:hidden; }
@@ -64,6 +62,7 @@ const SceneBackdrop: React.FC<SceneBackdropProps> = ({ image, weather, combat })
       .cena-token__runes { position:absolute;inset:-5px;display:flex;align-items:flex-start;justify-content:center;color:#c4a66b;font-size:10px;text-shadow:0 0 7px currentColor;pointer-events:none; }
       .cena-token__gem { position:absolute;right:-1px;top:6px;width:9px;height:9px;border-radius:50%;background:#8879d0;border:1px solid #d8cffc;box-shadow:0 0 9px #8f78e5; }
       .cena-token__label{position:absolute;left:50%;top:calc(100% + 7px);width:112px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:stretch;opacity:0;transition:opacity .16s,transform .16s;pointer-events:none}.cena-token:hover .cena-token__label,.cena-token.is-active .cena-token__label{opacity:1;transform:translateX(-50%) translateY(2px)}.cena-token__label strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:3px 7px;text-align:center;color:#fff5e8;background:#10111ddd;border:1px solid #786b81;font:700 11px 'Barlow Semi Condensed',sans-serif;box-shadow:0 5px 12px #000a}.cena-token__label>i{height:4px;background:#171723}.cena-token__label b{display:block;height:100%;background:linear-gradient(90deg,#9f1f3d,#ef5163)}
+      .cena-target-fx{position:absolute;inset:-32px;z-index:20;pointer-events:none;border-radius:50%}.cena-target-fx__aura{position:absolute;inset:0;border-radius:50%;animation:cena-fx-aura .9s cubic-bezier(.18,.8,.25,1) both}.cena-target-fx__aura:before{content:'';position:absolute;inset:25px;border-radius:50%;border:3px solid currentColor;box-shadow:0 0 22px currentColor,inset 0 0 20px currentColor;animation:cena-fx-ring .75s ease-out both}.cena-target-fx__aura i{--angle:calc(var(--fx-i) * 40deg);position:absolute;left:50%;top:50%;display:block;transform:rotate(var(--angle)) translateY(-30px);transform-origin:0 0}.cena-target-fx__aura.is-heal{color:#59ef88}.cena-target-fx__aura.is-heal i{width:11px;height:6px;border-radius:90% 10% 90% 10%;background:linear-gradient(135deg,#d8ffd5,#25b95e);box-shadow:0 0 8px #5cff8d;animation:cena-fx-leaf .95s cubic-bezier(.15,.7,.3,1) both;animation-delay:calc(var(--fx-i) * 22ms)}.cena-target-fx__aura.is-damage{color:#ff304f}.cena-target-fx__aura.is-damage i{width:7px;height:14px;border-radius:70% 30% 65% 35%;background:linear-gradient(#ff6b78,#8d001b);box-shadow:0 0 9px #ef183d;animation:cena-fx-blood .78s cubic-bezier(.25,.7,.45,1) both;animation-delay:calc(var(--fx-i) * 18ms)}.cena-target-fx__aura.is-evade{color:#fff}.cena-target-fx__aura.is-evade b{position:absolute;inset:18px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 18px #fff,0 0 38px #dff7ff;animation:cena-fx-ward .82s ease-out both}.cena-target-fx__aura.is-evade b:nth-child(2){animation-delay:.1s}.cena-target-fx__aura.is-evade b:nth-child(3){animation-delay:.2s}.cena-target-fx__condition{--condition-color:#a78bfa;position:absolute;left:50%;top:50%;display:grid;justify-items:center;gap:2px;color:var(--condition-color);filter:drop-shadow(0 0 9px var(--condition-color));animation:cena-fx-condition 1.15s cubic-bezier(.18,.9,.22,1) both}.cena-target-fx__condition:before{content:'';position:absolute;width:82px;height:82px;left:50%;top:50%;transform:translate(-50%,-50%);border:2px dashed currentColor;border-radius:50%;box-shadow:0 0 24px color-mix(in srgb,var(--condition-color) 75%,transparent),inset 0 0 22px color-mix(in srgb,var(--condition-color) 45%,transparent);animation:cena-fx-sigil .9s ease-out both}.cena-target-fx__condition span{font-size:25px;line-height:1}.cena-target-fx__condition strong{max-width:120px;padding:3px 8px;background:#090811e8;border:1px solid currentColor;color:#fff;white-space:nowrap;text-transform:uppercase;font:800 10px 'Barlow Semi Condensed',sans-serif;letter-spacing:1px}
 
       .cena-command-deck { position:absolute;z-index:20;right:14px;top:14px;bottom:14px;width:360px;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:linear-gradient(150deg,rgba(26,24,31,.91),rgba(9,10,15,.88));border:1px solid #70647788;box-shadow:0 24px 65px #000a,inset 0 1px #f5e9ff20,0 0 28px #45286322;clip-path:polygon(16px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 16px);backdrop-filter:blur(18px) saturate(1.18); }
       .cena-command-deck::before { content:'';height:3px;flex:none;background:linear-gradient(90deg,#b42d44,#c49a58 42%,#7167b7 72%,#55cbd0); }
@@ -184,7 +183,54 @@ const SceneBackdrop: React.FC<SceneBackdropProps> = ({ image, weather, combat })
       @media(max-width:1500px){.cena-scene-tools__weather{display:none}.cena-scene-tools__title{width:min(220px,20vw)}}
       @media(max-width:1100px){.cena-command-deck{width:340px;right:8px;top:8px;bottom:8px}.cena-arena-head{right:360px}.cena-shell.is-journal-open .cena-arena-head{left:52px}.cena-scene-tools__title{display:none}.cena-active-bar{width:68%;left:calc((100% - 340px)/2)}.cena-journal-drawer{width:340px}.cena-journal-tab.is-open{left:338px}.cena-editor__stats{grid-template-columns:repeat(2,1fr)}}
       @media(max-width:820px){.cena-command-deck{top:auto;left:8px;right:8px;bottom:8px;width:auto;height:min(48%,510px)}.cena-arena-head,.cena-shell.is-journal-open .cena-arena-head{left:52px;right:12px}.cena-scene-tools__weather button{width:32px;height:32px}.cena-active-bar{bottom:calc(min(48%,510px) + 18px);left:50%;width:94%;grid-template-columns:1fr 96px 1fr}.cena-active-hero__portrait{width:64px;height:64px}.cena-active-vital{padding:7px!important}.cena-active-vital span{display:none}.cena-deck-roster{min-height:150px}.cena-journal-drawer{position:fixed;top:76px;bottom:14px;width:280px;max-width:calc(100vw - 48px)}.cena-journal-tab.is-open{left:min(278px,calc(100vw - 48px))}.cena-editor__stats{grid-template-columns:repeat(2,1fr)}.cena-editor__effect{grid-template-columns:auto 1fr auto}.cena-editor__effect>label{grid-column:2}.cena-editor footer{flex-direction:column}.cena-editor footer button{width:100%}}
-      @media(prefers-reduced-motion:reduce){.cena-backdrop__weather,.cena-token,.cena-turn-card,.cena-command,.cena-floating-card,.cena-cinematic-event{animation:none!important}.cena-journal-drawer{transition:none}}
+      /* Painéis laterais como sombras sobre a cena, inspirados em mesas cinematográficas. */
+      .cena-command-deck{right:0;top:0;bottom:0;width:clamp(320px,25vw,390px);padding:22px 14px 18px 34px;background:linear-gradient(90deg,transparent,rgba(5,7,10,.58) 14%,rgba(4,6,9,.96) 100%);border:0;border-radius:0;box-shadow:none;clip-path:none;backdrop-filter:none}
+      .cena-command-deck::before{display:none}.cena-deck-roster,.cena-deck-actions,.cena-deck-seals{background:transparent;border-color:rgba(255,255,255,.09)}
+      .cena-shell.is-precombat .cena-command-deck{top:72px;bottom:72px;padding-top:12px}.cena-shell.is-precombat .cena-deck-roster{border-bottom:0}
+      .cena-journal-drawer{top:0;bottom:0;filter:none}.cena-journal-drawer .cena-glass-panel{background:linear-gradient(90deg,rgba(4,6,9,.96),rgba(5,7,10,.82) 72%,transparent)!important;border:0!important;border-radius:0!important;box-shadow:none!important;clip-path:none!important;backdrop-filter:none}
+      .cena-journal-drawer [role=tablist]{background:transparent!important;border-bottom-color:rgba(255,255,255,.1)!important}.cena-journal-drawer textarea{background:rgba(5,7,10,.42)!important;border-color:rgba(255,255,255,.1)!important}
+      .cena-scene-tools{background:rgba(7,9,12,.62);border:0;box-shadow:none;backdrop-filter:blur(7px)}.cena-arena-head{right:calc(clamp(320px,25vw,390px) + 14px)}
+      .cena-combatants-head{background:transparent!important;border-bottom-color:rgba(255,255,255,.08)}
+      .cena-combatants-head__nav button,.cena-combatants-head__nav button:last-child{background:transparent;border-color:rgba(255,255,255,.16);box-shadow:none;filter:none}
+      /* Ordem lateral: elenco neutro; somente o turno atual recebe cor e escala. */
+      .cena-roster__list{gap:6px;padding-right:4px}
+      .cena-combatant,.cena-combatant.is-party,.cena-combatant.is-npc{min-height:60px;padding:7px 8px;border:1px solid rgba(255,255,255,.1);border-left-color:rgba(255,255,255,.1);background:rgba(18,21,27,.76);box-shadow:none;filter:saturate(.18);opacity:.8;transition:min-height .22s ease,opacity .18s ease,border-color .18s ease,filter .18s ease}
+      .cena-combatant:after,.cena-combatant.has-banner:after{background:linear-gradient(90deg,rgba(10,12,16,.94),rgba(15,18,24,.82) 65%,rgba(10,12,16,.58))}
+      .cena-combatant__backdrop,.cena-combatant__backdrop.is-custom{opacity:.22;filter:grayscale(1) contrast(1.05)}
+      .cena-combatant:not(.is-current) .cena-combatant__portrait{width:42px;height:42px;border-color:#676b72;filter:grayscale(.65)}
+      .cena-combatant:not(.is-current) .cena-combatant__title strong{font-size:13px;color:#d8d9dc;text-shadow:none}
+      .cena-combatant:not(.is-current) .cena-combatant__title span{color:#7f838a}
+      .cena-combatant:not(.is-current) .cena-vital i{background:#6d7178;box-shadow:none}
+      .cena-combatant:not(.is-current) .cena-vital--aura i{background:#50545c}
+      .cena-combatant:not(.is-current) .cena-combatant__order-mark{color:#7e8289;text-shadow:none}
+      .cena-combatant.is-selected:not(.is-current){background:rgba(22,25,31,.82);border-color:rgba(255,255,255,.3);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+      .cena-combatant.is-current,.cena-combatant.is-current.is-party,.cena-combatant.is-current.is-npc{min-height:150px;align-items:flex-start;padding:13px 10px 11px;border-color:#e05268;border-left:4px solid #e05268;background:#3d1721;box-shadow:inset 0 0 34px rgba(218,55,83,.14),0 10px 26px rgba(0,0,0,.28);filter:none;opacity:1}
+      .cena-combatant.is-current:after,.cena-combatant.has-banner.is-current:after{background:linear-gradient(90deg,rgba(73,16,30,.94),rgba(37,18,27,.78) 66%,rgba(12,14,19,.7))}
+      .cena-combatant.is-current .cena-combatant__backdrop,.cena-combatant.is-current .cena-combatant__backdrop.is-custom{opacity:.48;filter:saturate(.82) contrast(1.05)}
+      .cena-combatant.is-current .cena-combatant__order-mark{width:46px;margin-top:25px;color:#ffd7a0;font-size:9px;letter-spacing:1.2px}
+      .cena-combatant.is-current .cena-combatant__portrait{width:68px;height:68px;margin-top:8px;border:2px solid #f0c078;box-shadow:0 0 0 3px #27131a,0 0 20px rgba(224,82,104,.55)}
+      .cena-combatant.is-current .cena-combatant__turn{inset:-7px;border-color:#ff7188;box-shadow:0 0 14px rgba(255,77,109,.8)}
+      .cena-combatant.is-current .cena-combatant__body{gap:6px}
+      .cena-combatant.is-current .cena-combatant__title strong{font-size:20px;line-height:1.05;color:#fff7ef}
+      .cena-combatant.is-current .cena-combatant__title span{color:#ffc0ca}
+      .cena-combatant.is-current .cena-vital{height:17px;border-color:rgba(255,255,255,.22);border-radius:4px}
+      .cena-combatant.is-current .cena-vital b,.cena-combatant.is-current .cena-vital em{top:2px;font-size:9px;letter-spacing:.45px}
+      .cena-combatant.is-current .cena-vital b{left:6px}.cena-combatant.is-current .cena-vital em{right:6px}
+      .cena-current-effects{display:flex;flex-direction:column;gap:4px;margin-top:1px;min-width:0}
+      .cena-current-effects__label{color:#d6b575;font:800 8px 'Barlow Semi Condensed',sans-serif;letter-spacing:1.3px}
+      .cena-current-effects__list{display:flex;flex-wrap:wrap;gap:4px;max-height:50px;overflow:auto}
+      .cena-current-effect,.cena-current-effects__empty{display:flex;align-items:center;gap:4px;min-width:0;padding:4px 6px;border:1px solid rgba(255,194,139,.25);border-radius:3px;background:rgba(9,10,14,.58);color:#f1cab0}
+      .cena-current-effect strong{max-width:86px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f6e7dc;font:700 9px 'Barlow Semi Condensed',sans-serif}
+      .cena-current-effect em{min-width:15px;text-align:center;border-radius:8px;background:#682136;color:#ffd8df;font:800 8px sans-serif;font-style:normal}
+      .cena-current-effects__empty{color:#979aa0;border-color:rgba(255,255,255,.1);font:700 8px 'Barlow Semi Condensed',sans-serif;letter-spacing:1px}
+      @keyframes cena-fx-aura{0%{opacity:0;transform:scale(.45)}22%{opacity:1}100%{opacity:0;transform:scale(1.28)}}
+      @keyframes cena-fx-ring{0%{opacity:0;transform:scale(.35)}35%{opacity:1}100%{opacity:0;transform:scale(1.65)}}
+      @keyframes cena-fx-leaf{0%{opacity:0;transform:rotate(var(--angle)) translateY(-22px) rotate(0)}25%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--angle) + 110deg)) translateY(-62px) rotate(240deg)}}
+      @keyframes cena-fx-blood{0%{opacity:0;transform:rotate(var(--angle)) translateY(-18px) scale(.4)}24%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--angle) + 22deg)) translateY(-58px) scale(1.15)}}
+      @keyframes cena-fx-ward{0%{opacity:0;transform:scale(.3)}35%{opacity:.95}100%{opacity:0;transform:scale(1.65)}}
+      @keyframes cena-fx-condition{0%{opacity:0;transform:translate(-50%,-25%) scale(.4)}28%,72%{opacity:1;transform:translate(-50%,-85%) scale(1)}100%{opacity:0;transform:translate(-50%,-120%) scale(.85)}}
+      @keyframes cena-fx-sigil{from{transform:translate(-50%,-50%) rotate(-45deg) scale(.35);opacity:0}45%{opacity:1}to{transform:translate(-50%,-50%) rotate(70deg) scale(1.25);opacity:0}}
+      @media(prefers-reduced-motion:reduce){.cena-backdrop__weather,.cena-token,.cena-turn-card,.cena-command,.cena-floating-card,.cena-cinematic-event{animation:none!important}.cena-target-fx__aura,.cena-target-fx__aura:before,.cena-target-fx__aura i,.cena-target-fx__aura b,.cena-target-fx__condition,.cena-target-fx__condition:before{animation-duration:.01ms!important;animation-iteration-count:1!important}.cena-journal-drawer{transition:none}}
     `}</style>
   </div>
 );
