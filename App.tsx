@@ -23,25 +23,11 @@ import {
   Download,
   Upload,
   Dices,
-  Triangle,
-  Square,
-  Octagon,
-  Hexagon,
-  Circle,
-  Hourglass,
-  BarChart3,
-  Play,
-  Pause,
-  RefreshCw,
   UserPlus,
-  ScrollText,
   Link as LinkIcon,
   PackageOpen,
   Hash,
   Star,
-  BookOpen,
-  Package2,
-  Trophy,
   Eye,
   EyeOff
 } from 'lucide-react';
@@ -2789,8 +2775,6 @@ const App: React.FC = () => {
   const [craftResult, setCraftResult] = useState<{ recipe: Recipe; character: Character } | null>(null);
   // Upgrade shop UI state
   const [upgradePurchaseResult, setUpgradePurchaseResult] = useState<{ offer: UpgradeOffer; targetChar: Character } | null>(null);
-  // Per-character currencies (charId -> moedas)
-  const [characterCurrencies, setCharacterCurrencies] = useState<Record<string, number>>({});
   // Active card item boost: which item (par/trinca/quadra/reroll) to apply when using a card
 
   // Items UI State
