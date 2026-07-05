@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createDefaultCena, DEFAULT_SCENE, DEFAULT_ENCOUNTER, setScene, addNpcFromCharacter, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken, setEncounterActive, logEntry, appendLog, updateNpcStats } from './cena';
+import { createDefaultCena, DEFAULT_SCENE, DEFAULT_ENCOUNTER, setScene, addNpcFromCharacter, mergeNpcLiveUpdates, removeNpc, syncNpcFromCharacter, toggleNpcHidden, toggleNpcPresent, setToken, setEncounterActive, setEncounterPaused, benchCastMember, unbenchCastMember, clearLog, logEntry, appendLog, updateNpcStats } from './cena';
 import type { Character } from '../types';
 
 function fakeChar(id: string, over: Partial<Character> = {}): Character {
@@ -17,6 +17,7 @@ describe('createDefaultCena', () => {
     expect(cena.npcRoster).toEqual([]);
     expect(cena.encounter).toEqual(DEFAULT_ENCOUNTER);
     expect(cena.log).toEqual([]);
+    expect(cena.benchedCastIds).toEqual([]);
   });
 
   it('retorna cópias independentes (não compartilha referência de scene/encounter)', () => {
@@ -40,9 +41,9 @@ describe('createDefaultCena', () => {
 describe('setScene', () => {
   it('faz merge parcial em scene sem mutar o original', () => {
     const cena = createDefaultCena();
-    const next = setScene(cena, { locationName: 'Mina', weather: 'storm' });
+    const next = setScene(cena, { locationName: 'Mina', subtitle: 'Galeria profunda' });
     expect(next.scene.locationName).toBe('Mina');
-    expect(next.scene.weather).toBe('storm');
+    expect(next.scene.subtitle).toBe('Galeria profunda');
     expect(next.scene.notes).toBe(cena.scene.notes);
     expect(cena.scene.locationName).toBe('Local Desconhecido');
     expect(next).not.toBe(cena);
@@ -110,6 +111,36 @@ describe('setEncounterActive', () => {
   });
 });
 
+describe('setEncounterPaused', () => {
+  it('liga e desliga a pausa sem mutar o original', () => {
+    const cena = createDefaultCena();
+    const paused = setEncounterPaused(cena, true);
+    expect(paused.encounter.isPaused).toBe(true);
+    expect(cena.encounter.isPaused).toBe(false);
+    expect(setEncounterPaused(paused, false).encounter.isPaused).toBe(false);
+  });
+});
+
+describe('benchCastMember / unbenchCastMember', () => {
+  it('adiciona e remove um id sem duplicar, sem mutar o original', () => {
+    const cena = createDefaultCena();
+    const benched = benchCastMember(cena, 'p1');
+    expect(benched.benchedCastIds).toEqual(['p1']);
+    expect(cena.benchedCastIds).toEqual([]);
+    expect(benchCastMember(benched, 'p1').benchedCastIds).toEqual(['p1']);
+    expect(unbenchCastMember(benched, 'p1').benchedCastIds).toEqual([]);
+  });
+});
+
+describe('clearLog', () => {
+  it('esvazia o log sem mutar o original', () => {
+    const cena = appendLog(createDefaultCena(), [logEntry('system', 'x')]);
+    const cleared = clearLog(cena);
+    expect(cleared.log).toEqual([]);
+    expect(cena.log).toHaveLength(1);
+  });
+});
+
 describe('log helpers', () => {
   it('logEntry cria entrada com kind/text e id único', () => {
     const a = logEntry('system', 'Olá');
@@ -140,6 +171,26 @@ describe('updateNpcStats', () => {
   it('no-op para id inexistente', () => {
     const cena = createDefaultCena();
     expect(updateNpcStats(cena, 'x', { currentHp: 1 }).npcRoster).toEqual([]);
+  });
+});
+
+describe('sincronização viva do NPC',()=>{
+  it('recebe mudanças da ficha preservando recursos e cooldowns do combate',()=>{
+    const npc=addNpcFromCharacter(createDefaultCena(),fakeChar('n',{name:'Antes',currentHp:10,arsenal:[{cardId:'a',quantity:1,equipped:false,active:false,currentCharges:1,cooldownRemaining:2}]})).npcRoster[0];
+    const source=fakeChar('n',{name:'Depois',maxHp:20,currentHp:20,defense:14,arsenal:[{cardId:'a',quantity:1,equipped:false,active:false,currentCharges:3},{cardId:'b',quantity:1,equipped:false,active:false}]});
+    const synced=syncNpcFromCharacter({...npc,currentHp:4},source);
+    expect(synced).toMatchObject({name:'Depois',maxHp:20,currentHp:4,defense:14});
+    expect(synced.arsenal?.map(holding=>holding.cardId)).toEqual(['a','b']);
+    expect(synced.arsenal?.[0]).toMatchObject({currentCharges:1,cooldownRemaining:2});
+  });
+
+  it('incorpora nova carta atribuída sem perder o estado das anteriores',()=>{
+    const source=fakeChar('n',{arsenal:[{cardId:'a',quantity:3,equipped:false,active:false}]});
+    const npc=addNpcFromCharacter(createDefaultCena(),source).npcRoster[0];
+    const runtime={...npc,arsenal:[{cardId:'a',quantity:1,equipped:true,active:true,cooldownRemaining:2}]};
+    const merged=mergeNpcLiveUpdates(runtime,{arsenal:[{cardId:'a',quantity:5,equipped:false,active:false},{cardId:'b',quantity:1,equipped:false,active:false}]},source);
+    expect(merged.arsenal?.map(holding=>holding.cardId)).toEqual(['a','b']);
+    expect(merged.arsenal?.[0]).toMatchObject({quantity:3,equipped:true,active:true,cooldownRemaining:2});
   });
 });
 
