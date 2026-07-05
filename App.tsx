@@ -3249,63 +3249,6 @@ const App: React.FC = () => {
 
 
 
-  const formatTime = (totalSeconds: number) => {
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  const setTimerFromInput = () => {
-    const total = (timerInput.h * 3600) + (timerInput.m * 60) + timerInput.s;
-    setTimerTime(total);
-    setIsTimerRunning(false);
-  };
-
-  const handleMultiRoll = (sides: number, qty: number, bonus: number, label: string) => {
-    const results = Array.from({length: qty}, () => Math.floor(Math.random() * sides) + 1);
-    const total = results.reduce((a,b) => a+b, 0) + bonus;
-    setMultiRollResults(results);
-    const notation = `${qty}d${sides}${bonus !== 0 ? (bonus > 0 ? `+${bonus}` : `${bonus}`) : ''}`;
-    showDiceAnimation({ total, notation, individualRolls: results, numSides: sides, bonus }, {
-      customLabel: label || 'RESULTADO',
-    });
-    setRollHistory(prev => [{ id:Math.random().toString(36).substr(2,9), result:total, type:label||notation, timestamp:Date.now() }, ...prev].slice(0, 50));
-  };
-
-  const NAMES: Record<string, string[][]> = {
-    fantasy: [['Aer','Bel','Cal','Dor','El','Far','Gal','Hal','Ir','Kel'],['ath','ion','ara','iel','von','eth','orn','ias','una','wyn']],
-    nordic: [['Bjorn','Erik','Sigr','Thor','Ulf','Val','Heid','Ragn','Ivar','Leif'],['ald','mar','vik','sen','sson','grim','hild','run','mund','ar']],
-    arabic: [['Abd','Ali','Fath','Hus','Jam','Kar','Mal','Nas','Rah','Sal'],['ullah','im','an','ud','eem','el','om','if','id','al']],
-    japanese: [['Ake','Haru','Hiro','Kaz','Ken','Nao','Rei','Sak','Yuk','Yosh'],['mi','ko','to','ki','shi','ka','no','ro','i','haru']],
-    latin: [['Aur','Cas','Dec','Fab','Jul','Marc','Oct','Serv','Tib','Val'],['ius','ia','anus','inus','ella','illa','us','um','ax','ix']],
-  };
-  const generateNames = (style: typeof nameStyle, count = 8) => {
-    const [prefixes, suffixes] = NAMES[style];
-    const names = Array.from({length: count}, () => {
-      const p = prefixes[Math.floor(Math.random() * prefixes.length)];
-      const s = suffixes[Math.floor(Math.random() * suffixes.length)];
-      return p + s;
-    });
-    setGeneratedNames(names);
-  };
-
-  const LOOT_TABLES = {
-    common: ['Moedas de cobre (2d6)', 'Tocha', 'Ração de viagem', 'Corda (15m)', 'Espelho de bolso', 'Pederneira', 'Vela (×3)', 'Saco de areia', 'Tesoura enferrujada', 'Mapa rasgado'],
-    uncommon: ['Poção de cura menor', 'Óleo alquímico', 'Flecha +1 (×5)', 'Pergaminho de luz', 'Amuleto protetor', 'Cristal de ressonância', 'Pó de prata', 'Gema bruta (10po)', 'Lente de aumento', 'Kit de ladrão'],
-    rare: ['Espada élfica +1', 'Anel de proteção', 'Capa de invisibilidade parcial', 'Tomo arcano', 'Cristal mágico', 'Armadura de escamas encantada', 'Cajado de fogo menor', 'Amuleto de resistência', 'Botas de velocidade', 'Varinha de detecção mágica'],
-    legendary: ['Espada dos Reis', 'Artefato Antigo Fragmentado', 'Grimório do Arquimago', 'Coroa de Ferro Negro', 'Orbe do Desejo', 'Manto Estelar', 'Cetro dos Elementos', 'Anel dos Sete Selos'],
-  };
-  const generateLoot = (tier: keyof typeof LOOT_TABLES, qty = 3) => {
-    const table = LOOT_TABLES[tier];
-    const items = Array.from({length: qty}, (_, i) => ({
-      id: Math.random().toString(36).substr(2,9),
-      name: table[Math.floor(Math.random() * table.length)],
-      rarity: tier,
-    }));
-    setLootList(prev => [...items, ...prev].slice(0, 20));
-  };
-
 
   if (isLoading) {
     return (
