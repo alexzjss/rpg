@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Compass, Users, Shield, LayoutGrid, Swords } from 'lucide-react';
+import { Compass, Users, Shield, Swords } from 'lucide-react';
 import type { TabId } from '../../utils/atmosphere';
 
 export type NavKind = 'mode' | 'satellite';
@@ -11,9 +11,9 @@ export interface NavDest {
 }
 
 export const MODES: TabId[] = ['cena'];
-export const SATELLITES: TabId[] = ['characters', 'arsenal', 'extras'];
-// Ordem das teclas 1..4
-export const NAV_ORDER: TabId[] = ['cena', 'characters', 'arsenal', 'extras'];
+export const SATELLITES: TabId[] = ['characters', 'arsenal'];
+// Ordem das teclas 1..3
+export const NAV_ORDER: TabId[] = ['cena', 'characters', 'arsenal'];
 
 // NAV_DESTS mantém combat/journey (ainda são TabId até a Fase 4), mas eles
 // não aparecem em NAV_ORDER/MODES, portanto ficam inacessíveis pela navegação.
@@ -23,5 +23,4 @@ export const NAV_DESTS: Record<TabId, NavDest> = {
   journey:    { id: 'journey',    label: 'Jornada',     kind: 'mode',      icon: Compass },
   characters: { id: 'characters', label: 'Personagens', kind: 'satellite', icon: Users },
   arsenal:    { id: 'arsenal',    label: 'Arsenal',     kind: 'satellite', icon: Shield },
-  extras:     { id: 'extras',     label: 'Extras',      kind: 'satellite', icon: LayoutGrid },
 };

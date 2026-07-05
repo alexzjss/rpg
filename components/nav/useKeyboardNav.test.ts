@@ -30,9 +30,9 @@ describe('useKeyboardNav', () => {
     expect(onSelect).toHaveBeenCalledWith('characters'); // índice 1
   });
 
-  it('ArrowLeft de cena dá a volta para o último (extras)', () => {
+  it('ArrowLeft de cena dá a volta para o último (arsenal)', () => {
     const { result, onSelect } = setup('cena');
     act(() => result.current.handleKey({ key: 'ArrowLeft', preventDefault() {} } as any));
-    expect(onSelect).toHaveBeenCalledWith('extras');
+    expect(onSelect).toHaveBeenCalledWith('arsenal');
   });
 });

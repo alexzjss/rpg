@@ -1,10 +1,10 @@
-export type TabId = 'cena' | 'combat' | 'arsenal' | 'characters' | 'extras' | 'journey';
+export type TabId = 'cena' | 'combat' | 'arsenal' | 'characters' | 'journey';
 export type Atmosphere = 'dark' | 'parchment' | 'dusk' | 'noir';
 
 const TAB_ATMOSPHERE: Record<TabId, Atmosphere> = {
   cena: 'noir',
   combat: 'dark', arsenal: 'dark',
-  characters: 'dark', extras: 'dark', journey: 'dusk',
+  characters: 'dark', journey: 'dusk',
 };
 
 export function atmosphereForTab(tab: TabId): Atmosphere {

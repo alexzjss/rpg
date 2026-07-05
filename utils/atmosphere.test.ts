@@ -5,7 +5,7 @@ describe('atmosphereForTab', () => {
   it('cena é noir; jornada é dusk; o resto é escuro', () => {
     expect(atmosphereForTab('cena')).toBe('noir');
     expect(atmosphereForTab('journey')).toBe('dusk');
-    for (const t of ['combat','arsenal','characters','extras'] as const) {
+    for (const t of ['combat','arsenal','characters'] as const) {
       expect(atmosphereForTab(t)).toBe('dark');
     }
   });

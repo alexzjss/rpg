@@ -3,7 +3,7 @@ import { SECTION_THEMES, ALL_SEC_VAR_KEYS, applySectionTheme } from './sectionTh
 import { atmosphereForTab } from './atmosphere';
 import type { TabId } from './atmosphere';
 
-const ALL_TABS: TabId[] = ['cena', 'combat', 'journey', 'characters', 'arsenal', 'extras'];
+const ALL_TABS: TabId[] = ['cena', 'combat', 'journey', 'characters', 'arsenal'];
 
 describe('SECTION_THEMES', () => {
   it('tem entrada para toda TabId', () => {
@@ -25,10 +25,6 @@ describe('SECTION_THEMES', () => {
   it('characters usa acento azul FF e override de ember', () => {
     expect(SECTION_THEMES.characters.vars['--sec-accent']).toBe('#5a9ae8');
     expect(SECTION_THEMES.characters.vars['--ember']).toBe('#5a9ae8');
-  });
-  it('extras usa acento cinza e override de ember', () => {
-    expect(SECTION_THEMES.extras.vars['--sec-accent']).toBe('#9aa3b0');
-    expect(SECTION_THEMES.extras.vars['--ember']).toBe('#8a93a0');
   });
   it('cena usa atmosfera noir e acento crimson', () => {
     expect(SECTION_THEMES.cena.atmosphere).toBe('noir');
@@ -55,13 +51,13 @@ describe('applySectionTheme', () => {
     expect(document.documentElement.dataset.section).toBe('combat');
     expect(document.documentElement.dataset.atmosphere).toBe(atmosphereForTab('combat'));
   });
-  it('remove as vars de combat ao trocar para extras e aplica overrides de extras', () => {
+  it('remove as vars de combat ao trocar para arsenal e aplica overrides de arsenal', () => {
     applySectionTheme('combat');
     expect(document.documentElement.style.getPropertyValue('--sec-accent')).toBe('#d11f3f');
     expect(document.documentElement.style.getPropertyValue('--gold-mid')).toBe('#2fd4c4');
-    applySectionTheme('extras');
-    expect(document.documentElement.dataset.section).toBe('extras');
-    expect(document.documentElement.style.getPropertyValue('--sec-accent')).toBe('#9aa3b0');
-    expect(document.documentElement.style.getPropertyValue('--gold-mid')).toBe('#8a93a0');
+    applySectionTheme('arsenal');
+    expect(document.documentElement.dataset.section).toBe('arsenal');
+    expect(document.documentElement.style.getPropertyValue('--sec-accent')).toBe('#d4142a');
+    expect(document.documentElement.style.getPropertyValue('--gold-mid')).toBe('#d4142a');
   });
 });
