@@ -302,14 +302,13 @@ function TabButton({ icon, active, onClick, children }: {
 }
 
 // Etapa B: metadados de cabeçalho por aba (kicker + título grande)
-type AppTab = 'cena' | 'combat' | 'arsenal' | 'characters' | 'extras' | 'journey';
+type AppTab = 'cena' | 'combat' | 'arsenal' | 'characters' | 'journey';
 const TAB_META: Record<AppTab, { label: string; kicker: string }> = {
   cena:       { label: 'Cena',        kicker: 'Exploração & Combate' },
   combat:     { label: 'Combate',     kicker: 'Arena & Iniciativa' },
   journey:    { label: 'Jornada',     kicker: 'Exploração & Aventura' },
   characters: { label: 'Personagens', kicker: 'Receptáculos & Vínculos' },
   arsenal:    { label: 'Arsenal',     kicker: 'Habilidades, Itens & Selos' },
-  extras:     { label: 'Extras',      kicker: 'Ferramentas do Mestre' },
 };
 
 const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({ title, onClose, children }) => (
@@ -2737,7 +2736,7 @@ const ItemUseAnimation: React.FC<{
 // --- Aplicação Principal ---
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'cena' | 'combat' | 'arsenal' | 'characters' | 'extras' | 'journey'>('cena');
+  const [activeTab, setActiveTab] = useState<'cena' | 'combat' | 'arsenal' | 'characters' | 'journey'>('cena');
   const [reducedMotion, setReducedMotion] = React.useState(getUserReducedMotion());
   React.useEffect(() => {
     applySectionTheme(activeTab);
@@ -2785,38 +2784,12 @@ const App: React.FC = () => {
   const [importConfirmData, setImportConfirmData] = useState<any>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
-  // Histórico de Dados Manuais
-  const [rollHistory, setRollHistory] = useState<{ id: string, result: number, type: string, timestamp: number }[]>([]);
-
-  // State Timer
-  const [timerTime, setTimerTime] = useState(0); // em segundos
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [timerInput, setTimerInput] = useState({ h: 0, m: 0, s: 0 });
-
-  // State Progress
-  const [progressData, setProgressData] = useState({ label: 'Progresso Customizado', current: 0, max: 100 });
-  // Extras: Dice enhancements
-  const [diceQty, setDiceQty] = useState(1);
-  const [diceBonus, setDiceBonus] = useState(0);
-  const [customDiceSides, setCustomDiceSides] = useState(6);
-  const [multiRollResults, setMultiRollResults] = useState<number[]>([]);
-  // Extras: Name generator
-  const [generatedNames, setGeneratedNames] = useState<string[]>([]);
-  const [nameStyle, setNameStyle] = useState<'fantasy' | 'nordic' | 'arabic' | 'japanese' | 'latin'>('fantasy');
-  // Extras: Loot generator
-  const [lootList, setLootList] = useState<{id:string;name:string;rarity:string}[]>([]);
-  // Extras: GM notes
-  const [gmNotes, setGmNotes] = useState('');
-  // Multiple progress bars
-  const [progressBars, setProgressBars] = useState([{ id:'1', label:'Progresso Customizado', current: 0, max: 100, color:'#d97706' }]);
-
   // Journey UI State
   const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
   const [quickEditChar, setQuickEditChar] = useState<Character | null>(null);
   const [craftResult, setCraftResult] = useState<{ recipe: Recipe; character: Character } | null>(null);
   // Upgrade shop UI state
   const [upgradePurchaseResult, setUpgradePurchaseResult] = useState<{ offer: UpgradeOffer; targetChar: Character } | null>(null);
-  const [shopCurrency, setShopCurrency] = useState(0);
   // Per-character currencies (charId -> moedas)
   const [characterCurrencies, setCharacterCurrencies] = useState<Record<string, number>>({});
   // Active card item boost: which item (par/trinca/quadra/reroll) to apply when using a card
@@ -2824,9 +2797,6 @@ const App: React.FC = () => {
   // Items UI State
   const [selectedInventoryCharId, setSelectedInventoryCharId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
-
-  // Conditions UI State
-  const [managingConditionsCharId, setManagingConditionsCharId] = useState<string | null>(null);
 
   // Combat UI State
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -2836,8 +2806,6 @@ const App: React.FC = () => {
   const [placingPin, setPlacingPin] = useState<{label: string; color: string} | null>(null);
   const [cardAnim, setCardAnim] = useState<CardAnimPayload | null>(null);
 
-  // Combat notes (GM only, per session)
-  const [combatNotes, setCombatNotes] = useState('');
   // Mass damage tool
 
   // Union state
@@ -2865,25 +2833,13 @@ const App: React.FC = () => {
 
   // ── Burn card state ──────────────────────────────────────────
 
-  // Timer Effect
-  useEffect(() => {
-    let interval: any;
-    if (isTimerRunning && timerTime > 0) {
-      interval = setInterval(() => {
-        setTimerTime((prev) => prev - 1);
-      }, 1000);
-    } else if (timerTime === 0) {
-      setIsTimerRunning(false);
-    }
-    return () => clearInterval(interval);
-  }, [isTimerRunning, timerTime]);
-
   // ── Boot: inicializa DB, migra dados antigos, carrega tudo de uma vez ──
   useEffect(() => {
     let cancelled = false;
 
-    DatabaseService.initialize().then(({ characters: chars, cards: cds, items: its, seals: sls, weapons: wps, grimoire: grim, combat: cbt, journey: jny, cena: cn, extras }) => {
+    DatabaseService.initialize().then(({ characters: chars, cards: cds, items: its, seals: sls, weapons: wps, grimoire: grim, combat: cbt, journey: jny, cena: cn }) => {
       if (cancelled) return;
+      latestCharactersRef.current = chars;
       setCharacters(chars);
       setCards(cds);
       setItems(its);
@@ -2893,15 +2849,6 @@ const App: React.FC = () => {
       setCombat(migrateCombatState(cbt));
       setJourney(jny);
       setCena(cn);
-      // Restore extras state
-      setGmNotes(extras.gmNotes ?? '');
-      setCombatNotes(extras.combatNotes ?? '');
-      setShopCurrency(extras.shopCurrency ?? 0);
-      setCharacterCurrencies(extras.characterCurrencies ?? {});
-      if (extras.progressBars?.length) setProgressBars(extras.progressBars);
-      if (extras.rollHistory?.length) setRollHistory(extras.rollHistory);
-      if (extras.lootList?.length) setLootList(extras.lootList);
-      if (extras.nameStyle) setNameStyle(extras.nameStyle as any);
       setIsLoading(false);
     }).catch(err => {
       console.error('[Boot] Erro ao carregar dados:', err);
@@ -2930,58 +2877,18 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // ── Autosave a cada 45s — salva TUDO incluindo extras ─────────────
+  // Autosave unificado: Cena/Combate, Arsenal, Personagens.
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-
-  useEffect(() => {
-    if (isLoading) return; // Não salva enquanto ainda está carregando
-    const INTERVAL_MS = 45_000;
-    const interval = setInterval(async () => {
-      try {
-        setAutoSaveStatus('saving');
-        await DatabaseService.saveFullSnapshot({
-          version: 5,
-          savedAt: new Date().toISOString(),
-          characters,
-          cards,
-          items,
-          seals,
-          weapons,
-          grimoire,
-          combat: combat!,
-          journey: journey!,
-          cena,
-          extras: {
-            gmNotes,
-            combatNotes,
-            shopCurrency,
-            characterCurrencies,
-            progressBars,
-            rollHistory,
-            lootList,
-            nameStyle,
-          },
-        });
-        setAutoSaveStatus('saved');
-        setTimeout(() => setAutoSaveStatus('idle'), 2500);
-      } catch (e) {
-        console.error('[Autosave] Erro:', e);
-        setAutoSaveStatus('error');
-        setTimeout(() => setAutoSaveStatus('idle'), 3000);
-      }
-    }, INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [isLoading, characters, cards, seals, grimoire, combat, journey, gmNotes, combatNotes, shopCurrency, characterCurrencies, progressBars, rollHistory, lootList, nameStyle]);
-
-  // ── Salva extras no IDB em tempo real quando mudam ─────────────
-  // (debounce 2s para não sobrecarregar o IDB a cada keystroke)
-  useEffect(() => {
-    if (isLoading) return;
-    const t = setTimeout(() => {
-      DatabaseService.updateExtras({ gmNotes, combatNotes, shopCurrency, characterCurrencies, progressBars, rollHistory, lootList, nameStyle });
-    }, 2000);
-    return () => clearTimeout(t);
-  }, [isLoading, gmNotes, combatNotes, shopCurrency, characterCurrencies, progressBars, rollHistory, lootList, nameStyle]);
+  const autosaveSnapshot = useMemo(() => combat && journey ? ({
+    version: SNAPSHOT_VERSION,
+    savedAt: new Date().toISOString(),
+    characters, cards, items, seals, weapons, grimoire, combat, journey, cena,
+  }) : null, [characters, cards, items, seals, weapons, grimoire, combat, journey, cena]);
+  const { saveNow: flushAutosave } = useUnifiedAutosave({
+    enabled: !isLoading,
+    snapshot: autosaveSnapshot,
+    onStatus: setAutoSaveStatus,
+  });
 
   // placeholder removido — lógica migrada para useEffect de boot acima
 
@@ -3066,20 +2973,6 @@ const App: React.FC = () => {
   const filteredCharacters = useMemo(() => characters.filter(c => !!c.id), [characters]);
 
   const selectedInventoryChar = useMemo(() => characters.find(c => c.id === selectedInventoryCharId), [characters, selectedInventoryCharId]);
-
-  // Helper para o modal de condições
-  const characterForConditions = useMemo(() => {
-    if (!managingConditionsCharId) return null;
-    if (combat) {
-        const combatant = combat.combatants.find(c => c.combatId === managingConditionsCharId);
-        if (combatant) return { ...combatant, isCombatant: true, realId: combatant.id };
-        const combatantByCharId = combat.combatants.find(c => c.id === managingConditionsCharId);
-        if (combatantByCharId) return { ...combatantByCharId, isCombatant: true, realId: combatantByCharId.id };
-    }
-    const char = characters.find(c => c.id === managingConditionsCharId);
-    if (char) return { ...char, isCombatant: false, realId: char.id };
-    return null;
-  }, [managingConditionsCharId, combat, characters]);
 
   const isCharInCombat = (charId: string) => combat?.combatants.some(c => c.id === charId) ?? false;
 
@@ -3498,9 +3391,6 @@ const App: React.FC = () => {
                   <span style={{ color:'var(--text-primary)', fontWeight:700 }}>{String(value)}</span>
                 </div>
               ))}
-              {importConfirmData.extras && (
-                <div style={{ fontSize:11, color:'rgba(52,211,153,0.8)', marginTop:4 }}>✓ Contém extras: notas, moedas, histórico</div>
-              )}
             </div>
 
             {importError && (
@@ -4098,350 +3988,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Aba Extras (omitted as mostly unchanged) */}
-        {activeTab === 'extras' && (
-          <div className="space-y-6 anim-fade-up max-w-6xl mx-auto mp-darktab" style={{ height:'100%', overflowY:'auto' }}>
-            {/* Tab Bar */}
-            <div className="bg-slate-900/70 border border-white/5 p-1.5 rounded-2xl flex flex-wrap gap-1 w-fit mx-auto shadow-xl">
-              {([
-                { id: 'dice',     icon: <Dices className="w-4 h-4" />,    label: 'Dados' },
-                { id: 'timer',    icon: <Hourglass className="w-4 h-4" />, label: 'Timer' },
-                { id: 'progress', icon: <BarChart3 className="w-4 h-4" />, label: 'Progresso' },
-                { id: 'names',    icon: <BookOpen className="w-4 h-4" />,  label: 'Nomes' },
-                { id: 'loot',     icon: <Package2 className="w-4 h-4" />,  label: 'Saque' },
-                { id: 'notes',    icon: <ScrollText className="w-4 h-4" />, label: 'Notas GM' },
-              ] as const).map(tab => (
-                <button key={tab.id} onClick={() => setExtrasTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-extrabold uppercase text-xs tracking-widest transition-all ${extrasTab === tab.id ? 'text-black shadow-lg' : 'text-slate-500 hover:text-white hover:bg-slate-800/80'}`}
-                  style={extrasTab === tab.id ? { background:'linear-gradient(135deg,#fff 0%,#e2e8f0 100%)' } : {}}
-                >{tab.icon}{tab.label}</button>
-              ))}
-            </div>
-
-            <div className="glass-panel p-8 rounded-[2.5rem] shadow-2xl border border-slate-800/50 min-h-[420px]">
-
-              {/* ── DADOS ── */}
-              {extrasTab === 'dice' && (
-                <div className="space-y-8">
-                  <div className="flex flex-wrap items-end gap-6 justify-between">
-                    <h3 className="text-3xl font-black text-white uppercase italic">Rolagem de Dados</h3>
-                    {/* Qty + Bonus controls */}
-                    <div className="flex items-center gap-4 bg-slate-900 rounded-2xl px-6 py-3 border border-slate-800">
-                      <div className="flex flex-col items-center gap-1">
-                        <label className="text-[9px] font-extrabold uppercase text-slate-500">Qtd</label>
-                        <div className="flex items-center gap-1">
-                          <button onClick={()=>setDiceQty(q=>Math.max(1,q-1))} className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-black flex items-center justify-center text-sm">−</button>
-                          <span className="w-8 text-center font-black text-white text-lg">{diceQty}</span>
-                          <button onClick={()=>setDiceQty(q=>Math.min(20,q+1))} className="w-7 h-7 rounded-lg bg-amber-700 hover:bg-amber-600 text-white font-black flex items-center justify-center text-sm">+</button>
-                        </div>
-                      </div>
-                      <div className="w-px h-8 bg-slate-700" />
-                      <div className="flex flex-col items-center gap-1">
-                        <label className="text-[9px] font-extrabold uppercase text-slate-500">Bônus</label>
-                        <div className="flex items-center gap-1">
-                          <button onClick={()=>setDiceBonus(b=>b-1)} className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-black flex items-center justify-center text-sm">−</button>
-                          <span className={`w-10 text-center font-black text-lg ${diceBonus>0?'text-emerald-400':diceBonus<0?'text-rose-400':'text-slate-400'}`}>{diceBonus>0?`+${diceBonus}`:diceBonus}</span>
-                          <button onClick={()=>setDiceBonus(b=>b+1)} className="w-7 h-7 rounded-lg bg-amber-700 hover:bg-amber-600 text-white font-black flex items-center justify-center text-sm">+</button>
-                        </div>
-                      </div>
-                      {(diceQty!==1||diceBonus!==0) && <button onClick={()=>{setDiceQty(1);setDiceBonus(0);}} className="text-[9px] text-slate-500 hover:text-rose-400 font-extrabold uppercase ml-2">Reset</button>}
-                    </div>
-                  </div>
-
-                  {/* Standard dice */}
-                  <div className="flex flex-wrap justify-center gap-4">
-                    {[4,6,8,10,12,20,100].map(sides => (
-                      <button key={sides}
-                        onClick={() => handleMultiRoll(sides, diceQty, diceBonus, `${diceQty}D${sides}${diceBonus?`${diceBonus>0?'+':''}${diceBonus}`:''}`)}
-                        className="w-24 h-24 bg-slate-900/80 border-2 border-slate-800 hover:border-amber-500 hover:bg-amber-950/30 rounded-[2rem] flex flex-col items-center justify-center gap-1.5 transition-all group shadow-lg hover:-translate-y-2 active:translate-y-0"
-                      >
-                        {sides===4 && <Triangle className="w-7 h-7 text-slate-600 group-hover:text-amber-400 transition-colors" />}
-                        {sides===6 && <Square className="w-7 h-7 text-slate-600 group-hover:text-amber-400 transition-colors" />}
-                        {sides===8 && <Octagon className="w-7 h-7 text-slate-600 group-hover:text-amber-400 transition-colors" />}
-                        {(sides===10||sides===12) && <Hexagon className="w-7 h-7 text-slate-600 group-hover:text-amber-400 transition-colors" />}
-                        {(sides===20||sides===100) && <Circle className="w-7 h-7 text-slate-600 group-hover:text-amber-400 transition-colors" />}
-                        <span className="text-xs font-black text-slate-400 group-hover:text-white">D{sides}</span>
-                        {diceQty>1 && <span className="text-[9px] font-black text-amber-600">{diceQty}×</span>}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Custom dice */}
-                  <div className="bg-slate-900/80 rounded-2xl p-5 border border-slate-800 flex flex-wrap items-center gap-5">
-                    <span className="text-xs font-extrabold uppercase text-slate-400 tracking-widest flex-shrink-0">Dado Customizado</span>
-                    <div className="flex items-center gap-3 flex-1">
-                      <span className="text-slate-500 font-black text-sm">{diceQty}d</span>
-                      <input type="number" min={2} max={999} value={customDiceSides}
-                        onChange={e=>setCustomDiceSides(Math.max(2,Math.min(999,Number(e.target.value))))}
-                        className="w-20 bg-slate-900/80 border border-slate-700 rounded-xl py-2 px-3 text-center font-black text-lg text-white outline-none focus:border-amber-500"
-                      />
-                      {diceBonus!==0 && <span className={`font-black text-sm ${diceBonus>0?'text-emerald-400':'text-rose-400'}`}>{diceBonus>0?'+':''}{diceBonus}</span>}
-                    </div>
-                    <button
-                      onClick={()=>handleMultiRoll(customDiceSides,diceQty,diceBonus,`${diceQty}d${customDiceSides}`)}
-                      className="px-6 py-3 bg-amber-700 hover:bg-amber-600 rounded-xl text-white font-extrabold uppercase text-xs transition-all flex items-center gap-2"
-                    >
-                      <Dices className="w-4 h-4"/> Rolar
-                    </button>
-                  </div>
-
-                  {/* Quick presets */}
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {[
-                      {label:'Ataque', notation:'1d20', s:20, q:1, b:0},
-                      {label:'Dano ×2', notation:'2d6', s:6, q:2, b:0},
-                      {label:'Iniciativa', notation:'1d20+2', s:20, q:1, b:2},
-                      {label:'Salvaguarda', notation:'1d20', s:20, q:1, b:0},
-                      {label:'3d6 Stats', notation:'3d6', s:6, q:3, b:0},
-                      {label:'Percentual', notation:'1d100', s:100, q:1, b:0},
-                    ].map(p=>(
-                      <button key={p.label} onClick={()=>handleMultiRoll(p.s,p.q,p.b,p.label)}
-                        className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-600/40 rounded-xl text-xs font-black text-slate-400 hover:text-white transition-all flex items-center gap-1.5"
-                      ><Trophy className="w-3 h-3"/>{p.label} <span className="text-slate-600">{p.notation}</span></button>
-                    ))}
-                  </div>
-
-                  {/* Multi-roll result display */}
-                  {multiRollResults.length > 1 && (
-                    <div className="bg-black/30 rounded-2xl p-4 border border-slate-800">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-500">Dados individuais</span>
-                        <span className="font-mono font-black text-white text-lg">Total: {multiRollResults.reduce((a,b)=>a+b,0)+diceBonus}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {multiRollResults.map((r,i)=>(
-                          <span key={i} className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm border ${r===1?'bg-rose-950 border-rose-700 text-rose-400':r===customDiceSides||r===20?'bg-amber-950 border-amber-600 text-amber-300':'bg-slate-900 border-slate-700 text-white'}`}>{r}</span>
-                        ))}
-                        {diceBonus!==0 && <span className={`px-3 h-10 rounded-xl flex items-center font-black text-sm border ${diceBonus>0?'bg-emerald-950 border-emerald-700 text-emerald-300':'bg-rose-950 border-rose-700 text-rose-300'}`}>{diceBonus>0?'+':''}{diceBonus}</span>}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* History */}
-                  <div className="bg-black/20 rounded-[2rem] p-5 max-h-52 overflow-y-auto custom-scroll border border-slate-800/50">
-                    <div className="flex items-center justify-between mb-3 sticky top-0">
-                      <p className="text-[10px] font-extrabold uppercase text-slate-500">Histórico</p>
-                      {rollHistory.length>0 && <button onClick={()=>setRollHistory([])} className="text-[9px] font-extrabold uppercase text-slate-600 hover:text-rose-400">Limpar</button>}
-                    </div>
-                    <div className="space-y-2">
-                      {rollHistory.slice(0,20).map(roll => (
-                        <div key={roll.id} className="flex justify-between items-center bg-slate-900/50 px-4 py-2.5 rounded-xl border border-slate-800/50">
-                          <span className="text-xs font-bold text-slate-400 uppercase">{roll.type}</span>
-                          <span className="text-xl font-black text-white">{roll.result}</span>
-                          <span className="text-[10px] font-mono text-slate-600">{new Date(roll.timestamp).toLocaleTimeString()}</span>
-                        </div>
-                      ))}
-                      {rollHistory.length===0 && <p className="text-slate-600 text-xs py-6 text-center">Nenhuma rolagem ainda.</p>}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ── TIMER ── */}
-              {extrasTab === 'timer' && (
-                <div className="flex flex-col items-center justify-center space-y-10 py-4">
-                  <div className="relative">
-                    <div className={`w-64 h-64 rounded-full border-8 flex items-center justify-center ${isTimerRunning?'border-amber-500 shadow-[0_0_60px_rgba(212,168,83,0.3)]':'border-slate-800'}`}>
-                      <span className="text-5xl font-black font-mono text-white tracking-wider tabular-nums">{formatTime(timerTime)}</span>
-                    </div>
-                    {isTimerRunning && <div className="absolute inset-0 rounded-full border-8 border-amber-400/20 animate-ping" />}
-                  </div>
-                  <div className="flex items-end gap-4">
-                    {[{label:'Horas',key:'h'},{label:'Min',key:'m'},{label:'Seg',key:'s'}].map(f=>(
-                      <div key={f.key} className="flex flex-col gap-2">
-                        <label className="text-[9px] font-extrabold uppercase text-slate-500 text-center">{f.label}</label>
-                        <input type="number" value={(timerInput as any)[f.key]} onChange={e=>setTimerInput({...timerInput,[f.key]:Number(e.target.value)})} className="w-20 bg-slate-900/80 border border-slate-800 rounded-2xl py-4 text-center font-black text-xl text-white outline-none focus:border-amber-500" />
-                      </div>
-                    ))}
-                  </div>
-                  {/* Quick presets */}
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {[{l:'30s',v:30},{l:'1min',v:60},{l:'5min',v:300},{l:'10min',v:600},{l:'30min',v:1800},{l:'1h',v:3600}].map(p=>(
-                      <button key={p.l} onClick={()=>{setTimerTime(p.v);setIsTimerRunning(false);}} className="px-4 py-2 bg-slate-900 hover:bg-amber-900/30 border border-slate-800 hover:border-amber-600/40 rounded-xl text-xs font-black text-slate-400 hover:text-white transition-all">{p.l}</button>
-                    ))}
-                  </div>
-                  <div className="flex gap-4">
-                    <button onClick={setTimerFromInput} className="px-7 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl font-extrabold uppercase text-xs text-white transition-all">Definir</button>
-                    <button onClick={()=>setIsTimerRunning(v=>!v)} className={`px-7 py-4 rounded-2xl font-extrabold uppercase text-xs text-white transition-all flex items-center gap-3 ${isTimerRunning?'bg-amber-600 hover:bg-amber-500':'bg-emerald-600 hover:bg-emerald-500'}`}>
-                      {isTimerRunning?<><Pause className="w-4 h-4"/>Pausar</>:<><Play className="w-4 h-4"/>Iniciar</>}
-                    </button>
-                    <button onClick={()=>{setIsTimerRunning(false);setTimerTime(0);}} className="px-7 py-4 bg-rose-950 hover:bg-rose-900 rounded-2xl font-extrabold uppercase text-xs text-rose-500 transition-all border border-rose-900/30">Zerar</button>
-                  </div>
-                </div>
-              )}
-
-              {/* ── PROGRESSO ── */}
-              {extrasTab === 'progress' && (
-                <div className="space-y-6 max-w-2xl mx-auto py-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-black text-white uppercase italic">Barras de Progresso</h3>
-                    <button onClick={()=>setProgressBars(pb=>[...pb,{id:Math.random().toString(36).substr(2,6),label:'Nova Meta',current:0,max:100,color:'#d97706'}])}
-                      className="flex items-center gap-2 px-4 py-2 bg-amber-700/40 hover:bg-amber-700/60 border border-amber-700/50 rounded-xl font-black text-xs text-amber-300 transition-all">
-                      <Plus className="w-3 h-3"/> Adicionar
-                    </button>
-                  </div>
-                  <div className="space-y-5">
-                    {progressBars.map((bar, idx)=>(
-                      <div key={bar.id} className="bg-slate-900/80 rounded-2xl p-5 border border-slate-800 space-y-3">
-                        <div className="flex gap-3 items-center">
-                          <input type="text" value={bar.label} onChange={e=>setProgressBars(pb=>pb.map((b,i)=>i===idx?{...b,label:e.target.value}:b))}
-                            className="flex-1 bg-slate-900/80 border border-slate-800 rounded-xl px-4 py-2 text-sm font-black text-white outline-none focus:border-amber-500" />
-                          <input type="color" value={bar.color} onChange={e=>setProgressBars(pb=>pb.map((b,i)=>i===idx?{...b,color:e.target.value}:b))} className="w-8 h-8 rounded-lg border-0 cursor-pointer bg-transparent" />
-                          {progressBars.length>1 && <button onClick={()=>setProgressBars(pb=>pb.filter((_,i)=>i!==idx))} className="text-slate-600 hover:text-rose-400 transition-colors"><Trash2 className="w-4 h-4"/></button>}
-                        </div>
-                        <div className="h-6 bg-slate-900/80 rounded-full overflow-hidden border border-slate-800 relative">
-                          <div className="h-full rounded-full transition-all duration-500" style={{width:`${Math.min(100,(bar.current/bar.max)*100)}%`,background:`linear-gradient(90deg,${bar.color}99,${bar.color})`}} />
-                          <span className="absolute inset-0 flex items-center justify-center text-xs font-black text-white/80">{bar.current}/{bar.max} ({Math.round((bar.current/bar.max)*100)}%)</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button onClick={()=>setProgressBars(pb=>pb.map((b,i)=>i===idx?{...b,current:Math.max(0,b.current-1)}:b))} className="w-8 h-8 bg-slate-800 hover:bg-slate-700 rounded-lg text-white font-black flex items-center justify-center">−</button>
-                          <input type="number" value={bar.current} onChange={e=>setProgressBars(pb=>pb.map((b,i)=>i===idx?{...b,current:Math.max(0,Math.min(b.max,Number(e.target.value)))}:b))}
-                            className="w-20 bg-slate-900/80 border border-slate-800 rounded-xl py-2 text-center font-black text-lg text-white outline-none" />
-                          <button onClick={()=>setProgressBars(pb=>pb.map((b,i)=>i===idx?{...b,current:Math.min(b.max,b.current+1)}:b))} className="w-8 h-8 rounded-lg text-white font-black flex items-center justify-center" style={{background:bar.color}}>+</button>
-                          <span className="text-slate-500 font-black text-sm">/</span>
-                          <input type="number" value={bar.max} onChange={e=>setProgressBars(pb=>pb.map((b,i)=>i===idx?{...b,max:Math.max(1,Number(e.target.value))}:b))}
-                            className="w-20 bg-slate-900/80 border border-slate-800 rounded-xl py-2 text-center font-black text-sm text-slate-400 outline-none" />
-                          <button onClick={()=>setProgressBars(pb=>pb.map((b,i)=>i===idx?{...b,current:b.max}:b))} className="ml-auto text-[9px] font-extrabold uppercase text-slate-600 hover:text-emerald-400">Max</button>
-                          <button onClick={()=>setProgressBars(pb=>pb.map((b,i)=>i===idx?{...b,current:0}:b))} className="text-[9px] font-extrabold uppercase text-slate-600 hover:text-rose-400">Zerar</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ── NOMES ── */}
-              {extrasTab === 'names' && (
-                <div className="space-y-8 max-w-2xl mx-auto py-4">
-                  <div className="text-center space-y-2">
-                    <h3 className="text-3xl font-black text-white uppercase italic">Gerador de Nomes</h3>
-                    <p className="text-slate-500 text-sm">NPCs, locais, organizações e mais</p>
-                  </div>
-                  {/* Style selector */}
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {([{id:'fantasy',label:'Fantasia'},{id:'nordic',label:'Nórdico'},{id:'arabic',label:'Árabe'},{id:'japanese',label:'Japonês'},{id:'latin',label:'Latino'}] as const).map(s=>(
-                      <button key={s.id} onClick={()=>setNameStyle(s.id)} className={`px-4 py-2 rounded-xl font-black text-xs uppercase transition-all ${nameStyle===s.id?'bg-amber-700 text-white border-transparent':'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'}`}>{s.label}</button>
-                    ))}
-                  </div>
-                  <div className="flex justify-center gap-4">
-                    <button onClick={()=>generateNames(nameStyle,8)} className="px-8 py-4 bg-amber-700 hover:bg-amber-600 rounded-2xl font-extrabold uppercase text-sm text-white transition-all flex items-center gap-3 shadow-lg shadow-amber-900/40">
-                      <RefreshCw className="w-5 h-5"/> Gerar Nomes
-                    </button>
-                    <button onClick={()=>generateNames(nameStyle,16)} className="px-6 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl font-extrabold uppercase text-xs text-slate-300 transition-all">
-                      ×2
-                    </button>
-                  </div>
-                  {generatedNames.length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {generatedNames.map((name,i)=>(
-                        <button key={i} onClick={()=>navigator.clipboard?.writeText(name)}
-                          className="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-600/40 rounded-xl py-3 px-4 text-center font-black text-white text-sm transition-all group"
-                          title="Clique para copiar">
-                          {name}<span className="block text-[9px] text-slate-600 group-hover:text-amber-500 uppercase font-black mt-0.5">copiar</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {generatedNames.length === 0 && (
-                    <div className="flex items-center justify-center py-12 opacity-30">
-                      <div className="text-center"><BookOpen className="w-12 h-12 mx-auto mb-3" /><p className="font-extrabold uppercase text-sm">Clique em Gerar Nomes</p></div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── SAQUE ── */}
-              {extrasTab === 'loot' && (
-                <div className="space-y-8 max-w-2xl mx-auto py-4">
-                  <div className="text-center space-y-2">
-                    <h3 className="text-3xl font-black text-white uppercase italic">Gerador de Saque</h3>
-                    <p className="text-slate-500 text-sm">Itens aleatórios por tier de raridade</p>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {([
-                      {tier:'common',   label:'Comum',   color:'#94a3b8', glow:'rgba(148,163,184,0.3)'},
-                      {tier:'uncommon', label:'Incomum', color:'#4ade80', glow:'rgba(74,222,128,0.3)'},
-                      {tier:'rare',     label:'Raro',    color:'#60a5fa', glow:'rgba(96,165,250,0.3)'},
-                      {tier:'legendary',label:'Lendário',color:'#f59e0b', glow:'rgba(245,158,11,0.3)'},
-                    ] as const).map(t=>(
-                      <button key={t.tier} onClick={()=>generateLoot(t.tier,3)}
-                        className="p-5 rounded-2xl border-2 text-center flex flex-col items-center gap-2 transition-all hover:-translate-y-1 active:translate-y-0"
-                        style={{background:`${t.glow.replace('0.3','0.08')}`,borderColor:`${t.color}55`,boxShadow:`0 0 20px ${t.glow.replace('0.3','0')}`}}
-                        onMouseEnter={e=>(e.currentTarget.style.boxShadow=`0 0 20px ${t.glow}`)}
-                        onMouseLeave={e=>(e.currentTarget.style.boxShadow=`0 0 20px ${t.glow.replace('0.3','0')}`)}>
-                        <Package2 style={{color:t.color,width:24,height:24}}/>
-                        <span className="font-black text-sm uppercase" style={{color:t.color}}>{t.label}</span>
-                        <span className="text-[9px] text-slate-500 font-extrabold uppercase">3 itens</span>
-                      </button>
-                    ))}
-                  </div>
-                  {lootList.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center mb-3">
-                        <p className="text-[10px] font-extrabold uppercase text-slate-500">Itens Gerados</p>
-                        <button onClick={()=>setLootList([])} className="text-[9px] font-extrabold uppercase text-slate-600 hover:text-rose-400">Limpar</button>
-                      </div>
-                      {lootList.map(item=>{
-                        const colors:{[k:string]:string}={common:'#94a3b8',uncommon:'#4ade80',rare:'#60a5fa',legendary:'#f59e0b'};
-                        const color=colors[item.rarity]||'#94a3b8';
-                        return (
-                          <div key={item.id} className="flex items-center gap-4 bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-3">
-                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{background:color,boxShadow:`0 0 6px ${color}`}} />
-                            <span className="flex-1 font-bold text-sm text-white">{item.name}</span>
-                            <span className="text-[9px] font-extrabold uppercase" style={{color}}>{item.rarity}</span>
-                            <button onClick={()=>setLootList(l=>l.filter(i=>i.id!==item.id))} className="text-slate-600 hover:text-rose-400 transition-colors"><X className="w-3 h-3"/></button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {lootList.length === 0 && (
-                    <div className="flex items-center justify-center py-12 opacity-30">
-                      <div className="text-center"><Package2 className="w-12 h-12 mx-auto mb-3"/><p className="font-extrabold uppercase text-sm">Selecione um tier para gerar itens</p></div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── NOTAS GM ── */}
-              {extrasTab === 'notes' && (
-                <div className="space-y-6 py-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-black text-white uppercase italic flex items-center gap-3"><ScrollText className="w-6 h-6 text-amber-400"/> Notas do Mestre</h3>
-                    <span className="text-[10px] font-extrabold uppercase text-slate-600">Privado · não salvo na nuvem</span>
-                  </div>
-                  <textarea
-                    value={gmNotes}
-                    onChange={e=>setGmNotes(e.target.value)}
-                    placeholder="Segredos do dungeon, planos de vilões, NPCs importantes, revelações futuras...&#10;&#10;Use este espaço para anotações que só o mestre precisa ver."
-                    className="w-full h-72 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 text-sm text-slate-300 outline-none focus:border-amber-600 resize-none custom-scroll leading-relaxed placeholder-slate-700"
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-slate-900/60 rounded-2xl p-4 border border-slate-800">
-                      <p className="text-[9px] font-extrabold uppercase text-slate-500 mb-2">Rolagem Secreta</p>
-                      <p className="text-xs text-slate-400 mb-3">Role dados sem mostrar o resultado para os jogadores</p>
-                      <div className="flex gap-2 flex-wrap">
-                        {[4,6,8,12,20].map(s=>(
-                          <button key={s} onClick={()=>{const r=Math.floor(Math.random()*s)+1;showDiceAnimation({ total:r, notation:`1d${s}`, individualRolls:[r], numSides:s, bonus:0 }, { customLabel:`D${s}` });setGmNotes(n=>n+`\n[Rolagem secreta D${s}: ${r}]`);}}
-                            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-black text-slate-400 hover:text-white transition-all">D{s}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="bg-slate-900/60 rounded-2xl p-4 border border-slate-800">
-                      <p className="text-[9px] font-extrabold uppercase text-slate-500 mb-2">Ferramentas Rápidas</p>
-                      <div className="space-y-2">
-                        <button onClick={()=>setGmNotes(n=>n+`\n--- Cena ${new Date().toLocaleTimeString()} ---\n`)} className="w-full px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-black text-slate-400 hover:text-white text-left transition-all">+ Marcar nova cena</button>
-                        <button onClick={()=>setGmNotes(n=>n+`\n⚠ PONTO IMPORTANTE: `)} className="w-full px-3 py-2 bg-amber-950/50 hover:bg-amber-900/40 rounded-xl text-xs font-black text-amber-600 hover:text-amber-400 text-left transition-all">+ Ponto importante</button>
-                        <button onClick={()=>setGmNotes('')} className="w-full px-3 py-2 bg-rose-950/50 hover:bg-rose-900/40 rounded-xl text-xs font-black text-rose-600 hover:text-rose-400 text-left transition-all">Limpar tudo</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </div>
-        )}
       </main>
 
 
@@ -4766,7 +4312,7 @@ const App: React.FC = () => {
                   : <span style={{ fontSize:13, fontWeight:700, color:'#86efac' }}>✓ {targetChar.name} recebeu o upgrade!</span>
                 }
               </div>
-              <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)' }}>Custo: {offer.finalPrice}🪙 · Saldo restante: {characterCurrencies[targetChar.id] ?? 0}🪙</div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)' }}>Custo: {offer.finalPrice}🪙</div>
               <button onClick={() => setUpgradePurchaseResult(null)} style={{ padding:'10px 32px', background:'linear-gradient(135deg,rgba(16,185,129,0.5),rgba(5,150,105,0.7))', border:'1px solid rgba(16,185,129,0.4)', borderRadius:12, color:'#fff', fontWeight:700, fontSize:12, textTransform:'uppercase', letterSpacing:'0.1em', cursor:'pointer' }}>
                 Excelente!
               </button>
