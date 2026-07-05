@@ -2761,7 +2761,6 @@ const App: React.FC = () => {
   const [editingCatalogItem, setEditingCatalogItem] = useState<Item | null>(null);
   const [giveItemTarget, setGiveItemTarget] = useState<Item | null>(null);
   const [giveItemQty, setGiveItemQty] = useState(1);
-  const [extrasTab, setExtrasTab] = useState<'dice' | 'timer' | 'progress' | 'names' | 'loot' | 'notes'>('dice');
   
   const [cards, setCards] = useState<Card[]>([]);
   const [grimoire, setGrimoire] = useState<GrimoireEntry[]>([]);
@@ -3031,7 +3030,6 @@ const App: React.FC = () => {
         combat,
         journey,
         cena,
-        extras: { gmNotes, combatNotes, shopCurrency, characterCurrencies, progressBars, rollHistory, lootList, nameStyle },
       });
       setAutoSaveStatus('saved');
       setTimeout(() => setAutoSaveStatus('idle'), 2500);
