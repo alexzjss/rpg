@@ -16,31 +16,6 @@ import type { ArsenalCard } from './arsenal';
 import { migrateCharacterArsenalHoldings, migrateLegacyArsenal, normalizeArsenalCard, cardToArsenal, itemToArsenal, sealToArsenal, weaponToArsenal } from './arsenalMigration';
 
 // ─────────────────────────────────────────────────────────────────
-// AppExtras — dados do GM / ferramentas que antes ficavam de fora
-// ─────────────────────────────────────────────────────────────────
-export interface AppExtras {
-  gmNotes: string;
-  combatNotes: string;
-  shopCurrency: number;
-  characterCurrencies: Record<string, number>;
-  progressBars: Array<{ id: string; label: string; current: number; max: number; color: string }>;
-  rollHistory: Array<{ id: string; result: number; type: string; timestamp: number }>;
-  lootList: Array<{ id: string; name: string; rarity: string }>;
-  nameStyle: string;
-}
-
-export const DEFAULT_EXTRAS: AppExtras = {
-  gmNotes: '',
-  combatNotes: '',
-  shopCurrency: 0,
-  characterCurrencies: {},
-  progressBars: [{ id: '1', label: 'Progresso Customizado', current: 0, max: 100, color: '#d97706' }],
-  rollHistory: [],
-  lootList: [],
-  nameStyle: 'fantasy',
-};
-
-// ─────────────────────────────────────────────────────────────────
 // AppSnapshot — estado completo e versionado do app
 // ─────────────────────────────────────────────────────────────────
 export interface AppSnapshot {
@@ -56,7 +31,6 @@ export interface AppSnapshot {
   combat: CombatState;
   journey: JourneyState;
   cena: CenaState;
-  extras: AppExtras;
 }
 
 export const SNAPSHOT_VERSION = 7;
@@ -204,7 +178,6 @@ async function _writeSnapshotAtomic(snapshot: AppSnapshot): Promise<void> {
     meta.put({ id: '__combat', value: snapshot.combat });
     meta.put({ id: '__journey', value: snapshot.journey });
     meta.put({ id: '__cena', value: snapshot.cena });
-    meta.put({ id: '__extras', value: snapshot.extras });
     meta.put({ id: '__snapshot_meta', savedAt: snapshot.savedAt, version: snapshot.version });
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error ?? new Error('Falha ao salvar snapshot'));
@@ -258,24 +231,12 @@ function ensureCena(raw: any): CenaState {
   };
 }
 
-function ensureExtras(raw: any): AppExtras {
-  if (!raw || typeof raw !== 'object') return { ...DEFAULT_EXTRAS };
-  return {
-    ...DEFAULT_EXTRAS,
-    ...raw,
-    characterCurrencies: raw.characterCurrencies ?? {},
-    progressBars: Array.isArray(raw.progressBars) ? raw.progressBars : DEFAULT_EXTRAS.progressBars,
-    rollHistory: Array.isArray(raw.rollHistory) ? raw.rollHistory : [],
-    lootList: Array.isArray(raw.lootList) ? raw.lootList : [],
-  };
-}
-
 // ─────────────────────────────────────────────────────────────────
 // In-memory listener registry
 // ─────────────────────────────────────────────────────────────────
-type ListenerKey = 'characters' | 'cards' | 'items' | 'seals' | 'weapons' | 'grimoire' | 'combat' | 'journey' | 'cena' | 'extras';
+type ListenerKey = 'characters' | 'cards' | 'items' | 'seals' | 'weapons' | 'grimoire' | 'combat' | 'journey' | 'cena';
 const _listeners: Record<ListenerKey, Function[]> = {
-  characters: [], cards: [], items: [], seals: [], weapons: [], grimoire: [], combat: [], journey: [], cena: [], extras: [],
+  characters: [], cards: [], items: [], seals: [], weapons: [], grimoire: [], combat: [], journey: [], cena: [],
 };
 
 function _notify(key: ListenerKey, data: any) {
@@ -358,7 +319,7 @@ async function runMigrations() {
 // Load all from IDB
 // ─────────────────────────────────────────────────────────────────
 async function loadAll() {
-  const [chars, cards, items, seals, weapons, grimoire, combatRec, journeyRec, cenaRec, extrasRec] = await Promise.all([
+  const [chars, cards, items, seals, weapons, grimoire, combatRec, journeyRec, cenaRec] = await Promise.all([
     _getAll<any>('characters'),
     _getAll<any>('cards'),
     _getAll<any>('items'),
@@ -368,7 +329,6 @@ async function loadAll() {
     _get<any>('meta', '__combat'),
     _get<any>('meta', '__journey'),
     _get<any>('meta', '__cena'),
-    _get<any>('meta', '__extras'),
   ]);
   return {
     characters: chars.map(ensureChar),
@@ -380,7 +340,6 @@ async function loadAll() {
     combat: ensureCombat(combatRec?.value),
     journey: ensureJourney(journeyRec?.value),
     cena: ensureCena(cenaRec?.value),
-    extras: ensureExtras(extrasRec?.value),
   };
 }
 
@@ -400,7 +359,6 @@ export const DatabaseService = {
     combat: CombatState;
     journey: JourneyState;
     cena: CenaState;
-    extras: AppExtras;
   }> => {
     await runMigrations();
     return loadAll();
@@ -444,10 +402,6 @@ export const DatabaseService = {
   syncCenaState: (cb: (d: CenaState) => void) => {
     _get<any>('meta', '__cena').then(r => cb(ensureCena(r?.value))).catch(() => cb(createDefaultCena()));
     return _subscribe<CenaState>('cena', cb);
-  },
-  syncExtras: (cb: (d: AppExtras) => void) => {
-    _get<any>('meta', '__extras').then(r => cb(ensureExtras(r?.value))).catch(() => cb({ ...DEFAULT_EXTRAS }));
-    return _subscribe<AppExtras>('extras', cb);
   },
 
   // ── Saves individuais ────────────────────────────────────────────
@@ -570,10 +524,6 @@ export const DatabaseService = {
     await _put('meta', { id: '__cena', value: state });
     _notify('cena', state);
   },
-  updateExtras: async (extras: AppExtras) => {
-    await _put('meta', { id: '__extras', value: extras });
-    _notify('extras', extras);
-  },
 
   // ── Snapshot: salva TUDO de uma vez ─────────────────────────────
   saveFullSnapshot: async (snapshot: AppSnapshot, options: { notify?: boolean } = {}): Promise<void> => {
@@ -590,7 +540,6 @@ export const DatabaseService = {
     _publishCombat(snapshot.combat);
     _notify('journey', snapshot.journey);
     _notify('cena', snapshot.cena);
-    _notify('extras', snapshot.extras);
   },
 
   // ── Constrói snapshot a partir dos dados atuais no IDB ──────────
@@ -628,19 +577,6 @@ export const DatabaseService = {
         combat: ensureCombat(raw.combat),
         journey: ensureJourney(raw.journey),
         cena: ensureCena(raw.cena),
-        // Suporte a formato antigo (sem extras encapsulado)
-        extras: ensureExtras(
-          raw.extras ?? {
-            gmNotes: raw.gmNotes,
-            combatNotes: raw.combatNotes,
-            shopCurrency: raw.shopCurrency,
-            characterCurrencies: raw.characterCurrencies,
-            progressBars: raw.progressBars,
-            rollHistory: raw.rollHistory,
-            lootList: raw.lootList,
-            nameStyle: raw.nameStyle,
-          }
-        ),
       };
 
       await DatabaseService.saveFullSnapshot(snapshot);
