@@ -51,4 +51,25 @@ describe('RosterPanel', () => {
     fireEvent.click(screen.getByText('Drone'));
     expect(onImportNpc).toHaveBeenCalledWith('x');
   });
+
+  it('integra iniciativa e edição rápida na lista de combatentes', () => {
+    const onEditCharacter = vi.fn();
+    const party = [fakeChar('p1', { role: 'cast', name: 'Doravar' }), fakeChar('p2', { role: 'cast', name: 'Elira' })];
+    render(
+      <RosterPanel party={party} npcRoster={[]} importable={[]} active={null} round={2}
+        orderIds={['p1', 'p2']} currentTurnId="p1" onEditCharacter={onEditCharacter}
+        onSelectActive={() => {}} onImportNpc={() => {}} onToggleHidden={() => {}}
+        onTogglePresent={() => {}} onRemoveNpc={() => {}} />,
+    );
+    expect(screen.getByText('RODADA')).toBeTruthy();
+    expect(screen.getByText('2')).toBeTruthy();
+    expect(screen.getByText('AGORA')).toBeTruthy();
+    const ring = document.querySelector('.cena-round-clock__ring') as HTMLElement;
+    expect(ring.style.background).toContain('#d9b56f');
+    // 2 combatentes na ordem, turno atual é o primeiro (índice 0) → 1 gomo aceso, 1 apagado
+    expect((ring.style.background.match(/#d9b56f/g) ?? []).length).toBe(1);
+    expect((ring.style.background.match(/#3a3f47/g) ?? []).length).toBe(1);
+    fireEvent.doubleClick(screen.getByTitle(/doravar.*duplo clique/i));
+    expect(onEditCharacter).toHaveBeenCalledWith('p1');
+  });
 });
