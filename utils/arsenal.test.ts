@@ -3,7 +3,7 @@ import type { Card, Item, Weapon } from '../types';
 import { arsenalCardAtLevel, createArsenalCard, type ArsenalEffect } from './arsenal';
 import { getPredefinedEffect, PREDEFINED_ARSENAL_EFFECTS } from './arsenalEffects';
 import { cardToArsenal, migrateCharacterArsenalHoldings, migrateLegacyArsenal } from './arsenalMigration';
-import { ACTION_PIPELINE_STEPS, activeOrderAdjustment, applyActiveEffect, consumePrincipalBlock, consumeTurnSkip, resolveArsenalAction, sortReactions, tickActiveEffects, type ArsenalActorState } from './arsenalPipeline';
+import { ACTION_PIPELINE_STEPS, activeOrderAdjustment, applyActiveEffect, cleanseByTag, consumePrincipalBlock, consumeTurnSkip, getActiveEffects, hasCondition, removeActiveEffect, resolveArsenalAction, sortReactions, tickActiveEffects, type ArsenalActorState } from './arsenalPipeline';
 import { activateForm, assignCardToHoldings, availableCardIds, comboStackCandidates, createHolding, equipWeapon, resolveComboCards } from './arsenalState';
 
 const actor = (overrides: Partial<ArsenalActorState> = {}): ArsenalActorState => ({
@@ -469,5 +469,15 @@ describe('capacidades expandidas de efeitos', () => {
     const card=createArsenalCard({id:'hit',name:'Golpe',category:'arma',damage:{flat:1}});
     const result=resolveArsenalAction({card,actor:actor({effects}),targets:[actor({id:'t',teamId:'b',currentHp:20})]});
     expect(result.targets[0].currentHp).toBe(15);
+  });
+
+  it('remove efeito ativo por id e por tag', () => {
+    const burn = getPredefinedEffect('Queimadura')!;
+    const cursed = getPredefinedEffect('Amaldiçoado')!;
+    const effects = applyActiveEffect(applyActiveEffect([], burn), cursed);
+    expect(hasCondition({ effects }, burn.id)).toBe(true);
+    expect(removeActiveEffect(effects, burn.id).some(active => active.effect.id === burn.id)).toBe(false);
+    expect(cleanseByTag(effects, 'debuff').some(active => active.effect.name === 'Amaldiçoado')).toBe(false);
+    expect(getActiveEffects({ effects })).toBe(effects);
   });
 });

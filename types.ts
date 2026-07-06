@@ -271,7 +271,7 @@ export interface Character {
   /** Estado canônico de posse/equipamento. Os campos legados acima seguem como adaptadores da UI atual. */
   arsenal?: ArsenalHolding[];
   /** Efeitos canônicos atualmente aplicados diretamente ao personagem. */
-  activeEffects?: Array<{ effect: ArsenalEffect; stacks: number; remaining?: number }>;
+  activeEffects?: Array<{ effect: ArsenalEffect; stacks: number; remaining?: number; sourceId?: string; appliedAtRound?: number; metadata?: Record<string, unknown> }>;
   /** Afinidades elementais: fraco / resistente / imune por elemento. */
   affinities?: Partial<Record<Element, Affinity>>;
 }

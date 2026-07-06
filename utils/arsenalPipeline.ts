@@ -43,6 +43,9 @@ export interface ActiveEffectState {
   remaining?: number;
   turnSkipsRemaining?: number;
   principalBlocksRemaining?: number;
+  sourceId?: string;
+  appliedAtRound?: number;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ArsenalActorState {
@@ -229,7 +232,7 @@ function modifierTotal(actor: ArsenalActorState, stat: 'ataque' | 'defesa' | 'da
     const direct = stat === 'ataque' ? active.effect.attackModifier : stat === 'defesa' ? active.effect.defenseModifier : 0;
     total += direct * active.stacks;
     for (const modifier of active.effect.modifiers) {
-      if (modifier.stat === stat && modifier.operation === 'somar' && matchesEffectFilter(modifier.filter, card, actor, undefined)) total += modifier.value * active.stacks;
+      if (modifier.stat === stat && modifier.operation === 'somar' && matchesEffectFilter(modifier.filter, card, actor, active.sourceId)) total += modifier.value * active.stacks;
     }
   }
   return total;
@@ -240,7 +243,7 @@ function modifierMultiplier(actor: ArsenalActorState, stat: 'ataque' | 'defesa' 
   let multiplier = 1;
   for (const active of actor.effects) {
     for (const modifier of active.effect.modifiers) {
-      if (modifier.stat === stat && modifier.operation === 'multiplicar' && matchesEffectFilter(modifier.filter, card, actor, undefined)) {
+      if (modifier.stat === stat && modifier.operation === 'multiplicar' && matchesEffectFilter(modifier.filter, card, actor, active.sourceId)) {
         multiplier *= (1 + modifier.value / 100) ** active.stacks;
       }
     }
@@ -252,7 +255,7 @@ function modifierMultiplier(actor: ArsenalActorState, stat: 'ataque' | 'defesa' 
 function modifierOverride(actor: ArsenalActorState, stat: 'ataque' | 'defesa' | 'dano', card: ArsenalCard): number | undefined {
   for (const active of actor.effects) {
     for (const modifier of active.effect.modifiers) {
-      if (modifier.stat === stat && modifier.operation === 'definir' && matchesEffectFilter(modifier.filter, card, actor, undefined)) return modifier.value;
+      if (modifier.stat === stat && modifier.operation === 'definir' && matchesEffectFilter(modifier.filter, card, actor, active.sourceId)) return modifier.value;
     }
   }
   return undefined;
@@ -282,7 +285,7 @@ function activeDiceBonuses(actor: ArsenalActorState, target: DiceBonusTarget, ca
   const bonuses: DiceBonus[] = [];
   for (const active of actor.effects) {
     for (const bonus of active.effect.diceBonuses ?? []) {
-      if (bonus.target === target && matchesEffectFilter(bonus.filter, card, actor, undefined)) {
+      if (bonus.target === target && matchesEffectFilter(bonus.filter, card, actor, active.sourceId)) {
         for (let stack = 0; stack < Math.max(1, active.stacks); stack += 1) bonuses.push(bonus);
       }
     }
@@ -392,6 +395,22 @@ function stackEffect(states: ActiveEffectState[], effect: ArsenalEffect): Active
 
 export function applyActiveEffect(states: readonly ActiveEffectState[], effect: ArsenalEffect): ActiveEffectState[] {
   return stackEffect([...states], effect);
+}
+
+export function getActiveEffects(actor: Pick<ArsenalActorState, 'effects'>): ActiveEffectState[] {
+  return actor.effects;
+}
+
+export function hasCondition(actor: Pick<ArsenalActorState, 'effects'>, effectId: string): boolean {
+  return actor.effects.some(active => active.effect.id === effectId);
+}
+
+export function removeActiveEffect(effects: readonly ActiveEffectState[], effectId: string): ActiveEffectState[] {
+  return effects.filter(active => active.effect.id !== effectId);
+}
+
+export function cleanseByTag(effects: readonly ActiveEffectState[], tag: string): ActiveEffectState[] {
+  return effects.filter(active => !active.effect.tags.includes(tag));
 }
 
 export function activeOrderAdjustment(effects: readonly ActiveEffectState[]): { speed: number; positions: number } {
