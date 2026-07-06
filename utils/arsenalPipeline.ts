@@ -535,6 +535,14 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
       return block({ ...base, trace: [...trace, { step: 'verificar_condicoes', detail: reason }] }, reason);
     }
   }
+  const confusion = actor.effects.find(active => active.effect.classic?.kind === 'confuso');
+  if (confusion) {
+    const chance = confusion.effect.classic!.value;
+    const roll = roller('1d100') / 100;
+    if (roll < chance) {
+      return { ...base, status: 'cancelada', trace: [...trace, { step: 'verificar_condicoes', detail: 'Confuso: ação perdida' }], reason: 'Confuso: ação perdida' };
+    }
+  }
   if (!request.resumePreparation && request.card.category === 'selo' && request.card.seal?.kind === 'ritual') {
     for (const requirement of request.card.seal.requiredItems) {
       const item = actor.holdings.find(holding => holding.cardId === requirement.itemId);

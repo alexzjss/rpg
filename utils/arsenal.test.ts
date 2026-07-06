@@ -23,10 +23,10 @@ describe('modelo do arsenal', () => {
     expect(card.weaponLinks).toEqual([]);
   });
 
-  it('oferece os quinze efeitos clássicos configuráveis', () => {
-    expect(PREDEFINED_ARSENAL_EFFECTS).toHaveLength(15);
+  it('oferece os dezesseis efeitos clássicos configuráveis', () => {
+    expect(PREDEFINED_ARSENAL_EFFECTS).toHaveLength(16);
     expect(PREDEFINED_ARSENAL_EFFECTS.map(effect => effect.name)).toEqual([
-      'Queimadura','Congelamento','Lentidão','Molhado','Eletrocutado','Sangramento','Fraqueza','Acelerado','Desnorteado','Paralisado',
+      'Queimadura','Congelamento','Lentidão','Molhado','Eletrocutado','Sangramento','Fraqueza','Acelerado','Desnorteado','Paralisado','Confuso',
       'Enraizado','Desequilibrado','Fraturado','Iluminado','Amaldiçoado',
     ]);
   });
@@ -288,6 +288,17 @@ describe('pipeline de resolução', () => {
     expect(failed.reason).toBe('Paralisado: falhou no teste (3 < 10)');
     const passed = resolveArsenalAction({ card, actor: actor({ effects: applyActiveEffect([], paralyzed) }), targets: [actor({ id: 't', teamId: 'b' })], roller: () => 15 });
     expect(passed.status).toBe('concluida');
+  });
+
+  it('Confuso tem chance de cancelar a ação declarada', () => {
+    const confused = getPredefinedEffect('Confuso')!;
+    const card = createArsenalCard({ id: 'hit', name: 'Golpe', category: 'habilidade', damage: { flat: 5 } });
+    const cancelled = resolveArsenalAction({
+      card, actor: actor({ effects: applyActiveEffect([], confused) }), targets: [actor({ id: 't', teamId: 'b' })],
+      roller: notation => notation === '1d100' ? 10 : 15, // 10/100 = 0.10 < chance padrão (0.25) de Confuso
+    });
+    expect(cancelled.status).toBe('cancelada');
+    expect(cancelled.reason).toBe('Confuso: ação perdida');
   });
 });
 

@@ -18,6 +18,7 @@ const seeds: ClassicSeed[] = [
   { name:'Acelerado', description:'Move o personagem X posições para antes enquanto durar.', tags:['buff','ordem'], classic:{kind:'acelerado',value:1} },
   { name:'Desnorteado', description:'Impede o uso de ações principais enquanto durar.', tags:['controle','acao'], classic:{kind:'desnorteado',value:1} },
   { name:'Paralisado', description:'Deve rolar 1d20 e obter pelo menos X para poder agir.', tags:['controle','teste'], classic:{kind:'paralisado',value:10} },
+  { name:'Confuso', description:'Chance de a ação ser perdida (ficar parado) em vez de executada.', tags:['controle','aleatorio'], classic:{kind:'confuso',value:0.25} },
 ];
 
 interface ElementalSeed {
