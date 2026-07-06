@@ -4,6 +4,7 @@ import {
   arsenalCardAtLevel,
   arsenalMaxLevel,
   createArsenalCard,
+  type AbilityType,
   type ArsenalCard,
   type ArsenalCategory,
   type ArsenalEffect,
@@ -11,6 +12,7 @@ import {
   type TriggerEvent,
   type UsageCondition,
 } from '../../utils/arsenal';
+import type { Element } from '../../types';
 import { PREDEFINED_ARSENAL_EFFECTS } from '../../utils/arsenalEffects';
 import { ImagePickerButton } from '../ui';
 import ArsenalCardPreview from './ArsenalCardPreview';
@@ -211,9 +213,9 @@ const EffectEditor: React.FC<{
           <label><span style={label}>Estat</span><select style={field} value={modifier.stat} onChange={e=>update({modifiers:effect.modifiers.map((m,i)=>i===mi?{...m,stat:e.target.value as typeof m.stat}:m)})}>{STATS.map(s=><option key={s.value} value={s.value}>{s.label}</option>)}</select></label>
           <label><span style={label}>Operação</span><select style={field} value={modifier.operation} onChange={e=>update({modifiers:effect.modifiers.map((m,i)=>i===mi?{...m,operation:e.target.value as typeof m.operation}:m)})}>{OPERATIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
           <label><span style={label}>Valor</span><input style={field} type="number" value={modifier.value} onChange={e=>update({modifiers:effect.modifiers.map((m,i)=>i===mi?{...m,value:Number(e.target.value)}:m)})}/></label>
-          <label><span style={label}>Só com elemento</span><select style={field} value={modifier.element??''} onChange={e=>update({modifiers:effect.modifiers.map((m,i)=>i===mi?{...m,element:e.target.value||null}:m)})}><option value="">Qualquer</option>{ELEMENTS.map(el=><option key={el.value} value={el.value}>{el.label}</option>)}</select></label>
+          <label><span style={label}>Só com elemento</span><select style={field} value={modifier.filter?.damageType?.[0]??''} onChange={e=>update({modifiers:effect.modifiers.map((m,i)=>i===mi?{...m,filter:{...m.filter,damageType:e.target.value?[e.target.value as Element]:undefined}}:m)})}><option value="">Qualquer</option>{ELEMENTS.map(el=><option key={el.value} value={el.value}>{el.label}</option>)}</select></label>
           <button aria-label={`Remover modificador ${mi+1}`} style={iconButton} onClick={()=>update({modifiers:effect.modifiers.filter((_,i)=>i!==mi)})}><Trash2 size={14}/></button>
-          <div style={{gridColumn:'1/-1'}}><CardPicker labelText="Só com estas armas equipadas" items={weapons} value={modifier.weaponIds??[]} onChange={weaponIds=>update({modifiers:effect.modifiers.map((m,i)=>i===mi?{...m,weaponIds}:m)})}/></div>
+          <div style={{gridColumn:'1/-1'}}><CardPicker labelText="Só com estas armas equipadas" items={weapons} value={modifier.filter?.weaponIds??[]} onChange={weaponIds=>update({modifiers:effect.modifiers.map((m,i)=>i===mi?{...m,filter:{...m.filter,weaponIds}}:m)})}/></div>
         </div>)}
         {effect.modifiers.length===0&&<Empty>Nenhum modificador de estat.</Empty>}
       </div>
@@ -229,11 +231,11 @@ const EffectEditor: React.FC<{
           <button aria-label={`Remover bônus de dado ${bi+1}`} style={iconButton} onClick={()=>update({diceBonuses:(effect.diceBonuses??[]).filter((_,i)=>i!==bi)})}><Trash2 size={14}/></button>
           <label><span style={label}>Rerrolar abaixo de</span><input style={field} type="number" value={bonus.rerollBelow??''} onChange={e=>update({diceBonuses:(effect.diceBonuses??[]).map((b,i)=>i===bi?{...b,rerollBelow:e.target.value===''?null:Number(e.target.value)}:b)})}/></label>
           <label><span style={label}>Resultado mínimo</span><input style={field} type="number" value={bonus.minimumResult??''} onChange={e=>update({diceBonuses:(effect.diceBonuses??[]).map((b,i)=>i===bi?{...b,minimumResult:e.target.value===''?null:Number(e.target.value)}:b)})}/></label>
-          <label><span style={label}>Categorias</span><select multiple style={{...field,minHeight:76}} value={bonus.categories??[]} onChange={e=>update({diceBonuses:(effect.diceBonuses??[]).map((b,i)=>i===bi?{...b,categories:selectedValues(e.currentTarget) as typeof b.categories}:b)})}><option value="habilidade">Habilidades</option><option value="selo">Selos</option><option value="item">Itens</option><option value="arma">Armas</option></select></label>
-          <label><span style={label}>Tipos de habilidade</span><select multiple style={{...field,minHeight:76}} value={bonus.abilityTypes??[]} onChange={e=>update({diceBonuses:(effect.diceBonuses??[]).map((b,i)=>i===bi?{...b,abilityTypes:selectedValues(e.currentTarget) as typeof b.abilityTypes}:b)})}><option value="comum">Comuns</option><option value="protecao">Proteção</option><option value="combo">Combo</option><option value="forma">Forma</option></select></label>
-          <label style={{gridColumn:'1/-1'}}><span style={label}>Tags das cartas (qualquer uma)</span><input style={field} placeholder="ex.: fogo, corpo a corpo" value={(bonus.tags??[]).join(', ')} onChange={e=>update({diceBonuses:(effect.diceBonuses??[]).map((b,i)=>i===bi?{...b,tags:e.target.value.split(',').map(v=>v.trim()).filter(Boolean)}:b)})}/></label>
-          <div style={{gridColumn:'1/-1'}}><CardPicker labelText="Somente estas cartas (vazio = qualquer)" items={catalog.filter(item=>item.id)} value={bonus.cardIds??[]} onChange={cardIds=>update({diceBonuses:(effect.diceBonuses??[]).map((b,i)=>i===bi?{...b,cardIds}:b)})}/></div>
-          <div style={{gridColumn:'1/-1'}}><CardPicker labelText="Somente com estas armas equipadas" items={weapons} value={bonus.weaponIds??[]} onChange={weaponIds=>update({diceBonuses:(effect.diceBonuses??[]).map((b,i)=>i===bi?{...b,weaponIds}:b)})}/></div>
+          <label><span style={label}>Categorias</span><select multiple style={{...field,minHeight:76}} value={bonus.filter?.categories??[]} onChange={e=>update({diceBonuses:(effect.diceBonuses??[]).map((b,i)=>i===bi?{...b,filter:{...b.filter,categories:selectedValues(e.currentTarget) as ArsenalCategory[]}}:b)})}><option value="habilidade">Habilidades</option><option value="selo">Selos</option><option value="item">Itens</option><option value="arma">Armas</option></select></label>
+          <label><span style={label}>Tipos de habilidade</span><select multiple style={{...field,minHeight:76}} value={bonus.filter?.abilityTypes??[]} onChange={e=>update({diceBonuses:(effect.diceBonuses??[]).map((b,i)=>i===bi?{...b,filter:{...b.filter,abilityTypes:selectedValues(e.currentTarget) as AbilityType[]}}:b)})}><option value="comum">Comuns</option><option value="protecao">Proteção</option><option value="combo">Combo</option><option value="forma">Forma</option></select></label>
+          <label style={{gridColumn:'1/-1'}}><span style={label}>Tags das cartas (qualquer uma)</span><input style={field} placeholder="ex.: fogo, corpo a corpo" value={(bonus.filter?.cardTags??[]).join(', ')} onChange={e=>update({diceBonuses:(effect.diceBonuses??[]).map((b,i)=>i===bi?{...b,filter:{...b.filter,cardTags:e.target.value.split(',').map(v=>v.trim()).filter(Boolean)}}:b)})}/></label>
+          <div style={{gridColumn:'1/-1'}}><CardPicker labelText="Somente estas cartas (vazio = qualquer)" items={catalog.filter(item=>item.id)} value={bonus.filter?.cardIds??[]} onChange={cardIds=>update({diceBonuses:(effect.diceBonuses??[]).map((b,i)=>i===bi?{...b,filter:{...b.filter,cardIds}}:b)})}/></div>
+          <div style={{gridColumn:'1/-1'}}><CardPicker labelText="Somente com estas armas equipadas" items={weapons} value={bonus.filter?.weaponIds??[]} onChange={weaponIds=>update({diceBonuses:(effect.diceBonuses??[]).map((b,i)=>i===bi?{...b,filter:{...b.filter,weaponIds}}:b)})}/></div>
         </div>)}
         {(effect.diceBonuses??[]).length===0&&<Empty>Nenhum bônus de rolagem.</Empty>}
       </div>
