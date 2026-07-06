@@ -23,10 +23,10 @@ describe('modelo do arsenal', () => {
     expect(card.weaponLinks).toEqual([]);
   });
 
-  it('oferece os catorze efeitos clássicos configuráveis', () => {
-    expect(PREDEFINED_ARSENAL_EFFECTS).toHaveLength(14);
+  it('oferece os quinze efeitos clássicos configuráveis', () => {
+    expect(PREDEFINED_ARSENAL_EFFECTS).toHaveLength(15);
     expect(PREDEFINED_ARSENAL_EFFECTS.map(effect => effect.name)).toEqual([
-      'Queimadura','Congelamento','Lentidão','Molhado','Eletrocutado','Sangramento','Fraqueza','Acelerado','Desnorteado',
+      'Queimadura','Congelamento','Lentidão','Molhado','Eletrocutado','Sangramento','Fraqueza','Acelerado','Desnorteado','Paralisado',
       'Enraizado','Desequilibrado','Fraturado','Iluminado','Amaldiçoado',
     ]);
   });
@@ -278,6 +278,16 @@ describe('pipeline de resolução', () => {
     const attack=createArsenalCard({id:'weak-hit',name:'Golpe',category:'habilidade',testDice:'1d20',damage:{flat:4}});
     const result=resolveArsenalAction({card:attack,actor:actor({effects:applyActiveEffect([],weak)}),targets:[actor({id:'t',teamId:'b',defense:10})],roller:()=>19});
     expect(result.hitTargetIds).toEqual([]);
+  });
+
+  it('Paralisado bloqueia a ação quando o teste falha', () => {
+    const paralyzed = getPredefinedEffect('Paralisado')!;
+    const card = createArsenalCard({ id: 'hit', name: 'Golpe', category: 'habilidade', damage: { flat: 5 } });
+    const failed = resolveArsenalAction({ card, actor: actor({ effects: applyActiveEffect([], paralyzed) }), targets: [actor({ id: 't', teamId: 'b' })], roller: () => 3 });
+    expect(failed.status).toBe('bloqueada');
+    expect(failed.reason).toBe('Paralisado: falhou no teste (3 < 10)');
+    const passed = resolveArsenalAction({ card, actor: actor({ effects: applyActiveEffect([], paralyzed) }), targets: [actor({ id: 't', teamId: 'b' })], roller: () => 15 });
+    expect(passed.status).toBe('concluida');
   });
 });
 

@@ -17,6 +17,7 @@ const seeds: ClassicSeed[] = [
   { name:'Fraqueza', description:'Reduz os testes de ataque por subtração ou divisão.', tags:['debuff','ataque'], classic:{kind:'fraqueza',value:2,mode:'subtrair'} },
   { name:'Acelerado', description:'Move o personagem X posições para antes enquanto durar.', tags:['buff','ordem'], classic:{kind:'acelerado',value:1} },
   { name:'Desnorteado', description:'Impede o uso de ações principais enquanto durar.', tags:['controle','acao'], classic:{kind:'desnorteado',value:1} },
+  { name:'Paralisado', description:'Deve rolar 1d20 e obter pelo menos X para poder agir.', tags:['controle','teste'], classic:{kind:'paralisado',value:10} },
 ];
 
 interface ElementalSeed {

@@ -526,6 +526,15 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
     const failure = conditionFailure(condition, request.card, actor, targets, !!request.isReaction);
     if (failure) return block({ ...base, trace: [...trace, { step: 'verificar_condicoes', detail: failure }] }, failure);
   }
+  const paralysis = actor.effects.find(active => active.effect.classic?.kind === 'paralisado');
+  if (paralysis) {
+    const dc = paralysis.effect.classic!.value;
+    const rollResult = roller('1d20');
+    if (rollResult < dc) {
+      const reason = `Paralisado: falhou no teste (${rollResult} < ${dc})`;
+      return block({ ...base, trace: [...trace, { step: 'verificar_condicoes', detail: reason }] }, reason);
+    }
+  }
   if (!request.resumePreparation && request.card.category === 'selo' && request.card.seal?.kind === 'ritual') {
     for (const requirement of request.card.seal.requiredItems) {
       const item = actor.holdings.find(holding => holding.cardId === requirement.itemId);
