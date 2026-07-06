@@ -365,6 +365,20 @@ describe('capacidades expandidas de efeitos', () => {
     expect(result.targets[0].currentHp).toBe(24);
   });
 
+  it('Amaldiçoado reduz cura e recuperação de aura recebidas', () => {
+    const cursed = effect({
+      modifiers: [
+        { stat: 'cura_recebida', operation: 'multiplicar', value: -50 },
+        { stat: 'aura_recebida', operation: 'multiplicar', value: -50 },
+      ],
+    });
+    const card = createArsenalCard({ id: 'heal', name: 'Cura', category: 'habilidade', healing: { flat: 10 }, auraRestored: { flat: 4 } });
+    const target = actor({ id: 't', teamId: 'b', currentHp: 10, maxHp: 30, currentAura: 0, maxAura: 10, effects: applyActiveEffect([], cursed) });
+    const result = resolveArsenalAction({ card, actor: actor(), targets: [target] });
+    expect(result.targets[0].currentHp).toBe(15);
+    expect(result.targets[0].currentAura).toBe(2);
+  });
+
   it('imunidade a um efeito clássico impede sua aplicação no alvo', () => {
     const burn = PREDEFINED_ARSENAL_EFFECTS.find(entry => entry.name === 'Queimadura')!;
     const fireproof = effect({ id: 'fireproof', name: 'À Prova de Fogo', immunities: ['queimadura'] });

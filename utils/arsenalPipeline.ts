@@ -263,6 +263,19 @@ function resolveStatTotal(base: number, actor: ArsenalActorState, stat: 'ataque'
   return override !== undefined ? override : multiplied;
 }
 
+/** Multiplicador de cura/recuperação de aura RECEBIDA pelo portador (ex.: Amaldiçoado). Diferente de modifierMultiplier: aqui 'value' é um percentual de redução/aumento direto (-50 = metade), não um bônus composto por stack. */
+function receivedMultiplier(actor: ArsenalActorState, stat: 'cura_recebida' | 'aura_recebida'): number {
+  let multiplier = 1;
+  for (const active of actor.effects) {
+    for (const modifier of active.effect.modifiers) {
+      if (modifier.stat === stat && modifier.operation === 'multiplicar') {
+        multiplier *= (1 + modifier.value / 100) ** active.stacks;
+      }
+    }
+  }
+  return Math.max(0, multiplier);
+}
+
 function activeDiceBonuses(actor: ArsenalActorState, target: DiceBonusTarget, card: ArsenalCard): DiceBonus[] {
   const bonuses: DiceBonus[] = [];
   for (const active of actor.effects) {
@@ -613,8 +626,10 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
     const appliedDamage = Math.min(target.currentHp, Math.max(0, targetDamage));
     totalAppliedDamage += appliedDamage;
     if (appliedDamage > 0) actor.currentHp = Math.max(0, actor.currentHp - thornsDamage(target, roller));
-    target.currentHp = Math.max(0, Math.min(target.maxHp, target.currentHp - targetDamage + rolledHealing + absorbedHealing));
-    target.currentAura = Math.max(0, Math.min(target.maxAura, target.currentAura + auraRestored));
+    const receivedHealing = Math.floor((rolledHealing + absorbedHealing) * receivedMultiplier(target, 'cura_recebida'));
+    const receivedAura = Math.floor(auraRestored * receivedMultiplier(target, 'aura_recebida'));
+    target.currentHp = Math.max(0, Math.min(target.maxHp, target.currentHp - targetDamage + receivedHealing));
+    target.currentAura = Math.max(0, Math.min(target.maxAura, target.currentAura + receivedAura));
   }
   const lifeStealPercent = totalLifeSteal(actor);
   if (lifeStealPercent > 0 && totalAppliedDamage > 0) {
