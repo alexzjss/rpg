@@ -23,10 +23,11 @@ describe('modelo do arsenal', () => {
     expect(card.weaponLinks).toEqual([]);
   });
 
-  it('oferece somente os nove efeitos clássicos configuráveis', () => {
-    expect(PREDEFINED_ARSENAL_EFFECTS).toHaveLength(9);
+  it('oferece os catorze efeitos clássicos configuráveis', () => {
+    expect(PREDEFINED_ARSENAL_EFFECTS).toHaveLength(14);
     expect(PREDEFINED_ARSENAL_EFFECTS.map(effect => effect.name)).toEqual([
       'Queimadura','Congelamento','Lentidão','Molhado','Eletrocutado','Sangramento','Fraqueza','Acelerado','Desnorteado',
+      'Enraizado','Desequilibrado','Fraturado','Iluminado','Amaldiçoado',
     ]);
   });
 });
@@ -363,6 +364,15 @@ describe('capacidades expandidas de efeitos', () => {
     const result = resolveArsenalAction({ card, actor: actor({ currentHp: 20 }), targets: [actor({ id: 't', teamId: 'b', currentHp: 30, maxHp: 40, effects: applyActiveEffect([], thorny) })] });
     expect(result.actor.currentHp).toBe(16);
     expect(result.targets[0].currentHp).toBe(24);
+  });
+
+  it('Fraturado reduz defesa e aumenta dano físico recebido', () => {
+    const fractured = getPredefinedEffect('Fraturado')!;
+    const card = createArsenalCard({ id: 'punch', name: 'Soco', category: 'habilidade', element: 'fisico', testDice: '1d20', damage: { flat: 10 } });
+    const target = actor({ id: 't', teamId: 'b', defense: 12, currentHp: 30, maxHp: 30, effects: applyActiveEffect([], fractured) });
+    const result = resolveArsenalAction({ card, actor: actor(), targets: [target], roller: () => 11 });
+    expect(result.hitTargetIds).toEqual(['t']);
+    expect(result.targets[0].currentHp).toBe(17);
   });
 
   it('Amaldiçoado reduz cura e recuperação de aura recebidas', () => {
