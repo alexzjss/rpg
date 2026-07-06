@@ -1,4 +1,5 @@
 import { rollDice } from './dice';
+import { applyDamageConditionInteractions } from './arsenalElements';
 import {
   hasAllTags,
   type ArsenalCard,
@@ -628,9 +629,10 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
   for (const target of targets) {
     if (!hitIds.includes(target.id)) continue;
     let targetDamage=damageTotal;
-    if(request.card.element==='raio'&&targetDamage>0){
-      const wet=target.effects.filter(active=>active.effect.classic?.kind==='molhado');
-      if(wet.length){targetDamage=Math.floor(targetDamage*wet.reduce((multiplier,active)=>multiplier*Math.max(1,active.effect.classic!.value),1));target.effects=target.effects.filter(active=>active.effect.classic?.kind!=='molhado');}
+    if (request.card.element && targetDamage > 0) {
+      const interaction = applyDamageConditionInteractions(target.effects, request.card.element, targetDamage);
+      targetDamage = interaction.damage;
+      target.effects = interaction.effects;
     }
     let absorbedHealing = 0;
     const affinity = activeAffinity(target, request.card.element);
