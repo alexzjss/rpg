@@ -1,5 +1,6 @@
 import { rollDice } from './dice';
-import { applyDamageConditionInteractions } from './arsenalElements';
+import { applyDamageConditionInteractions, rollElementalConditionChance } from './arsenalElements';
+import { getPredefinedEffect } from './arsenalEffects';
 import {
   hasAllTags,
   type ArsenalCard,
@@ -661,6 +662,14 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
     for (const effect of request.card.effects) {
       if (isImmuneTo(target, effect.classic?.kind)) continue;
       target.effects = stackEffect(target.effects, effect);
+    }
+  }
+  for (const target of targets) {
+    if (!hitIds.includes(target.id)) continue;
+    const procKind = rollElementalConditionChance(request.card, roller);
+    if (procKind) {
+      const procEffect = getPredefinedEffect(procKind);
+      if (procEffect && !isImmuneTo(target, procKind)) target.effects = stackEffect(target.effects, procEffect);
     }
   }
   if (request.card.target.type === 'campo_de_batalha' && request.card.effects.length) {

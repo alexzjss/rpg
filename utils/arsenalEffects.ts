@@ -87,6 +87,6 @@ export function getPredefinedEffect(idOrName: string): ArsenalEffect | undefined
   };
   const lookup=aliases[normalized]??idOrName;
   const key=lookup.toLocaleLowerCase('pt-BR');
-  const found=PREDEFINED_ARSENAL_EFFECTS.find(effect=>effect.id===idOrName||effect.name.toLocaleLowerCase('pt-BR')===key);
+  const found=PREDEFINED_ARSENAL_EFFECTS.find(effect=>effect.id===idOrName||effect.name.toLocaleLowerCase('pt-BR')===key||effect.classic?.kind===idOrName);
   return found?structuredClone(found):undefined;
 }

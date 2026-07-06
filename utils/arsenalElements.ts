@@ -1,5 +1,5 @@
 import type { Element } from '../types';
-import type { ClassicEffectKind } from './arsenal';
+import type { ArsenalCard, ClassicEffectKind } from './arsenal';
 import type { ActiveEffectState } from './arsenalPipeline';
 
 export interface DamageConditionInteraction {
@@ -44,4 +44,33 @@ export function applyDamageConditionInteractions(
     damage: result,
     effects: effects.filter(active => !active.effect.classic || !consumedKinds.has(active.effect.classic.kind)),
   };
+}
+
+export interface ElementalConditionConfig {
+  damageType: Element;
+  conditionKind: ClassicEffectKind;
+  chance: number; // 0..1
+}
+
+export const ELEMENTAL_CONDITION_TABLE: ElementalConditionConfig[] = [
+  { damageType: 'fogo', conditionKind: 'queimadura', chance: 0.20 },
+  { damageType: 'água', conditionKind: 'molhado', chance: 0.20 },
+  { damageType: 'raio', conditionKind: 'eletrocutado', chance: 0.15 },
+  { damageType: 'vento', conditionKind: 'desequilibrado', chance: 0.15 },
+  { damageType: 'terra', conditionKind: 'enraizado', chance: 0.15 },
+  { damageType: 'fisico', conditionKind: 'fraturado', chance: 0.10 },
+  { damageType: 'sangue', conditionKind: 'sangramento', chance: 0.20 },
+  { damageType: 'luminoso', conditionKind: 'iluminado', chance: 0.15 },
+  { damageType: 'escuridão', conditionKind: 'amaldicoado', chance: 0.15 },
+];
+
+/** Rola (1-100 via roller) se a carta deve aplicar a condição elemental padrão do seu dano. Retorna o kind ou null. */
+export function rollElementalConditionChance(card: ArsenalCard, roller: (notation: string) => number): ClassicEffectKind | null {
+  if (card.applyElementalCondition === false) return null;
+  if (!card.element) return null;
+  const entry = ELEMENTAL_CONDITION_TABLE.find(item => item.damageType === card.element);
+  if (!entry) return null;
+  const chance = card.elementalConditionChance ?? entry.chance;
+  const roll = roller('1d100');
+  return roll <= chance * 100 ? entry.conditionKind : null;
 }

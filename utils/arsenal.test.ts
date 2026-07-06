@@ -300,6 +300,18 @@ describe('pipeline de resolução', () => {
     expect(cancelled.status).toBe('cancelada');
     expect(cancelled.reason).toBe('Confuso: ação perdida');
   });
+
+  it('carta de fogo tem chance de aplicar Queimadura após o dano', () => {
+    const card = createArsenalCard({ id: 'fire', name: 'Fogo', category: 'habilidade', element: 'fogo', damage: { flat: 5 }, elementalConditionChance: 1 });
+    const result = resolveArsenalAction({ card, actor: actor(), targets: [actor({ id: 't', teamId: 'b', currentHp: 20 })], roller: dice => dice === '1d100' ? 1 : 0 });
+    expect(result.targets[0].effects.some(active => active.effect.classic?.kind === 'queimadura')).toBe(true);
+  });
+
+  it('applyElementalCondition:false nunca aplica a condição', () => {
+    const card = createArsenalCard({ id: 'fire', name: 'Fogo', category: 'habilidade', element: 'fogo', damage: { flat: 5 }, applyElementalCondition: false, elementalConditionChance: 1 });
+    const result = resolveArsenalAction({ card, actor: actor(), targets: [actor({ id: 't', teamId: 'b', currentHp: 20 })], roller: dice => dice === '1d100' ? 1 : 0 });
+    expect(result.targets[0].effects).toEqual([]);
+  });
 });
 
 describe('capacidades expandidas de efeitos', () => {

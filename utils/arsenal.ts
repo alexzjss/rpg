@@ -347,6 +347,10 @@ export interface ArsenalCard {
   /** Nível 1 é a própria carta; a lista contém somente os níveis seguintes. */
   levels: ArsenalLevel[];
   metadata?: Record<string, unknown>;
+  /** Sobrescreve a chance padrão de aplicar a condição elemental do seu tipo de dano (0-1). */
+  elementalConditionChance?: number;
+  /** false desativa completamente o proc de condição elemental para esta carta. */
+  applyElementalCondition?: boolean;
 }
 
 export interface ArsenalHolding {
