@@ -31,8 +31,8 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import { Card, CardLevel, CardBonus, Character, CombatState, CardType, Condition, Item, JourneyState, ConditionEffect, ConditionEffectType, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, UpgradeOffer, UpgradeOfferType, Weapon } from './types';
-import { DatabaseService } from './utils/database';
+import { Card, CardLevel, CardBonus, Character, CombatState, CardType, Item, JourneyState, ConditionEffect, ConditionEffectType, Seal, SealExecutionMode, DamageType, PRESET_CONDITIONS, Recipe, UpgradeOffer, UpgradeOfferType, Weapon } from './types';
+import { DatabaseService, SNAPSHOT_VERSION } from './utils/database';
 import type { RollResult } from './utils/dice';
 import DiceAnimation from './components/DiceAnimation';
 import CardRevealAnimation, { CardAnimPayload } from './components/CardRevealAnimation';
@@ -42,12 +42,16 @@ import type { ActionCategory } from './components/combat/ActionIconRail';
 import { migrateCombatState } from './utils/combatMigration';
 import { applySectionTheme } from './utils/sectionTheme';
 import type { CenaState } from './utils/cena';
-import { createDefaultCena } from './utils/cena';
-import type { GrimoireEntry } from './utils/grimoire';
+import { createDefaultCena, mergeNpcLiveUpdates, syncNpcFromCharacter } from './utils/cena';
+import type { ArsenalCard } from './utils/arsenal';
 import { TabSweep, Title, ImagePickerButton } from './components/ui';
 import { useKeyboardNav } from './components/nav';
 import CenaTab from './tabs/CenaTab';
+import ArsenalWorkspace from './components/arsenal/ArsenalWorkspace';
 import { getUserReducedMotion, setUserReducedMotion } from './utils/motionPref';
+import { useUnifiedAutosave } from './hooks/useUnifiedAutosave';
+import CharacterEditor from './components/characters/CharacterEditor';
+import { exportCharacterFile } from './utils/characterExport';
 
 
 // --- Portal de Confirmação (escapa stacking context de backdrop-filter/overflow) ---
@@ -313,94 +317,6 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
   </div>
 );
 
-const ConditionManager: React.FC<{ 
-  conditions: Condition[]; 
-  onSave: (newConditions: Condition[]) => void;
-}> = ({ conditions, onSave }) => {
-  const [localConditions, setLocalConditions] = useState<Condition[]>(conditions);
-  const [newName, setNewName] = useState('');
-  const [newDuration, setNewDuration] = useState(3);
-
-  const handleAdd = () => {
-    if (!newName) return;
-    const updated = [...localConditions, { name: newName, duration: newDuration }];
-    setLocalConditions(updated);
-    setNewName('');
-    setNewDuration(3);
-    onSave(updated);
-  };
-
-  const handleUpdate = (index: number, field: keyof Condition, value: any) => {
-    const updated = [...localConditions];
-    updated[index] = { ...updated[index], [field]: value };
-    setLocalConditions(updated);
-    onSave(updated);
-  };
-
-  const handleRemove = (index: number) => {
-    const updated = localConditions.filter((_, i) => i !== index);
-    setLocalConditions(updated);
-    onSave(updated);
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        {localConditions.map((cond, i) => (
-          <div key={i} className="flex items-center gap-4 bg-slate-900 p-3 rounded-2xl border border-slate-800">
-             <div className="flex-1">
-                <span className="text-sm font-black text-rose-400 uppercase">{cond.name}</span>
-             </div>
-             <div className="flex items-center gap-2">
-                <span className="text-[10px] text-slate-500 uppercase font-black">Rodadas:</span>
-                <input 
-                  type="number" 
-                  value={cond.duration} 
-                  onChange={(e) => handleUpdate(i, 'duration', Number(e.target.value))}
-                  className="w-16 bg-slate-900/80 border border-slate-800 rounded-xl px-2 py-1 text-center font-bold text-white text-sm focus:border-amber-600 outline-none"
-                />
-             </div>
-             <button onClick={() => handleRemove(i)} className="p-2 bg-slate-900/80 text-slate-500 hover:text-rose-500 rounded-xl transition-colors">
-                <Trash2 className="w-4 h-4" />
-             </button>
-          </div>
-        ))}
-        {localConditions.length === 0 && <p className="text-slate-500 text-center text-xs py-4">Sem condições ativas.</p>}
-      </div>
-
-      <div className="pt-4 border-t border-slate-800 space-y-4">
-         <p className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest">Adicionar Nova Condição</p>
-         <div className="mb-2">
-           <PresetConditionPicker onSelect={(name, dur) => { setNewName(name); setNewDuration(dur); }} />
-         </div>
-         <div className="flex gap-4">
-             <input 
-               type="text" 
-               placeholder="Nome (Ex: Envenenado)" 
-               value={newName} 
-               onChange={(e) => setNewName(e.target.value)}
-               className="flex-1 bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-3 text-white text-sm focus:border-amber-600 outline-none"
-             />
-             <input 
-               type="number" 
-               placeholder="Dur" 
-               value={newDuration} 
-               onChange={(e) => setNewDuration(Number(e.target.value))}
-               className="w-20 bg-slate-900/80 border border-slate-800 rounded-2xl px-2 py-3 text-center text-white text-sm focus:border-amber-600 outline-none"
-             />
-             <button 
-               onClick={handleAdd}
-               className="px-4 bg-amber-600 hover:bg-amber-500 text-white rounded-2xl shadow-lg transition-all"
-             >
-                <Plus className="w-5 h-5" />
-             </button>
-         </div>
-      </div>
-    </div>
-  );
-};
-
-
 const QuickEditCharacter: React.FC<{ character: Character; onSave: (hp: number, aura: number, ammo?: number) => void }> = ({ character, onSave }) => {
     const [hp, setHp] = useState(character.currentHp);
     const [aura, setAura] = useState(character.currentAura);
@@ -436,7 +352,7 @@ const QuickEditCharacter: React.FC<{ character: Character; onSave: (hp: number, 
 
 const CharacterForm: React.FC<{ cards: Card[]; weapons: Weapon[]; seals: Seal[]; initialData?: Character; onSubmit: (c: Character) => void; onDelete: (id: string) => void }> = ({ cards, weapons, seals, initialData, onSubmit, onDelete }) => {
   const [formData, setFormData] = useState<Character>(initialData?.id ? initialData : {
-    id: '', name: '', icon: '', maxHp: 10, currentHp: 10, maxAura: 10, currentAura: 10, maxAmmo: 0, currentAmmo: 0, baseInitiative: 0, cardIds: [], weaponIds: [], sealIds: [], conditions: [], items: [], role: 'npc', code: ''
+    id: '', name: '', icon: '', maxHp: 10, currentHp: 10, maxAura: 10, currentAura: 10, maxAmmo: 0, currentAmmo: 0, baseInitiative: 0, speed: 0, cardIds: [], weaponIds: [], sealIds: [], conditions: [], items: [], code: ''
   });
 
   const toggleCard = (id: string) => {
@@ -490,37 +406,14 @@ const CharacterForm: React.FC<{ cards: Card[]; weapons: Weapon[]; seals: Seal[];
               <input type="number" value={formData.maxAmmo || 0} onChange={e => setFormData({ ...formData, maxAmmo: Number(e.target.value), currentAmmo: Number(e.target.value) })} className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-4 text-white font-black text-xl text-center focus:border-orange-600 outline-none" />
            </div>
            <div className="space-y-2">
-              <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Iniciativa Base</label>
-              <input type="number" value={formData.baseInitiative} onChange={e => setFormData({ ...formData, baseInitiative: Number(e.target.value) })} className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-4 text-white font-black text-xl text-center focus:border-slate-500 outline-none" />
-           </div>
-           <div className="space-y-2">
-              <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Deslocamento</label>
-              <input type="number" min={0} value={formData.deslocamento ?? 6} onChange={e => setFormData({ ...formData, deslocamento: Number(e.target.value) })} className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-4 text-white font-black text-xl text-center focus:border-amber-600 outline-none" />
+              <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Velocidade</label>
+              <input type="number" value={formData.speed ?? formData.baseInitiative ?? 0} onChange={e => setFormData({ ...formData, speed: Number(e.target.value), baseInitiative: Number(e.target.value) })} className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-4 text-white font-black text-xl text-center focus:border-slate-500 outline-none" />
            </div>
         </div>
       </div>
 
-      {/* Role selector + Code */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Categoria</label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setFormData({ ...formData, role: 'cast' })}
-              className={`flex-1 py-3 rounded-2xl font-extrabold uppercase text-xs tracking-widest border transition-all ${(formData.role ?? 'npc') === 'cast' ? 'bg-amber-600 border-amber-400/50 text-white shadow-[0_0_15px_rgba(201,152,58,0.3)]' : 'bg-slate-900/80 border-slate-800 text-slate-500 hover:text-slate-300'}`}
-            >
-              ⭐ Cast
-            </button>
-            <button
-              type="button"
-              onClick={() => setFormData({ ...formData, role: 'npc' })}
-              className={`flex-1 py-3 rounded-2xl font-extrabold uppercase text-xs tracking-widest border transition-all ${(formData.role ?? 'npc') === 'npc' ? 'bg-slate-700 border-slate-500/50 text-white shadow-md' : 'bg-slate-900/80 border-slate-800 text-slate-500 hover:text-slate-300'}`}
-            >
-              👤 NPC
-            </button>
-          </div>
-        </div>
+      {/* Code */}
+      <div className="grid grid-cols-1 gap-4">
         <div className="space-y-2">
           <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">
             Código do Personagem
@@ -739,7 +632,7 @@ const DamageTypeSelector: React.FC<{
   onChange: (v: DamageType) => void;
   small?: boolean;
 }> = ({ value, onChange, small }) => {
-  const current = DAMAGE_TYPES.find(d => d.value === (value || 'normal')) || DAMAGE_TYPES[0];
+  const current = DAMAGE_TYPES.find(d => d.value === (value || 'fisico')) || DAMAGE_TYPES[0];
   const [open, setOpen] = React.useState(false);
   return (
     <div style={{ position:'relative', display:'inline-block' }}>
@@ -774,9 +667,9 @@ const DamageTypeSelector: React.FC<{
               onClick={() => { onChange(dt.value); setOpen(false); }}
               style={{
                 display:'flex', alignItems:'center', gap:4, padding:'4px 8px',
-                borderRadius:8, border:`1px solid ${dt.value === (value||'normal') ? dt.color : 'transparent'}`,
-                background: dt.value === (value||'normal') ? `${dt.color}22` : 'rgba(255,255,255,0.04)',
-                color: dt.value === (value||'normal') ? dt.color : 'rgba(255,255,255,0.6)',
+                borderRadius:8, border:`1px solid ${dt.value === (value||'fisico') ? dt.color : 'transparent'}`,
+                background: dt.value === (value||'fisico') ? `${dt.color}22` : 'rgba(255,255,255,0.04)',
+                color: dt.value === (value||'fisico') ? dt.color : 'rgba(255,255,255,0.6)',
                 fontSize:10, fontWeight:700, cursor:'pointer', flex:'0 0 auto',
               }}
             >
@@ -1163,7 +1056,7 @@ const CardForm: React.FC<{ initialData?: Card; onSubmit: (c: Card) => void; onDe
            {(formData.damage || 0) > 0 && (
              <div className="space-y-2">
                <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-widest ml-2">Tipo de Dano</label>
-               <DamageTypeSelector value={(formData as any).damageType || 'normal'} onChange={v => setFormData({ ...formData, damageType: v } as any)} />
+               <DamageTypeSelector value={(formData as any).damageType || 'fisico'} onChange={v => setFormData({ ...formData, damageType: v } as any)} />
              </div>
            )}
 
@@ -1482,7 +1375,7 @@ const CardForm: React.FC<{ initialData?: Card; onSubmit: (c: Card) => void; onDe
                     {((levelDraft.damage ?? formData.damage) || 0) > 0 && (
                       <div className="space-y-1">
                         <label className="text-[9px] font-extrabold uppercase text-slate-500 tracking-widest ml-1">Tipo de Dano</label>
-                        <DamageTypeSelector small value={(levelDraft as any).damageType || (formData as any).damageType || 'normal'} onChange={v => setLevelDraft({...levelDraft, damageType: v} as any)} />
+                        <DamageTypeSelector small value={(levelDraft as any).damageType || (formData as any).damageType || 'fisico'} onChange={v => setLevelDraft({...levelDraft, damageType: v} as any)} />
                       </div>
                     )}
                     <div className="space-y-1">
@@ -1662,7 +1555,7 @@ const ItemForm: React.FC<{ initialData?: Item; onSubmit: (item: Item) => void; o
             {(formData.combatDamage || 0) > 0 && (
               <div className="space-y-1">
                 <label className="text-[9px] font-extrabold uppercase text-rose-500/70 tracking-widest ml-1">Tipo de Dano</label>
-                <DamageTypeSelector small value={(formData as any).combatDamageType || 'normal'} onChange={v => set({ combatDamageType: v } as any)} />
+                <DamageTypeSelector small value={(formData as any).combatDamageType || 'fisico'} onChange={v => set({ combatDamageType: v } as any)} />
               </div>
             )}
 
@@ -1799,7 +1692,7 @@ const WeaponForm: React.FC<{ initialData?: Weapon; onSubmit: (w: Weapon) => void
       {(formData.damage ?? 0) > 0 && (
         <div className="space-y-2">
           <label className="text-[10px] font-extrabold uppercase text-rose-500/70 tracking-widest ml-2">Tipo de Dano</label>
-          <DamageTypeSelector value={formData.damageType || 'normal'} onChange={v => set({ damageType: v })} />
+          <DamageTypeSelector value={formData.damageType || 'fisico'} onChange={v => set({ damageType: v })} />
         </div>
       )}
 
@@ -1870,7 +1763,7 @@ const WeaponForm: React.FC<{ initialData?: Weapon; onSubmit: (w: Weapon) => void
             {(formData.combatDamage || 0) > 0 && (
               <div className="space-y-1">
                 <label className="text-[9px] font-extrabold uppercase text-rose-500/70 tracking-widest ml-1">Tipo de Dano</label>
-                <DamageTypeSelector small value={formData.combatDamageType || 'normal'} onChange={v => set({ combatDamageType: v })} />
+                <DamageTypeSelector small value={formData.combatDamageType || 'fisico'} onChange={v => set({ combatDamageType: v })} />
               </div>
             )}
 
@@ -1951,8 +1844,7 @@ const AssignCardModal: React.FC<{
   onClose: () => void;
 }> = ({ card, characters, onAssign, onClose }) => {
   const [search, setSearch] = React.useState('');
-  const castChars = characters.filter(c => (c.role ?? 'npc') === 'cast');
-  const filtered = castChars.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = characters.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <Modal title={`Atribuir "${card.name}" a Personagem`} onClose={onClose}>
@@ -1994,7 +1886,7 @@ const AssignCardModal: React.FC<{
             );
           })}
           {filtered.length === 0 && (
-            <p className="text-slate-500 uppercase font-black text-center py-8 opacity-40">Nenhum personagem do Cast encontrado</p>
+            <p className="text-slate-500 uppercase font-black text-center py-8 opacity-40">Nenhum personagem encontrado</p>
           )}
         </div>
       </div>
@@ -2009,8 +1901,7 @@ const AssignWeaponModal: React.FC<{
   onClose: () => void;
 }> = ({ weapon, characters, onAssign, onClose }) => {
   const [search, setSearch] = React.useState('');
-  const castChars = characters.filter(c => (c.role ?? 'npc') === 'cast');
-  const filtered = castChars.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = characters.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <Modal title={`Atribuir "${weapon.name}" a Personagem`} onClose={onClose}>
@@ -2037,7 +1928,7 @@ const AssignWeaponModal: React.FC<{
               </div>
             );
           })}
-          {filtered.length === 0 && <p className="text-slate-500 uppercase font-black text-center py-8 opacity-40">Nenhum personagem do Cast encontrado</p>}
+          {filtered.length === 0 && <p className="text-slate-500 uppercase font-black text-center py-8 opacity-40">Nenhum personagem encontrado</p>}
         </div>
       </div>
     </Modal>
@@ -2051,8 +1942,7 @@ const AssignSealModal: React.FC<{
   onClose: () => void;
 }> = ({ seal, characters, onAssign, onClose }) => {
   const [search, setSearch] = React.useState('');
-  const castChars = characters.filter(c => (c.role ?? 'npc') === 'cast');
-  const filtered = castChars.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = characters.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <Modal title={`Atribuir "${seal.name}" a Personagem`} onClose={onClose}>
@@ -2079,7 +1969,7 @@ const AssignSealModal: React.FC<{
               </div>
             );
           })}
-          {filtered.length === 0 && <p className="text-slate-500 uppercase font-black text-center py-8 opacity-40">Nenhum personagem do Cast encontrado</p>}
+          {filtered.length === 0 && <p className="text-slate-500 uppercase font-black text-center py-8 opacity-40">Nenhum personagem encontrado</p>}
         </div>
       </div>
     </Modal>
@@ -2093,9 +1983,9 @@ const CharacterCard: React.FC<{
   isCharInCombat: (id: string) => boolean;
   setEditingCharacter: (c: Character) => void;
   deleteCharacter: (id: string) => void;
-}> = ({ char, idx, isCharInCombat, setEditingCharacter, deleteCharacter }) => {
-  const isNpc = (char.role ?? 'npc') === 'npc';
-  const accentColor = isNpc ? 'rgba(120,150,200,0.85)' : '#5a9ae8';
+  onExport: (character: Character) => void;
+}> = ({ char, idx, isCharInCombat, setEditingCharacter, deleteCharacter, onExport }) => {
+  const accentColor = '#5a9ae8';
   const inCombat = isCharInCombat(char.id);
 
   return (
@@ -2116,7 +2006,7 @@ const CharacterCard: React.FC<{
         <div className="mp-character-portrait__veil" />
         <div className="mp-character-portrait__glow" />
         <div className="mp-character-portrait__badge">
-          {isNpc ? 'NPC' : '⭐ Cast'}
+          PERSONAGEM
         </div>
         {inCombat && (
           <div className="mp-character-portrait__combat">
@@ -2170,6 +2060,9 @@ const CharacterCard: React.FC<{
 
         {/* Actions */}
         <div className="mp-character-actions">
+          <button onClick={() => onExport(char)} className="mp-character-action-btn" title="Exportar personagem e cartas" aria-label={`Exportar ${char.name}`}>
+            <Download />
+          </button>
           <button onClick={() => setEditingCharacter(char)} className="mp-character-action-btn mp-character-action-btn--edit" title="Editar">
             <Edit3 />
           </button>
@@ -2268,7 +2161,7 @@ const SealForm: React.FC<{
         {(form.damage || 0) > 0 && (
           <div style={{ marginBottom:10 }}>
             <label style={LBL}>Tipo de Dano</label>
-            <DamageTypeSelector small value={(form as any).damageType || 'normal'} onChange={v => set({ damageType: v } as any)} />
+            <DamageTypeSelector small value={(form as any).damageType || 'fisico'} onChange={v => set({ damageType: v } as any)} />
           </div>
         )}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
@@ -2747,17 +2640,20 @@ const App: React.FC = () => {
   const [editingCatalogItem, setEditingCatalogItem] = useState<Item | null>(null);
   const [giveItemTarget, setGiveItemTarget] = useState<Item | null>(null);
   const [giveItemQty, setGiveItemQty] = useState(1);
-  
+
   const [cards, setCards] = useState<Card[]>([]);
-  const [grimoire, setGrimoire] = useState<GrimoireEntry[]>([]);
+  const [grimoire, setGrimoire] = useState<ArsenalCard[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [seals, setSeals] = useState<Seal[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const latestCharactersRef = useRef<Character[]>([]);
   const [combat, setCombat] = useState<CombatState | null>(null);
   const latestCombatRef = useRef<CombatState | null>(null);
   useEffect(() => { latestCombatRef.current = combat; }, [combat]);
   const [journey, setJourney] = useState<JourneyState | null>(null);
   const [cena, setCena] = useState<CenaState>(createDefaultCena());
+  const latestCenaRef = useRef<CenaState>(createDefaultCena());
+  useEffect(() => { latestCenaRef.current = cena; }, [cena]);
   const [isLoading, setIsLoading] = useState(true);
 
   // States para Tooltip e UX
@@ -2831,6 +2727,7 @@ const App: React.FC = () => {
       setGrimoire(grim);
       setCombat(migrateCombatState(cbt));
       setJourney(jny);
+      latestCenaRef.current=cn;
       setCena(cn);
       setIsLoading(false);
     }).catch(err => {
@@ -2839,7 +2736,7 @@ const App: React.FC = () => {
     });
 
     // Subscriptions para atualizações em tempo real (ex: outra aba)
-    const unsubChars = DatabaseService.syncCharacters((data) => { if (!cancelled) setCharacters(data); });
+    const unsubChars = DatabaseService.syncCharacters((data) => { if (!cancelled) { latestCharactersRef.current = data; setCharacters(data); } });
     const unsubCards = DatabaseService.syncCards((data) => { if (!cancelled) setCards(data); });
     const unsubItems = DatabaseService.syncItems((data) => { if (!cancelled) setItems(data); });
     const unsubSeals = DatabaseService.syncSeals((data) => { if (!cancelled) setSeals(data); });
@@ -2847,7 +2744,7 @@ const App: React.FC = () => {
     const unsubGrimoire = DatabaseService.syncGrimoire((data) => { if (!cancelled) setGrimoire(data); });
     const unsubCombat = DatabaseService.syncCombatState((data) => { if (!cancelled) setCombat(migrateCombatState(data)); });
     const unsubJourney = DatabaseService.syncJourneyState((data) => { if (!cancelled) setJourney(data); });
-    const unsubCena = DatabaseService.syncCenaState((data) => { if (!cancelled) setCena(data); });
+    const unsubCena = DatabaseService.syncCenaState((data) => { if (!cancelled) { latestCenaRef.current=data; setCena(data); } });
 
     // Responde a pedidos da janela de jogadores com o snapshot atual de combate
     const unsubReq = DatabaseService.onCombatRequest(() => {
@@ -2903,13 +2800,14 @@ const App: React.FC = () => {
   const [assignCardModal, setAssignCardModal] = useState<Card | null>(null);
   const [assignWeaponModal, setAssignWeaponModal] = useState<Weapon | null>(null);
   const [assignSealModal, setAssignSealModal] = useState<Seal | null>(null);
-  const [showHideNpcs, setShowHideNpcs] = useState(false);
   // Initiative drag-to-reorder
-  const [diceAnimQueue, setDiceAnimQueue] = useState<Array<{ id: string; isVisible: boolean; result: number; defenderResult?: number; isSuccess: boolean; customLabel?: string; notation?: string; individualRolls?: number[]; numSides?: number; bonus?: number; dramatic?: boolean; actorLabel?: string; defenderLabel?: string; onReveal?: () => void }>>([]);
+  const [diceAnimQueue, setDiceAnimQueue] = useState<Array<{ id: string; isVisible: boolean; result: number; defenderResult?: number; defenderRoll?: RollResult; defenderBase?: number; isSuccess: boolean; customLabel?: string; notation?: string; individualRolls?: number[]; numSides?: number; bonus?: number; dramatic?: boolean; actorLabel?: string; defenderLabel?: string; onReveal?: () => void; onComplete?: () => void }>>([]);
   const diceAnim = diceAnimQueue[0] ?? null;
+  const diceAnimQueueRef = useRef(diceAnimQueue);
+  diceAnimQueueRef.current = diceAnimQueue;
   const showDiceAnimation = (
     roll: RollResult | { total: number; notation?: string; individualRolls?: number[]; numSides?: number; bonus?: number },
-    options: { isSuccess?: boolean; customLabel?: string; defenderResult?: number; dramatic?: boolean; actorLabel?: string; defenderLabel?: string; onReveal?: () => void } = {},
+    options: { isSuccess?: boolean; customLabel?: string; defenderResult?: number; defenderRoll?: RollResult; defenderBase?: number; dramatic?: boolean; actorLabel?: string; defenderLabel?: string; onReveal?: () => void; onComplete?: () => void } = {},
   ) => {
     setDiceAnimQueue(queue => [...queue, {
       id: `dice-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -2922,14 +2820,21 @@ const App: React.FC = () => {
       numSides: roll.numSides || 20,
       bonus: roll.bonus || 0,
       defenderResult: options.defenderResult,
+      defenderRoll: options.defenderRoll,
+      defenderBase: options.defenderBase,
       dramatic: options.dramatic,
       actorLabel: options.actorLabel,
       defenderLabel: options.defenderLabel,
       onReveal: options.onReveal,
+      onComplete: options.onComplete,
     }]);
   };
   const handleCardAnimComplete = useCallback(() => setCardAnim(null), []);
-  const handleDiceAnimComplete = useCallback(() => setDiceAnimQueue(queue => queue.slice(1)), []);
+  const handleDiceAnimComplete = useCallback(() => {
+    const completed = diceAnimQueueRef.current[0];
+    completed?.onComplete?.();
+    setDiceAnimQueue(queue => queue[0]?.id === completed?.id ? queue.slice(1) : queue);
+  }, []);
   
   // Atualizado para suportar múltiplas reações
   
@@ -3001,26 +2906,9 @@ const App: React.FC = () => {
   const handleManualSave = async () => {
     if (isLoading || !combat || !journey) return;
     try {
-      setAutoSaveStatus('saving');
-      await DatabaseService.saveFullSnapshot({
-        version: 5,
-        savedAt: new Date().toISOString(),
-        characters,
-        cards,
-        items,
-        seals,
-        weapons,
-        grimoire,
-        combat,
-        journey,
-        cena,
-      });
-      setAutoSaveStatus('saved');
-      setTimeout(() => setAutoSaveStatus('idle'), 2500);
+      await flushAutosave();
     } catch (e) {
       console.error('[ManualSave] Erro:', e);
-      setAutoSaveStatus('error');
-      setTimeout(() => setAutoSaveStatus('idle'), 3000);
     }
   };
   // Keep ref in sync so Ctrl+S always uses latest closure
@@ -3074,12 +2962,21 @@ const App: React.FC = () => {
 
   const saveCharacter = (char: Character) => {
     const finalChar = char.id ? char : { ...char, id: Math.random().toString(36).substr(2, 9) };
-    DatabaseService.saveCharacter(finalChar);
-    if (combat?.isActive) {
-      const updatedCombatants = combat.combatants.map(cb => 
+    const nextCharacters=latestCharactersRef.current.some(character=>character.id===finalChar.id)
+      ? latestCharactersRef.current.map(character=>character.id===finalChar.id?finalChar:character)
+      : [...latestCharactersRef.current,finalChar];
+    latestCharactersRef.current=nextCharacters;setCharacters(nextCharacters);void DatabaseService.saveCharacter(finalChar);
+    const liveCena=latestCenaRef.current;
+    if(liveCena.npcRoster.some(npc=>npc.id===finalChar.id)){
+      const nextCena={...liveCena,npcRoster:liveCena.npcRoster.map(npc=>npc.id===finalChar.id?syncNpcFromCharacter(npc,finalChar):npc)};
+      latestCenaRef.current=nextCena;setCena(nextCena);void DatabaseService.updateCena(nextCena);
+    }
+    const liveCombat=latestCombatRef.current;
+    if (liveCombat?.isActive) {
+      const updatedCombatants = liveCombat.combatants.map(cb => 
         cb.id === finalChar.id ? { ...cb, ...finalChar, combatId: cb.combatId, initiativeResult: cb.initiativeResult, gridPos: cb.gridPos } : cb
       );
-      DatabaseService.updateCombat({ ...combat, combatants: updatedCombatants });
+      const nextCombat={...liveCombat,combatants:updatedCombatants};latestCombatRef.current=nextCombat;setCombat(nextCombat);void DatabaseService.updateCombat(nextCombat);
     }
   };
 
@@ -3137,6 +3034,7 @@ const App: React.FC = () => {
 
 
   const updateCena = (next: CenaState) => {
+    latestCenaRef.current=next;
     setCena(next);
     DatabaseService.updateCena(next);
   };
@@ -3149,15 +3047,25 @@ const App: React.FC = () => {
 
 
   const updateCharacterStats = (charId: string, updates: Partial<Character>) => {
-    const originalChar = characters.find(c => c.id === charId);
+    const originalChar = latestCharactersRef.current.find(c => c.id === charId);
     if (!originalChar) return;
     const updatedChar = { ...originalChar, ...updates };
-    DatabaseService.saveCharacter(updatedChar);
-    if (combat && isCharInCombat(charId)) {
-        const updatedCombatants = combat.combatants.map(c => 
+    const nextCharacters = latestCharactersRef.current.map(character => character.id === charId ? updatedChar : character);
+    latestCharactersRef.current = nextCharacters;
+    setCharacters(nextCharacters);
+    void DatabaseService.saveCharacter(updatedChar);
+    const liveCombat=latestCombatRef.current;
+    if (liveCombat?.combatants.some(c=>c.id===charId)) {
+        const updatedCombatants = liveCombat.combatants.map(c => 
             c.id === charId ? { ...c, ...updates } : c
         );
-        DatabaseService.updateCombat({ ...combat, combatants: updatedCombatants });
+        const nextCombat={ ...liveCombat, combatants: updatedCombatants };
+        latestCombatRef.current=nextCombat;setCombat(nextCombat);void DatabaseService.updateCombat(nextCombat);
+    }
+    const liveCena=latestCenaRef.current;
+    if(liveCena.npcRoster.some(npc=>npc.id===charId)){
+      const nextCena={...liveCena,npcRoster:liveCena.npcRoster.map(npc=>npc.id===charId?mergeNpcLiveUpdates(npc,updates,originalChar):npc)};
+      latestCenaRef.current=nextCena;setCena(nextCena);void DatabaseService.updateCena(nextCena);
     }
   };
 
@@ -3209,7 +3117,6 @@ const App: React.FC = () => {
       }
     });
   };
-
 
 
 
@@ -3351,7 +3258,7 @@ const App: React.FC = () => {
         <input type="file" ref={backupFileRef} onChange={handleUploadBackup} className="hidden" accept=".json" />
       </div>
 
-      <main className="flex-1 p-5 md:p-8 max-w-[1920px] mx-auto w-full" style={{ overflow: 'auto', minHeight: 0, height: 0 }}>
+      <main className={activeTab === 'cena' ? 'flex-1 p-0 w-full max-w-none' : 'flex-1 p-5 md:p-8 max-w-[1920px] mx-auto w-full'} style={{ overflow: activeTab === 'cena' ? 'hidden' : 'auto', minHeight: 0, height: 0 }}>
         {/* ... (Previous tabs code omitted for brevity as they are unchanged) ... */}
         {/* Aba Cena */}
         {activeTab === 'cena' && (
@@ -3362,6 +3269,7 @@ const App: React.FC = () => {
             seals={seals}
             items={items}
             weapons={weapons}
+            arsenal={grimoire}
             updateCena={updateCena}
             updateCharacterStats={updateCharacterStats}
             onDiceRoll={showDiceAnimation}
@@ -3391,15 +3299,6 @@ const App: React.FC = () => {
               </div>
               <div style={{ display:'flex', gap:8 }}>
                 <button
-                  onClick={() => setShowHideNpcs(v => !v)}
-                  className={`mp-cta mp-cta--secondary`}
-                  style={{ padding:'8px 16px', fontSize:10 }}
-                  title={showHideNpcs ? 'Mostrar NPCs' : 'Ocultar NPCs'}
-                >
-                  {showHideNpcs ? <Eye style={{ width:13, height:13 }} /> : <EyeOff style={{ width:13, height:13 }} />}
-                  <span>NPC</span>
-                </button>
-                <button
                   onClick={() => setEditingCharacter({} as any)}
                   className="mp-cta"
                   style={{ padding:'8px 22px', fontSize:11 }}
@@ -3411,45 +3310,20 @@ const App: React.FC = () => {
 
             {/* Grid de personagens */}
             <div className="mp-character-grid" style={{ paddingBottom: 48 }}>
-              {/* Cast Section */}
-              {filteredCharacters.filter(c => (c.role ?? 'npc') === 'cast').length > 0 && (
+              {filteredCharacters.length > 0 && (
                 <>
                   <div className="mp-section-divider col-span-full"
                     style={{ '--divider-color': 'rgba(127,224,255,0.8)', '--divider-bg': 'rgba(20,54,110,0.3)' } as React.CSSProperties}>
                     <div className="mp-section-divider__label">
-                      <Star style={{ width:9, height:9 }} /> Cast
+                      <Users style={{ width:9, height:9 }} /> Personagens
                     </div>
                     <div className="mp-section-divider__line" />
                     <span className="mp-section-divider__count">
-                      {filteredCharacters.filter(c => (c.role ?? 'npc') === 'cast').length}
+                      {filteredCharacters.length}
                     </span>
                   </div>
-                  {filteredCharacters.filter(c => (c.role ?? 'npc') === 'cast').map((char, idx) => (
-                    <CharacterCard key={char.id} char={char} idx={idx} isCharInCombat={isCharInCombat} setEditingCharacter={setEditingCharacter} deleteCharacter={deleteCharacter} />
-                  ))}
-                </>
-              )}
-
-              {/* NPC Section */}
-              {filteredCharacters.filter(c => (c.role ?? 'npc') === 'npc').length > 0 && (
-                <>
-                  <button
-                    onClick={() => setShowHideNpcs(v => !v)}
-                    className="mp-section-divider col-span-full"
-                    style={{ '--divider-color': 'rgba(100,116,139,0.65)', '--divider-bg': 'rgba(30,41,59,0.35)', background:'none', border:'none', cursor:'pointer', width:'100%', textAlign:'left', marginTop:8 } as React.CSSProperties}
-                  >
-                    <div className="mp-section-divider__label">
-                      {showHideNpcs ? <Eye style={{ width:9, height:9 }} /> : <EyeOff style={{ width:9, height:9 }} />}
-                      <Users style={{ width:9, height:9 }} /> NPC
-                      {showHideNpcs && <span style={{ opacity:0.55, letterSpacing:'0.1em' }}> (ocultos)</span>}
-                    </div>
-                    <div className="mp-section-divider__line" />
-                    <span className="mp-section-divider__count">
-                      {filteredCharacters.filter(c => (c.role ?? 'npc') === 'npc').length}
-                    </span>
-                  </button>
-                  {!showHideNpcs && filteredCharacters.filter(c => (c.role ?? 'npc') === 'npc').map((char, idx) => (
-                    <CharacterCard key={char.id} char={char} idx={idx} isCharInCombat={isCharInCombat} setEditingCharacter={setEditingCharacter} deleteCharacter={deleteCharacter} />
+                  {filteredCharacters.map((char, idx) => (
+                    <CharacterCard key={char.id} char={char} idx={idx} isCharInCombat={isCharInCombat} setEditingCharacter={setEditingCharacter} deleteCharacter={deleteCharacter} onExport={character=>exportCharacterFile(character,grimoire)} />
                   ))}
                 </>
               )}
@@ -3468,6 +3342,11 @@ const App: React.FC = () => {
 
         {/* Aba Arsenal */}
         {activeTab === 'arsenal' && (
+          <ArsenalWorkspace characters={characters} onUpdateCharacter={updateCharacterStats} />
+        )}
+
+        {/* Catálogo legado preservado temporariamente apenas como adaptador de dados; não é mais renderizado. */}
+        {false && (
           <div className="flex flex-col mp-darktab" style={{ height:'100%' }}>
             <div className="flex gap-1 p-1 mb-4 rounded-2xl w-fit flex-shrink-0" style={{ background:'rgba(0,0,0,0.35)', border:'1px solid rgba(255,255,255,0.06)' }}>
               {([
@@ -3916,6 +3795,8 @@ const App: React.FC = () => {
         isVisible={!!diceAnim?.isVisible} 
         result={diceAnim?.result || 0} 
         defenderResult={diceAnim?.defenderResult} 
+        defenderRoll={diceAnim?.defenderRoll}
+        defenderBase={diceAnim?.defenderBase}
         isSuccess={!!diceAnim?.isSuccess} 
         customLabel={diceAnim?.customLabel} 
         notation={diceAnim?.notation || '1d20'}
@@ -3996,32 +3877,6 @@ const App: React.FC = () => {
           </div>
         </Modal>
       )}
-
-      {/* MODAL GERENCIAR CONDIÇÕES */}
-      {managingConditionsCharId && characterForConditions && (
-         <Modal title={`Condições de ${characterForConditions.name}`} onClose={() => setManagingConditionsCharId(null)}>
-            <ConditionManager 
-               conditions={characterForConditions.conditions}
-               onSave={(newConditions) => {
-                  if (characterForConditions.isCombatant) {
-                      const newCombatants = combat!.combatants.map(c => 
-                        c.combatId === managingConditionsCharId ? { ...c, conditions: newConditions } : c
-                      );
-                      DatabaseService.updateCombat({ ...combat!, combatants: newCombatants });
-                      if (characterForConditions.realId) {
-                         const masterExists = characters.some(c => c.id === characterForConditions.realId);
-                         if (masterExists) {
-                            DatabaseService.saveCharacter({ ...characters.find(c => c.id === characterForConditions.realId)!, conditions: newConditions });
-                         }
-                      }
-                  } else {
-                      updateCharacterStats(characterForConditions.realId, { conditions: newConditions });
-                  }
-               }}
-            />
-         </Modal>
-      )}
-
 
       {/* MODAL ATRIBUIR HABILIDADE A PERSONAGEM */}
       {assignCardModal && (
@@ -4227,7 +4082,7 @@ const App: React.FC = () => {
       {/* MODAIS E PROMPTS */}
       {editingCharacter && (
         <Modal title={editingCharacter.id ? "Editar Receptáculo" : "Criar Receptáculo"} onClose={() => setEditingCharacter(null)}>
-           <CharacterForm cards={cards} weapons={weapons} seals={seals} initialData={editingCharacter} onSubmit={(char) => { saveCharacter(char); setEditingCharacter(null); }} onDelete={deleteCharacter} />
+           <CharacterEditor cards={cards} weapons={weapons} seals={seals} arsenalCards={grimoire} initialData={editingCharacter} onSubmit={(char) => { saveCharacter(char); setEditingCharacter(null); }} onDelete={deleteCharacter} />
         </Modal>
       )}
 

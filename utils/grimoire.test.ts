@@ -12,7 +12,7 @@ const sword: GrimoireEntry = {
   id: 'e1', name: 'Espada', image: '', description: '', category: 'arma',
   combat: {
     actionType: 'principal', targeting: 'inimigo', attackDice: '1d20',
-    effects: [{ kind: 'damage', dice: '2d6', element: 'normal' }],
+    effects: [{ kind: 'damage', dice: '2d6', element: 'fisico' }],
   },
 };
 

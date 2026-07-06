@@ -83,7 +83,7 @@ const CardDetailOverlay: React.FC<CardDetailOverlayProps> = ({
   const shownDesc = (level > 1 && levelData?.description) ? levelData.description : card.description;
 
   const damageType = (card as any).damageType as string | undefined;
-  const dtInfo = damageType && damageType !== 'normal'
+  const dtInfo = damageType && damageType !== 'fisico'
     ? DAMAGE_TYPES.find(d => d.value === damageType)
     : null;
 

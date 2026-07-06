@@ -56,7 +56,7 @@ describe('elementInteraction', () => {
   });
 
   it('elemento neutro não interage', () => {
-    const r = elementInteraction('normal', [{ name: 'Molhado', duration: 2 }]);
+    const r = elementInteraction('fisico', [{ name: 'Molhado', duration: 2 }]);
     expect(r).toEqual({ multiplier: 1, flatBonus: 0, removeConditions: [], renewConditions: [], addConditions: [], notes: [] });
   });
 });

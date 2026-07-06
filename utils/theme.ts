@@ -106,7 +106,7 @@ export const CARD_TYPE_THEME: Record<CardType, CardTypeStyle> = {
 // DAMAGE_TYPES — movido de App.tsx (fonte única)
 // ─────────────────────────────────────────────────────────────────
 export const DAMAGE_TYPES: { value: DamageType; label: string; color: string; emoji: string }[] = [
-  { value: 'normal',    label: 'Normal',    color: '#94a3b8', emoji: '⚔️' },
+  { value: 'fisico',    label: 'Físico',    color: '#94a3b8', emoji: '⚔️' },
   { value: 'fogo',      label: 'Fogo',      color: '#ef4444', emoji: '🔥' },
   { value: 'raio',      label: 'Raio',      color: '#facc15', emoji: '⚡' },
   { value: 'água',      label: 'Água',      color: '#38bdf8', emoji: '💧' },

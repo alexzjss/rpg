@@ -33,7 +33,7 @@ const strike: ActionInput = {
   profile: {
     actionType: 'principal', targeting: 'inimigo', attackDice: '1d20',
     costs: { aura: 3, ammo: 1 },
-    effects: [{ kind: 'damage', dice: '2d6', element: 'normal' }],
+    effects: [{ kind: 'damage', dice: '2d6', element: 'fisico' }],
   },
 };
 
@@ -175,14 +175,14 @@ import { applyEffects } from './resolve';
 describe('applyEffects', () => {
   it('rola o dano e aplica como delta negativo de HP', () => {
     const roll = seqRoller([{ total: 8, dieRoll: 8 }]);
-    const r = applyEffects('A', snap({ id: 'b' }), [{ kind: 'damage', dice: '2d6', element: 'normal' }], { roll });
+    const r = applyEffects('A', snap({ id: 'b' }), [{ kind: 'damage', dice: '2d6', element: 'fisico' }], { roll });
     expect(r.damages[0].final).toBe(8);
     expect(r.targetDelta).toEqual({ hp: -8 });
   });
 
   it('crítico dobra os dados (não o bônus fixo)', () => {
     const roll = seqRoller([{ total: 10, dieRoll: 7, bonus: 3 }]); // 2d6+3 → dados 7
-    const r = applyEffects('A', snap({ id: 'b' }), [{ kind: 'damage', dice: '2d6+3', element: 'normal' }], { roll, crit: true });
+    const r = applyEffects('A', snap({ id: 'b' }), [{ kind: 'damage', dice: '2d6+3', element: 'fisico' }], { roll, crit: true });
     expect(r.damages[0].final).toBe(17); // 7*2 + 3
   });
 
@@ -219,7 +219,7 @@ describe('applyEffects', () => {
   it('Protegido reduz o dano final (valor do preset = 3, mínimo 0)', () => {
     const roll = seqRoller([{ total: 2, dieRoll: 2 }]);
     const target = snap({ id: 'b', conditions: [{ name: 'Protegido', duration: 2 }] });
-    const r = applyEffects('A', target, [{ kind: 'damage', dice: '1d4', element: 'normal' }], { roll });
+    const r = applyEffects('A', target, [{ kind: 'damage', dice: '1d4', element: 'fisico' }], { roll });
     expect(r.damages[0].final).toBe(0); // max(0, 2-3)
   });
 

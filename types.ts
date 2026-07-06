@@ -1,6 +1,8 @@
+import type { ArsenalEffect, ArsenalHolding } from './utils/arsenal';
+
 export type CardType = 'ataque' | 'reação' | 'ação' | 'reforço' | 'vínculo' | 'combinação' | 'forma';
 
-export type DamageType = 'normal' | 'fogo' | 'raio' | 'água' | 'terra' | 'vento' | 'escuridão' | 'luminoso' | 'sangue' | 'aura';
+export type DamageType = 'fisico' | 'fogo' | 'raio' | 'água' | 'terra' | 'vento' | 'escuridão' | 'luminoso' | 'sangue' | 'aura';
 
 /** Elemento de dano do sistema unificado (mesma união do DamageType legado). */
 export type Element = DamageType;
@@ -240,6 +242,7 @@ export interface Character {
   id: string;
   name: string;
   icon: string;
+  bannerImage?: string;
   maxHp: number;
   currentHp: number;
   maxAura: number;
@@ -248,7 +251,7 @@ export interface Character {
   currentAmmo: number;
   baseInitiative: number;
   defense?: number;   // defesa para teste de acerto (default DEFAULT_DEFENSE)
-  deslocamento?: number;   // unidades de movimento (padrão: 6)
+  speed?: number;          // velocidade base; influencia iniciativa e ordem efetiva
   cardIds: string[];
   pinnedCardIds?: string[];
   weaponIds?: string[];
@@ -257,6 +260,7 @@ export interface Character {
   isInJourney?: boolean;
   items: Item[];
   isHidden?: boolean;
+  /** @deprecated Mantido apenas para abrir arquivos antigos. Todos agora são personagens. */
   role?: 'cast' | 'npc';
   code?: string;
   bonds?: string[]; // list of vínculo names this character has
@@ -264,6 +268,10 @@ export interface Character {
   ownedItems?: OwnedItem[]; // posse referenciada (catálogo global)
   /** Acervo unificado do grimório (substituirá cardIds/sealIds/weaponIds/ownedItems na Fase 3). */
   grimoire?: GrimoireHolding[];
+  /** Estado canônico de posse/equipamento. Os campos legados acima seguem como adaptadores da UI atual. */
+  arsenal?: ArsenalHolding[];
+  /** Efeitos canônicos atualmente aplicados diretamente ao personagem. */
+  activeEffects?: Array<{ effect: ArsenalEffect; stacks: number; remaining?: number }>;
   /** Afinidades elementais: fraco / resistente / imune por elemento. */
   affinities?: Partial<Record<Element, Affinity>>;
 }
@@ -292,11 +300,6 @@ export interface CombatHistoryItem {
   timestamp: number;
 }
 
-export interface FieldCondition extends Condition {
-  id: string;
-  sourceCard?: string;
-}
-
 export interface CustomPin {
   id: string;
   label: string;
@@ -316,7 +319,6 @@ export interface CombatState {
   turnIndex: number;
   combatants: Combatant[];
   history: CombatHistoryItem[];
-  fieldConditions: FieldCondition[];
   backgroundImage: string;
   globalBonus: number;
   gridWidth: number;
@@ -331,7 +333,6 @@ export interface CombatState {
   // Novos campos da refatoração da grid
   gridVisible: boolean;
   gridDensity: number;        // ex: 10 → grade 10×10 visual
-  escala: number;             // % arena por unidade de deslocamento (ex: 10)
   fog?: FogState;
   aoeTemplates?: AoETemplate[];
 }
