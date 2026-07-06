@@ -177,7 +177,9 @@ export interface ElementalAffinity {
 
 export type ClassicEffectKind =
   | 'queimadura' | 'congelamento' | 'lentidao' | 'molhado' | 'eletrocutado'
-  | 'sangramento' | 'fraqueza' | 'acelerado' | 'desnorteado';
+  | 'sangramento' | 'fraqueza' | 'acelerado' | 'desnorteado'
+  | 'enraizado' | 'desequilibrado' | 'fraturado' | 'iluminado' | 'amaldicoado'
+  | 'paralisado' | 'confuso';
 
 export type ClassicEffectConfig =
   | { kind: 'queimadura' | 'eletrocutado'; value: number }
@@ -186,7 +188,10 @@ export type ClassicEffectConfig =
   | { kind: 'molhado'; value: number }
   | { kind: 'sangramento'; value: number; mode: 'fixo' | 'percentual_vida_maxima' }
   | { kind: 'fraqueza'; value: number; mode: 'subtrair' | 'dividir' }
-  | { kind: 'desnorteado'; value: number };
+  | { kind: 'desnorteado'; value: number }
+  | { kind: 'enraizado' | 'desequilibrado' | 'fraturado' | 'iluminado' | 'amaldicoado'; value: number }
+  | { kind: 'paralisado'; value: number } // DC do teste 1d20 (valor mínimo aceito)
+  | { kind: 'confuso'; value: number }; // chance (0-1) de a ação ser cancelada
 
 export interface ArsenalEffect {
   id: string;
