@@ -12,20 +12,31 @@ const actor = (over: Partial<ArsenalActorState> = {}): ArsenalActorState => ({
 });
 const target = (over: Partial<ArsenalActorState> = {}): ArsenalActorState => actor({ id: 't', teamId: 'B', name: 'Alvo', isCurrentTurn: false, ...over });
 
-/** Anexa um nó 'custo' solto (não conectado ao fluxo) ao grafo — graphCosts só olha presença no grafo mesclado. */
+/** Anexa um nó ao grafo conectado à raiz de trigger (nó estruturalmente alcançável). */
+function attachToRoot(graph: AbilityGraph, node: GraphNode): AbilityGraph {
+  const rootId = graph.nodes.find(n => n.family === 'gatilho')!.id;
+  return { ...graph, nodes: [...graph.nodes, node], edges: [...graph.edges, { id: `edge-${node.id}`, from: rootId, to: node.id }] };
+}
+
+/** Anexa um nó ao grafo sem conectá-lo a nada — usado para testar que nós desconectados são ignorados. */
+function detached(graph: AbilityGraph, node: GraphNode): AbilityGraph {
+  return { ...graph, nodes: [...graph.nodes, node] };
+}
+
+/** Anexa um nó 'custo' conectado à raiz do grafo. */
 function withCusto(graph: AbilityGraph, recurso: 'aura' | 'municao' | 'vida', amount: number): AbilityGraph {
   const node: GraphNode = { id: `custo-${recurso}-${graph.nodes.length}`, type: 'custo', family: 'efeito', props: { recurso, amount } };
-  return { ...graph, nodes: [...graph.nodes, node] };
+  return attachToRoot(graph, node);
 }
 
 function withCooldown(graph: AbilityGraph, tipo: 'sem_cooldown' | 'turnos' | 'rodadas' | 'usos', amount: number): AbilityGraph {
   const node: GraphNode = { id: `cooldown-${graph.nodes.length}`, type: 'cooldown', family: 'efeito', props: { tipo, amount } };
-  return { ...graph, nodes: [...graph.nodes, node] };
+  return attachToRoot(graph, node);
 }
 
 function withPreparacao(graph: AbilityGraph, tipo: 'instantaneo' | 'turnos' | 'rodadas', amount: number): AbilityGraph {
   const node: GraphNode = { id: `preparacao-${graph.nodes.length}`, type: 'preparacao', family: 'efeito', props: { tipo, amount } };
-  return { ...graph, nodes: [...graph.nodes, node] };
+  return attachToRoot(graph, node);
 }
 
 function danoGraph(over: Partial<AbilityGraph['header']> = {}, auraCost = 0): AbilityGraph {
@@ -338,6 +349,12 @@ describe('resolveAbilityGraphAction', () => {
     it('grafo sem nós custo retorna zeros', () => {
       expect(graphCosts(danoGraph(), 1)).toEqual({ aura: 0, municao: 0, vida: 0 });
     });
+
+    it('ignora um nó custo desconectado do fluxo (não alcançável a partir da raiz)', () => {
+      const base = danoGraph();
+      const desconectado = detached(base, { id: 'custo-solto', type: 'custo', family: 'efeito', props: { recurso: 'aura', amount: 99 } });
+      expect(graphCosts(desconectado, 1)).toEqual({ aura: 0, municao: 0, vida: 0 });
+    });
   });
 
   describe('graphCooldown', () => {
@@ -348,6 +365,12 @@ describe('resolveAbilityGraphAction', () => {
 
     it('grafo sem nó cooldown retorna sem_cooldown', () => {
       expect(graphCooldown(danoGraph(), 1)).toEqual({ type: 'sem_cooldown' });
+    });
+
+    it('ignora um nó cooldown desconectado do fluxo', () => {
+      const base = danoGraph();
+      const desconectado = detached(base, { id: 'cd-solto', type: 'cooldown', family: 'efeito', props: { tipo: 'rodadas', amount: 5 } });
+      expect(graphCooldown(desconectado, 1)).toEqual({ type: 'sem_cooldown' });
     });
   });
 

@@ -42,13 +42,29 @@ function block(actor: ArsenalActorState, targets: ArsenalActorState[], reason: s
   return { status: 'bloqueada', reason, actor, targets, rolls: {}, hitTargetIds: [], defeatedIds: [], trace: [], fieldEffects: [], ongoingEffectIntents: [], additionalTargets: [] };
 }
 
+/** Ids de todos os nós alcançáveis a partir de algum trigger (família 'gatilho') do grafo mesclado —
+ * um nó solto sem trigger algum como ancestral não conta, mesmo que não tenha arestas de entrada. */
+function reachableNodeIds(graph: AbilityGraph): Set<string> {
+  const roots = graph.nodes.filter(n => n.family === 'gatilho');
+  const reachable = new Set<string>(roots.map(r => r.id));
+  const queue = [...reachable];
+  while (queue.length) {
+    const id = queue.pop()!;
+    for (const edge of graph.edges) {
+      if (edge.from === id && !reachable.has(edge.to)) { reachable.add(edge.to); queue.push(edge.to); }
+    }
+  }
+  return reachable;
+}
+
 export interface GraphCosts { aura: number; municao: number; vida: number }
 
 /** Soma os nós 'custo' alcançáveis no grafo mesclado, agrupados por recurso. */
 export function graphCosts(graph: AbilityGraph, level: number): GraphCosts {
   const merged = mergeLevel(graph, level);
+  const reachable = reachableNodeIds(merged);
   const sum = (recurso: string) => merged.nodes
-    .filter(n => n.type === 'custo' && (n.props as { recurso?: string }).recurso === recurso)
+    .filter(n => reachable.has(n.id) && n.type === 'custo' && (n.props as { recurso?: string }).recurso === recurso)
     .reduce((total, n) => total + Number((n.props as { amount?: number }).amount ?? 0), 0);
   return { aura: sum('aura'), municao: sum('municao'), vida: sum('vida') };
 }
@@ -57,7 +73,9 @@ export interface GraphComboConfig { stackKey: string; maxStacks: number }
 
 /** Configuração de combo do grafo: presente se houver uma raiz secundária 'em_combo'. */
 export function graphComboConfig(graph: AbilityGraph, level: number): GraphComboConfig | null {
-  const node = mergeLevel(graph, level).nodes.find(n => n.type === 'em_combo');
+  const merged = mergeLevel(graph, level);
+  const reachable = reachableNodeIds(merged);
+  const node = merged.nodes.find(n => reachable.has(n.id) && n.type === 'em_combo');
   if (!node) return null;
   const props = node.props as { stackKey?: string; maxStacks?: number };
   return { stackKey: props.stackKey ?? '', maxStacks: props.maxStacks ?? 2 };
@@ -65,7 +83,9 @@ export function graphComboConfig(graph: AbilityGraph, level: number): GraphCombo
 
 /** Cooldown do grafo mesclado, lido do nó 'cooldown'. Ausente = sem cooldown. */
 export function graphCooldown(graph: AbilityGraph, level: number): CooldownConfig {
-  const node = mergeLevel(graph, level).nodes.find(n => n.type === 'cooldown');
+  const merged = mergeLevel(graph, level);
+  const reachable = reachableNodeIds(merged);
+  const node = merged.nodes.find(n => reachable.has(n.id) && n.type === 'cooldown');
   if (!node) return { type: 'sem_cooldown' };
   const props = node.props as { tipo?: CooldownConfig['type']; amount?: number };
   const tipo = props.tipo ?? 'sem_cooldown';
@@ -74,7 +94,9 @@ export function graphCooldown(graph: AbilityGraph, level: number): CooldownConfi
 
 /** Preparação do grafo mesclado, lida do nó 'preparacao'. Ausente = instantânea. */
 export function graphPreparation(graph: AbilityGraph, level: number): PreparationConfig {
-  const node = mergeLevel(graph, level).nodes.find(n => n.type === 'preparacao');
+  const merged = mergeLevel(graph, level);
+  const reachable = reachableNodeIds(merged);
+  const node = merged.nodes.find(n => reachable.has(n.id) && n.type === 'preparacao');
   if (!node) return INSTANT_PREPARATION;
   const props = node.props as { tipo?: 'instantaneo' | 'turnos' | 'rodadas'; amount?: number };
   const tipo = props.tipo ?? 'instantaneo';
@@ -226,14 +248,15 @@ export interface GraphFormaVisual {
 /** Introspecciona o grafo mesclado no nível: é forma se tem cor_token/icone_token; bônus vem de nós buff com stat vida_maxima/aura_maxima. */
 export function graphFormaVisual(graph: AbilityGraph, level: number): GraphFormaVisual {
   const merged = mergeLevel(graph, level);
-  const colorNode = merged.nodes.find(n => n.type === 'cor_token');
-  const iconNode = merged.nodes.find(n => n.type === 'icone_token');
+  const reachable = reachableNodeIds(merged);
+  const colorNode = merged.nodes.find(n => reachable.has(n.id) && n.type === 'cor_token');
+  const iconNode = merged.nodes.find(n => reachable.has(n.id) && n.type === 'icone_token');
   const isForma = !!colorNode || !!iconNode;
   const hpBonus = merged.nodes
-    .filter(n => n.type === 'buff' && (n.props as { stat?: string }).stat === 'vida_maxima')
+    .filter(n => reachable.has(n.id) && n.type === 'buff' && (n.props as { stat?: string }).stat === 'vida_maxima')
     .reduce((sum, n) => sum + Number((n.props as { value?: number }).value ?? 0), 0);
   const auraBonus = merged.nodes
-    .filter(n => n.type === 'buff' && (n.props as { stat?: string }).stat === 'aura_maxima')
+    .filter(n => reachable.has(n.id) && n.type === 'buff' && (n.props as { stat?: string }).stat === 'aura_maxima')
     .reduce((sum, n) => sum + Number((n.props as { value?: number }).value ?? 0), 0);
   return {
     isForma,
