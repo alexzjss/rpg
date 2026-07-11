@@ -93,4 +93,36 @@ describe('interpretAbility', () => {
     // só o dano do nó 'd2' (pendurado sob 'evt') deve ter rodado, não o 'd1' da raiz principal
     expect(res.targets.find(t => t.id === 'e')!.currentHp).toBe(21);
   });
+
+  it('um trigger alcançado como filho (não como entrada) registra reação pendente em vez de executar', () => {
+    const g: AbilityGraph = {
+      ...createAbilityGraph({ id: 'g5', name: 'Reação encadeada' }),
+      nodes: [
+        { id: 'enquanto', type: 'enquanto_ativa', family: 'gatilho', props: {} },
+        { id: 'alvejado', type: 'ao_ser_alvejado', family: 'gatilho', props: {} },
+        { id: 'd', type: 'dano', family: 'efeito', props: { dice: undefined, flat: 7, element: 'fisico' } },
+      ],
+      edges: [
+        { id: 'e1', from: 'enquanto', to: 'alvejado' },
+        { id: 'e2', from: 'alvejado', to: 'd' },
+      ],
+    };
+    const res = interpretAbility(g, 1, { actor: actor(), primaryTargets: [enemy()], allTargets: [actor(), enemy()], roller: () => 0 }, { entryNodeIds: ['enquanto'] });
+    expect(res.targets.find(t => t.id === 'e')!.currentHp).toBe(30); // dano NÃO aplicado ainda
+    expect(res.pendingReactions).toEqual([{ eventType: 'ao_ser_alvejado', nodeIds: ['d'] }]);
+  });
+
+  it('o mesmo trigger, quando é o próprio ponto de entrada, executa normalmente', () => {
+    const g: AbilityGraph = {
+      ...createAbilityGraph({ id: 'g6', name: 'Reação direta' }),
+      nodes: [
+        { id: 'alvejado', type: 'ao_ser_alvejado', family: 'gatilho', props: {} },
+        { id: 'd', type: 'dano', family: 'efeito', props: { dice: undefined, flat: 7, element: 'fisico' } },
+      ],
+      edges: [{ id: 'e1', from: 'alvejado', to: 'd' }],
+    };
+    const res = interpretAbility(g, 1, { actor: actor(), primaryTargets: [enemy()], allTargets: [actor(), enemy()], roller: () => 0 });
+    expect(res.targets.find(t => t.id === 'e')!.currentHp).toBe(23);
+    expect(res.pendingReactions ?? []).toEqual([]);
+  });
 });

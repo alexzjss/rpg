@@ -23,6 +23,8 @@ export interface InterpretCtx {
   hitTest?: boolean;
   /** Bônus de defesa somado ao limiar do nó 'teste' quando comparador é 'defesa_alvo' (proteção/reação). */
   defenseBonus?: number;
+  /** Reações registradas por triggers alcançados como filhos (não como ponto de entrada) durante este walk. */
+  pendingReactions?: { eventType: string; nodeIds: string[] }[];
   /** Sincroniza mutações do escopo de volta aos alvos/ator acumulados. */
   commit?: () => void;
   /** Intenções de movimento — materializadas no grid pela Cena (Fase 4); o núcleo headless só registra. */
@@ -45,6 +47,7 @@ export interface AbilityResult {
   trace: TraceStep[];
   ongoingEffectIntents: { targetId: string; casterId: string; rounds: number }[];
   hitTest?: boolean;
+  pendingReactions?: { eventType: string; nodeIds: string[] }[];
 }
 
 export interface InterpretInput {
@@ -82,6 +85,7 @@ export function interpretAbility(graph: AbilityGraph, level: number, input: Inte
     transformIntents: [],
     lastEffectKind: new Map(),
     ongoingEffectIntents: [],
+    pendingReactions: [],
   };
   ctx.commit = () => {
     for (const s of ctx.scope) {
@@ -109,6 +113,14 @@ export function interpretAbility(graph: AbilityGraph, level: number, input: Inte
     if (!node || visited.has(node.id)) return;   // guarda anti-ciclo acidental
     visited.add(node.id);
     const def = getNodeType(node.type);
+    if (node.family === 'gatilho' && !entryIds.has(node.id)) {
+      // trigger alcançado como filho (não como entrada): registra a reação e para o walk aqui.
+      const childIds = outgoing(node.id).map(e => e.to);
+      if (childIds.length) {
+        ctx.pendingReactions = [...(ctx.pendingReactions ?? []), { eventType: node.type, nodeIds: childIds }];
+      }
+      return;
+    }
     if (!def) { ctx.trace.push({ node: node.type, detail: 'nó desconhecido — ignorado' }); }
     else if (node.family === 'ramo' && def.evaluate) {
       const branch = def.evaluate(node.props, ctx) ? 'entao' : 'senao';
@@ -129,5 +141,6 @@ export function interpretAbility(graph: AbilityGraph, level: number, input: Inte
     trace: ctx.trace,
     ongoingEffectIntents: ctx.ongoingEffectIntents ?? [],
     hitTest: ctx.hitTest,
+    pendingReactions: ctx.pendingReactions,
   };
 }
