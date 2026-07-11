@@ -82,6 +82,12 @@ export function graphPreparation(graph: AbilityGraph, level: number): Preparatio
   return { timing, cancellable: true, interruptedByDamage: false, persistsAfterDamage: true, visibility: 'visivel' };
 }
 
+/** Acha o id do nó de trigger de um tipo específico no grafo mesclado, para uso como entryNodeIds. */
+function findEntryNodeIds(graph: AbilityGraph, level: number, triggerType: string): string[] {
+  const node = mergeLevel(graph, level).nodes.find(n => n.type === triggerType);
+  return node ? [node.id] : [];
+}
+
 export type AbilityGraphCooldownEvent = 'inicio_turno' | 'inicio_rodada' | 'uso_manual';
 
 /** Avança o cooldown das habilidades-grafo do elenco: um contador simples por turnos/rodadas/usos —
@@ -164,7 +170,7 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
       if (isCombo) {
         const comboResult = interpretAbility(pass.graph, pass.level, {
           actor: passActor, primaryTargets: [currentTarget], allTargets: [passActor, ...targets, ...currentAdditionalTargets], roller, defenseBonus,
-        }, { rootType: 'em_combo' });
+        }, { entryNodeIds: findEntryNodeIds(pass.graph, pass.level, 'em_combo') });
         passActor = comboResult.actor;
         currentTarget = comboResult.targets.find(rt => rt.id === currentTarget.id) ?? currentTarget;
         currentAdditionalTargets = currentAdditionalTargets.map(t => comboResult.targets.find(rt => rt.id === t.id) ?? t);
@@ -206,7 +212,7 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
 export function runOngoingEffect(
   graph: AbilityGraph, level: number, owner: ArsenalActorState, roller: (notation: string) => number,
 ) {
-  return interpretAbility(graph, level, { actor: owner, primaryTargets: [owner], allTargets: [owner], roller }, { rootType: 'enquanto_ativa' });
+  return interpretAbility(graph, level, { actor: owner, primaryTargets: [owner], allTargets: [owner], roller }, { entryNodeIds: findEntryNodeIds(graph, level, 'enquanto_ativa') });
 }
 
 export interface GraphFormaVisual {
