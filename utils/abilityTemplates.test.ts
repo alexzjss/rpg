@@ -69,7 +69,7 @@ describe('listAbilityTemplates', () => {
 
   it('forma especial inclui custo de aura, duracao, buff e cor de token', () => {
     const graph = listAbilityTemplates().find(t => t.id === 'forma_especial')!.build({ auraCost: 5, formRounds: 6, formBuffStat: 'aura_maxima', formBuffValue: 8, formColor: '#22d3ee' });
-    expect(graph.header.testDice).toBeNull();
+    expect(graph.nodes.some(n => n.type === 'teste')).toBe(false);
     expect(graph.nodes.some(n => n.type === 'custo' && n.props.amount === 5)).toBe(true);
     expect(graph.nodes.some(n => n.type === 'aplicar_como_efeito' && n.props.rounds === 6)).toBe(true);
     expect(graph.nodes.some(n => n.type === 'buff' && n.props.stat === 'aura_maxima' && n.props.value === 8)).toBe(true);

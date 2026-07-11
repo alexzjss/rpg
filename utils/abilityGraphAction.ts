@@ -28,7 +28,7 @@ export interface AbilityGraphActionResult {
   actor: ArsenalActorState;
   targets: ArsenalActorState[];
   preparation?: PreparationConfig;
-  rolls: { test?: number };
+  rolls: Record<string, never>;
   hitTargetIds: string[];
   defeatedIds: string[];
   trace: TraceStep[];
@@ -137,40 +137,45 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
   }
 
   const defenseBonus = request.defenseBonus ?? 0;
-  const test = header.testDice ? roller(header.testDice) : undefined;
-  const hitTargets = test === undefined ? targets : targets.filter(t => test >= t.defense + defenseBonus);
-  const missedTargets = test === undefined ? [] : targets.filter(t => test < t.defense + defenseBonus);
+  const passesFor = () => [{ graph: request.graph, level: request.level }, ...combos];
 
   let passActor = actor;
-  let passHitTargets = hitTargets;
   const trace: TraceStep[] = [];
   const ongoingEffectIntents: { targetId: string; casterId: string; rounds: number }[] = [];
   const isCombo = combos.length > 0;
-  for (const pass of [{ graph: request.graph, level: request.level }, ...combos]) {
-    const passResult = interpretAbility(pass.graph, pass.level, {
-      actor: passActor, primaryTargets: passHitTargets, allTargets: [passActor, ...targets, ...additionalTargets], roller,
-    });
-    passActor = passResult.actor;
-    passHitTargets = passHitTargets.map(t => passResult.targets.find(rt => rt.id === t.id) ?? t);
-    for (let i = 0; i < additionalTargets.length; i += 1) {
-      additionalTargets[i] = passResult.targets.find(rt => rt.id === additionalTargets[i].id) ?? additionalTargets[i];
-    }
-    trace.push(...passResult.trace);
-    ongoingEffectIntents.push(...passResult.ongoingEffectIntents);
+  const hitTargetIds: string[] = [];
+  const resultTargetById = new Map<string, ArsenalActorState>();
+  let currentAdditionalTargets = additionalTargets;
 
-    if (isCombo) {
-      const comboResult = interpretAbility(pass.graph, pass.level, {
-        actor: passActor, primaryTargets: passHitTargets, allTargets: [passActor, ...targets, ...additionalTargets], roller,
-      }, { rootType: 'em_combo' });
-      passActor = comboResult.actor;
-      passHitTargets = passHitTargets.map(t => comboResult.targets.find(rt => rt.id === t.id) ?? t);
-      for (let i = 0; i < additionalTargets.length; i += 1) {
-        additionalTargets[i] = comboResult.targets.find(rt => rt.id === additionalTargets[i].id) ?? additionalTargets[i];
+  for (const originalTarget of targets) {
+    let currentTarget = originalTarget;
+    let hit = true;
+    for (const pass of passesFor()) {
+      const passResult = interpretAbility(pass.graph, pass.level, {
+        actor: passActor, primaryTargets: [currentTarget], allTargets: [passActor, ...targets, ...currentAdditionalTargets], roller, defenseBonus,
+      });
+      hit = hit && (passResult.hitTest ?? true);
+      passActor = passResult.actor;
+      currentTarget = passResult.targets.find(rt => rt.id === currentTarget.id) ?? currentTarget;
+      currentAdditionalTargets = currentAdditionalTargets.map(t => passResult.targets.find(rt => rt.id === t.id) ?? t);
+      trace.push(...passResult.trace);
+      ongoingEffectIntents.push(...passResult.ongoingEffectIntents);
+
+      if (isCombo) {
+        const comboResult = interpretAbility(pass.graph, pass.level, {
+          actor: passActor, primaryTargets: [currentTarget], allTargets: [passActor, ...targets, ...currentAdditionalTargets], roller, defenseBonus,
+        }, { rootType: 'em_combo' });
+        passActor = comboResult.actor;
+        currentTarget = comboResult.targets.find(rt => rt.id === currentTarget.id) ?? currentTarget;
+        currentAdditionalTargets = currentAdditionalTargets.map(t => comboResult.targets.find(rt => rt.id === t.id) ?? t);
+        trace.push(...comboResult.trace);
+        ongoingEffectIntents.push(...comboResult.ongoingEffectIntents);
       }
-      trace.push(...comboResult.trace);
-      ongoingEffectIntents.push(...comboResult.ongoingEffectIntents);
     }
+    if (hit) hitTargetIds.push(originalTarget.id);
+    resultTargetById.set(originalTarget.id, currentTarget);
   }
+  additionalTargets.splice(0, additionalTargets.length, ...currentAdditionalTargets);
 
   if (holding) {
     const cooldown = graphCooldown(request.graph, request.level);
@@ -181,17 +186,14 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
     if (header.charges) holding.currentCharges = Math.max(0, (holding.currentCharges ?? header.charges.current) - 1);
   }
 
-  const resultTargets = [
-    ...passHitTargets,
-    ...missedTargets.filter(t => !passHitTargets.some(rt => rt.id === t.id)),
-  ];
+  const resultTargets = targets.map(t => resultTargetById.get(t.id)!);
 
   return {
     status: 'concluida',
     actor: { ...passActor, holdings: actor.holdings },
     targets: resultTargets,
-    rolls: { test },
-    hitTargetIds: hitTargets.map(t => t.id),
+    rolls: {},
+    hitTargetIds,
     defeatedIds: resultTargets.filter(t => t.currentHp <= 0).map(t => t.id),
     trace,
     fieldEffects: [],

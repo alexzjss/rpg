@@ -40,29 +40,54 @@ function danoGraph(over: Partial<AbilityGraph['header']> = {}, auraCost = 0): Ab
   return auraCost > 0 ? withCusto(base, 'aura', auraCost) : base;
 }
 
+function danoComTesteGraph(comparador: 'defesa_alvo' | 'valor_fixo' = 'defesa_alvo', valorFixo = 0): AbilityGraph {
+  return {
+    ...createAbilityGraph({ id: 'golpe-teste', name: 'Golpe com teste' }),
+    nodes: [
+      { id: 'g', type: 'ao_ativar', family: 'gatilho', props: {} },
+      { id: 'teste', type: 'teste', family: 'ramo', props: { dice: '1d20', comparador, valorFixo, modificador: 0 } },
+      { id: 'd', type: 'dano', family: 'efeito', props: { dice: undefined, flat: 6, element: 'fisico' } },
+    ],
+    edges: [
+      { id: 'e1', from: 'g', to: 'teste' },
+      { id: 'e2', from: 'teste', to: 'd', branch: 'entao' },
+    ],
+  };
+}
+
 describe('resolveAbilityGraphAction', () => {
   beforeEach(() => { _resetRegistry(); ensureNodesRegistered(); });
 
-  it('sem testDice, sempre acerta e aplica dano', () => {
+  it('sem nó teste, sempre acerta e aplica dano', () => {
     const res = resolveAbilityGraphAction({ graph: danoGraph(), level: 1, actor: actor(), targets: [target()], roller: () => 0 });
     expect(res.status).toBe('concluida');
     expect(res.hitTargetIds).toEqual(['t']);
     expect(res.targets[0].currentHp).toBe(24);
   });
 
-  it('com testDice, erra quando o teste é menor que a defesa do alvo', () => {
-    const graph = danoGraph({ testDice: '1d20' });
-    const res = resolveAbilityGraphAction({ graph, level: 1, actor: actor(), targets: [target({ defense: 99 })], roller: () => 5 });
+  it('com nó teste, erra quando a rolagem é menor que a defesa do alvo', () => {
+    const res = resolveAbilityGraphAction({ graph: danoComTesteGraph(), level: 1, actor: actor(), targets: [target({ defense: 99 })], roller: () => 5 });
     expect(res.hitTargetIds).toEqual([]);
     expect(res.targets[0].currentHp).toBe(30); // não sofreu dano
-    expect(res.rolls.test).toBe(5);
   });
 
-  it('com testDice, acerta quando o teste é maior ou igual à defesa', () => {
-    const graph = danoGraph({ testDice: '1d20' });
-    const res = resolveAbilityGraphAction({ graph, level: 1, actor: actor(), targets: [target({ defense: 5 })], roller: () => 10 });
+  it('com nó teste, acerta quando a rolagem é maior ou igual à defesa', () => {
+    const res = resolveAbilityGraphAction({ graph: danoComTesteGraph(), level: 1, actor: actor(), targets: [target({ defense: 5 })], roller: () => 10 });
     expect(res.hitTargetIds).toEqual(['t']);
     expect(res.targets[0].currentHp).toBe(24);
+  });
+
+  it('testa cada alvo individualmente: um alvo pode acertar e outro errar na mesma ação', () => {
+    const res = resolveAbilityGraphAction({
+      graph: danoComTesteGraph(),
+      level: 1,
+      actor: actor(),
+      targets: [target({ id: 't1', defense: 5 }), target({ id: 't2', defense: 15 })],
+      roller: () => 10,
+    });
+    expect(res.hitTargetIds.sort()).toEqual(['t1']);
+    expect(res.targets.find(t => t.id === 't1')!.currentHp).toBe(24); // acertou
+    expect(res.targets.find(t => t.id === 't2')!.currentHp).toBe(30); // errou, sem dano
   });
 
   it('bloqueia por aura insuficiente', () => {
@@ -200,7 +225,7 @@ describe('resolveAbilityGraphAction', () => {
 
   describe('defenseBonus (proteção/reação)', () => {
     it('soma defenseBonus à defesa do alvo no teste de acerto', () => {
-      const graph = danoGraph({ testDice: '1d20' });
+      const graph = danoComTesteGraph();
       const semBonus = resolveAbilityGraphAction({ graph, level: 1, actor: actor(), targets: [target({ defense: 10 })], roller: () => 10 });
       expect(semBonus.hitTargetIds).toEqual(['t']); // 10 >= 10, acerta
 

@@ -21,6 +21,8 @@ export interface InterpretCtx {
   trace: TraceStep[];
   /** Resultado do último nó 'teste' avaliado no walk — usado por resolveAbilityGraphAction para decidir acerto/erro por alvo. */
   hitTest?: boolean;
+  /** Bônus de defesa somado ao limiar do nó 'teste' quando comparador é 'defesa_alvo' (proteção/reação). */
+  defenseBonus?: number;
   /** Sincroniza mutações do escopo de volta aos alvos/ator acumulados. */
   commit?: () => void;
   /** Intenções de movimento — materializadas no grid pela Cena (Fase 4); o núcleo headless só registra. */
@@ -50,6 +52,8 @@ export interface InterpretInput {
   primaryTargets: ArsenalActorState[];
   allTargets: ArsenalActorState[];
   roller?: (notation: string, label?: string) => number;
+  /** Bônus de defesa somado ao limiar do nó 'teste' (comparador 'defesa_alvo') — usado por proteção/reação. */
+  defenseBonus?: number;
 }
 
 export function interpretAbility(graph: AbilityGraph, level: number, input: InterpretInput, opts?: { rootType?: string }): AbilityResult {
@@ -69,6 +73,7 @@ export function interpretAbility(graph: AbilityGraph, level: number, input: Inte
     allTargets: [...byId.values()],
     additionalTargets: input.allTargets.filter(t => !input.primaryTargets.some(primary => primary.id === t.id) && t.id !== input.actor.id).map(t => byId.get(t.id)!),
     roller,
+    defenseBonus: input.defenseBonus,
     element: graph.header.element,
     trace: [],
     commit: undefined,

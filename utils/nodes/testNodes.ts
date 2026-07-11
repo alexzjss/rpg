@@ -40,7 +40,7 @@ export function registerTestNodes(): void {
         return result;
       }
       const roll = ctx.roller(p.dice, 'Teste') + (p.modificador ?? 0);
-      const threshold = p.comparador === 'defesa_alvo' ? (ctx.scope[0]?.defense ?? 0)
+      const threshold = p.comparador === 'defesa_alvo' ? (ctx.scope[0]?.defense ?? 0) + (ctx.defenseBonus ?? 0)
         : p.comparador === 'aura_alvo' ? ctx.actor.currentAura
         : (p.valorFixo ?? 0);
       const result = roll >= threshold;
