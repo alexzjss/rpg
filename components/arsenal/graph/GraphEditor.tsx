@@ -127,7 +127,7 @@ const GraphEditor: React.FC<Props> = ({ initial, onSave, onClose }) => {
             <button type="button" style={tabButton(rightTab === 'preview')} onClick={() => setRightTab('preview')}>Preview</button>
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {rightTab === 'propriedades' && <NodeInspector node={selectedNode} onChange={handleInspectorChange} onRemove={nodeId => setGraph(g => removeNode(g, nodeId))} />}
+            {rightTab === 'propriedades' && <NodeInspector node={selectedNode} edges={displayed.edges} onChange={handleInspectorChange} onRemove={nodeId => setGraph(g => removeNode(g, nodeId))} />}
             {rightTab === 'simulador' && <SimulatorPanel graph={graph} level={level} />}
             {rightTab === 'preview' && <PreviewPanel graph={displayed} />}
           </div>
