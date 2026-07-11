@@ -2,7 +2,7 @@ import { rollDice } from './dice';
 import { mergeLevel, type AbilityGraph } from './abilityGraph';
 import type { ArsenalHolding, CooldownConfig, PreparationConfig } from './arsenal';
 import { INSTANT_PREPARATION } from './arsenal';
-import { interpretAbility, type TraceStep } from './abilityInterpreter';
+import { interpretAbility, type TraceStep, type OngoingEffectIntent } from './abilityInterpreter';
 import type { ArsenalActorState } from './arsenalPipeline';
 
 export interface AbilityGraphActionRequest {
@@ -33,7 +33,7 @@ export interface AbilityGraphActionResult {
   defeatedIds: string[];
   trace: TraceStep[];
   fieldEffects: never[];
-  ongoingEffectIntents: { targetId: string; casterId: string; rounds: number }[];
+  ongoingEffectIntents: OngoingEffectIntent[];
   /** Estado atualizado dos additionalTargets (ex.: o atacante, se um nó 'alvo' o incluiu no escopo e o afetou). */
   additionalTargets: ArsenalActorState[];
 }
@@ -147,7 +147,7 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
 
   let passActor = actor;
   const trace: TraceStep[] = [];
-  const ongoingEffectIntents: { targetId: string; casterId: string; rounds: number }[] = [];
+  const ongoingEffectIntents: OngoingEffectIntent[] = [];
   const isCombo = combos.length > 0;
   const hitTargetIds: string[] = [];
   const resultTargetById = new Map<string, ArsenalActorState>();

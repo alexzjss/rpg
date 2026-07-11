@@ -6,6 +6,13 @@ import type { ArsenalActorState } from './arsenalPipeline';
 
 export interface TraceStep { node: string; detail?: string }
 
+export interface OngoingEffectIntent {
+  targetId: string;
+  casterId: string;
+  rounds: number;
+  pendingReactions?: { eventType: string; nodeIds: string[] }[];
+}
+
 export interface InterpretCtx {
   actor: ArsenalActorState;
   /** Escopo corrente dos efeitos (mutável ao longo do fluxo). */
@@ -38,14 +45,14 @@ export interface InterpretCtx {
   /** Última condição clássica aplicada a cada alvo (por id), usada pelo nó 'eco'. */
   lastEffectKind?: Map<string, string>;
   /** Intenções de aplicar a própria habilidade como efeito contínuo — materializadas pela Cena como activeOngoingEffects. */
-  ongoingEffectIntents?: { targetId: string; casterId: string; rounds: number }[];
+  ongoingEffectIntents?: OngoingEffectIntent[];
 }
 
 export interface AbilityResult {
   actor: ArsenalActorState;
   targets: ArsenalActorState[];
   trace: TraceStep[];
-  ongoingEffectIntents: { targetId: string; casterId: string; rounds: number }[];
+  ongoingEffectIntents: OngoingEffectIntent[];
   hitTest?: boolean;
   pendingReactions?: { eventType: string; nodeIds: string[] }[];
 }

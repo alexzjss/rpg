@@ -68,4 +68,18 @@ describe('registerCoreNodes', () => {
     expect(c.trace.some(t => t.detail?.includes('3 de aura'))).toBe(true);
     expect(c.scope[0].currentHp).toBe(30);
   });
+
+  it('aplicar_como_efeito carrega ctx.pendingReactions para o ongoingEffectIntent emitido', () => {
+    const c = ctx({ pendingReactions: [{ eventType: 'ao_ser_alvejado', nodeIds: ['d'] }] });
+    getNodeType('aplicar_como_efeito')!.interpret!({ alvo: 'proprio', rounds: 3 }, c);
+    expect(c.ongoingEffectIntents?.[0]).toMatchObject({
+      pendingReactions: [{ eventType: 'ao_ser_alvejado', nodeIds: ['d'] }],
+    });
+  });
+
+  it('aplicar_como_efeito sem pendingReactions não inclui o campo no ongoingEffectIntent', () => {
+    const c = ctx();
+    getNodeType('aplicar_como_efeito')!.interpret!({ alvo: 'proprio', rounds: 3 }, c);
+    expect(c.ongoingEffectIntents?.[0]).not.toHaveProperty('pendingReactions');
+  });
 });

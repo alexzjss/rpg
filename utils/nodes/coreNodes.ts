@@ -62,7 +62,10 @@ export function registerCoreNodes(): void {
     summarize: p => `Aplica como efeito em ${p.alvo === 'proprio' ? 'si mesmo' : 'alvo atual'} por ${p.rounds} rod.`,
     interpret: (p, ctx) => {
       const target = p.alvo === 'proprio' ? ctx.actor : (ctx.scope[0] ?? ctx.actor);
-      ctx.ongoingEffectIntents = [...(ctx.ongoingEffectIntents ?? []), { targetId: target.id, casterId: ctx.actor.id, rounds: p.rounds }];
+      ctx.ongoingEffectIntents = [...(ctx.ongoingEffectIntents ?? []), {
+        targetId: target.id, casterId: ctx.actor.id, rounds: p.rounds,
+        ...(ctx.pendingReactions?.length ? { pendingReactions: ctx.pendingReactions } : {}),
+      }];
       ctx.trace.push({ node: 'aplicar_como_efeito', detail: `Aplicado como efeito contínuo em ${target.name} por ${p.rounds} rodadas` });
     },
   });

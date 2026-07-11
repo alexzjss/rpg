@@ -7,6 +7,7 @@ import { actorActions, normalizeArsenalCard, normalizeAbilityGraph, resolveActio
 import type { AbilityGraph } from '../utils/abilityGraph';
 import { mergeLevel } from '../utils/abilityGraph';
 import { resolveAbilityGraphAction, activatableGraphForms, graphFormaVisual, runOngoingEffect, graphComboConfig, advanceAbilityGraphCooldowns } from '../utils/abilityGraphAction';
+import type { OngoingEffectIntent } from '../utils/abilityInterpreter';
 import { buildAbilityGraphCombatLog } from '../utils/combatLogGraph';
 import { graphComboStackCandidates, resolveGraphComboSelection } from '../utils/abilityGraphCombo';
 import { startEncounter, advanceTurn, prevTurn, reorderEncounter, tickFieldEffects, addParticipantToOrder, removeParticipantFromOrder } from '../utils/encounter';
@@ -318,7 +319,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
 
   /** Registra as intenções de 'aplicar_como_efeito' de um resultado de habilidade-grafo como activeOngoingEffects. */
   const registerOngoingEffects = (
-    cur: CenaState, graphId: string, intents: { targetId: string; casterId: string; rounds: number }[],
+    cur: CenaState, graphId: string, intents: OngoingEffectIntent[],
   ): CenaState => {
     if (!intents.length) return cur;
     const entries: OngoingEffectState[] = intents.map(intent => ({
