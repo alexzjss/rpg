@@ -56,7 +56,7 @@ export interface InterpretInput {
   defenseBonus?: number;
 }
 
-export function interpretAbility(graph: AbilityGraph, level: number, input: InterpretInput, opts?: { rootType?: string }): AbilityResult {
+export function interpretAbility(graph: AbilityGraph, level: number, input: InterpretInput, opts?: { entryNodeIds?: string[] }): AbilityResult {
   const merged = mergeLevel(graph, level);
   const roller = input.roller ?? (notation => rollDice(notation).total);
 
@@ -95,9 +95,15 @@ export function interpretAbility(graph: AbilityGraph, level: number, input: Inte
   const outgoing = (id: string, branch?: 'entao' | 'senao') =>
     merged.edges.filter(e => e.from === id && (branch === undefined ? e.branch === undefined : e.branch === branch));
 
-  const root = merged.nodes.find(n => n.family === 'gatilho' && (opts?.rootType ? n.type === opts.rootType : n.type !== 'enquanto_ativa'));
-  if (!root) return { actor: ctx.actor, targets: [...byId.values()].filter(a => a.id !== ctx.actor.id), trace: ctx.trace, ongoingEffectIntents: [] };
+  const structuralRoots = opts?.entryNodeIds
+    ? opts.entryNodeIds.map(id => nodeById.get(id)).filter((n): n is GraphNode => !!n)
+    : merged.nodes.filter(n => !merged.edges.some(e => e.to === n.id));
+  const entryPoints = opts?.entryNodeIds
+    ? structuralRoots
+    : structuralRoots.filter(n => n.type !== 'enquanto_ativa' && n.type !== 'em_combo');
+  if (!entryPoints.length) return { actor: ctx.actor, targets: [...byId.values()].filter(a => a.id !== ctx.actor.id), trace: ctx.trace, ongoingEffectIntents: [] };
 
+  const entryIds = new Set(entryPoints.map(n => n.id));
   const visited = new Set<string>();
   const walk = (node: GraphNode | undefined) => {
     if (!node || visited.has(node.id)) return;   // guarda anti-ciclo acidental
@@ -114,7 +120,7 @@ export function interpretAbility(graph: AbilityGraph, level: number, input: Inte
     }
     for (const e of outgoing(node.id)) walk(nodeById.get(e.to));
   };
-  walk(root);
+  for (const entry of entryPoints) walk(entry);
   ctx.commit?.();
 
   return {
