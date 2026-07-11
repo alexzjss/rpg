@@ -68,6 +68,14 @@ describe('NodePalette', () => {
     expect(onPickTrigger).not.toHaveBeenCalled();
   });
 
+  it('com pendingConnection ativa, permite conectar um trigger como filho via onPick', () => {
+    const onPick = vi.fn();
+    render(<NodePalette pendingConnection={{ parentId: 'algum-id' }} {...baseProps} onPick={onPick} />);
+    const buttons = screen.getAllByRole('button', { name: 'Enquanto ativa' });
+    fireEvent.click(buttons[buttons.length - 1]);
+    expect(onPick).toHaveBeenCalledWith('enquanto_ativa');
+  });
+
   it('agrupa os blocos de Efeitos em subcategorias esperadas', () => {
     render(<NodePalette pendingConnection={{ parentId: 'x' }} {...baseProps} />);
     expect(screen.getByText('Combate')).toBeTruthy();
