@@ -10,7 +10,7 @@ function graphDano(): AbilityGraph {
     nodes: [
       { id: 'g', type: 'ao_ativar', family: 'gatilho', props: {} },
       { id: 'd', type: 'dano', family: 'efeito', props: { dice: '2d6', flat: 0, element: 'fogo' } },
-      { id: 'c', type: 'aplicar_condicao', family: 'efeito', props: { classicKind: 'queimadura' } },
+      { id: 'c', type: 'aplicar_condicao', family: 'efeito', props: { conditionName: 'Queimando' } },
     ],
     edges: [{ id: 'e1', from: 'g', to: 'd' }, { id: 'e2', from: 'd', to: 'c' }],
   };
@@ -23,7 +23,7 @@ describe('simulateAbility', () => {
     const res = simulateAbility(graphDano(), 1, { roller: () => 7 });
     const texto = describeTrace(res.trace);
     expect(texto).toContain('dano');
-    expect(texto).toContain('queimadura');
+    expect(texto).toContain('Queimando');
     expect(res.targets[0].currentHp).toBeLessThan(res.targets[0].maxHp);
   });
 

@@ -37,16 +37,30 @@ describe('NodePalette', () => {
   it('abre o criador rapido e dispara onLoadTemplate ao confirmar', () => {
     const onLoadTemplate = vi.fn();
     render(<NodePalette pendingConnection={null} {...baseProps} onLoadTemplate={onLoadTemplate} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Ataque com custo de aura' }));
+    fireEvent.click(screen.getByRole('button', { name: /Criar habilidade/ }));
+    fireEvent.click(screen.getByText('Ataque com custo de aura').closest('button')!);
     fireEvent.change(screen.getByLabelText('Custo de aura'), { target: { value: '4' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar no grafo' }));
     expect(onLoadTemplate).toHaveBeenCalledWith('ataque_aura', expect.objectContaining({ auraCost: 4 }));
   });
 
+  it('abre o seletor e o modo guiado avanca por passos ate criar o grafo', () => {
+    const onWizardBuild = vi.fn();
+    render(<NodePalette pendingConnection={null} {...baseProps} onWizardBuild={onWizardBuild} />);
+    fireEvent.click(screen.getByRole('button', { name: /Criar habilidade/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Personalizado \(perguntas guiadas\)/ }));
+    expect(screen.getByText(/Passo 1 de/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Avancar/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Avancar/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Avancar/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar grafo' }));
+    expect(onWizardBuild).toHaveBeenCalled();
+  });
+
   it('busca filtra os tipos listados', () => {
     render(<NodePalette pendingConnection={{ parentId: 'x' }} {...baseProps} />);
-    fireEvent.change(screen.getByPlaceholderText('Buscar no'), { target: { value: 'escudo' } });
-    expect(screen.getByText('Escudo')).toBeTruthy();
+    fireEvent.change(screen.getByPlaceholderText('Buscar nó ou tipo...'), { target: { value: 'roubo de vida' } });
+    expect(screen.getByText('Roubo de vida')).toBeTruthy();
     expect(screen.queryByText('Cura')).toBeFalsy();
   });
 
@@ -82,6 +96,6 @@ describe('NodePalette', () => {
     expect(screen.getByText('Defesa')).toBeTruthy();
     expect(screen.getByText('Controle')).toBeTruthy();
     expect(screen.getAllByText('Forma').length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: 'Escudo' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Roubo de vida' })).toBeTruthy();
   });
 });

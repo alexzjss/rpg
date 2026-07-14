@@ -26,7 +26,7 @@ const Chip: React.FC<ChipProps> = ({ name, dot = '#E0102B', badge, badgeColor = 
 );
 
 export const SealsPanel: React.FC<{ seals: Seal[] }> = ({ seals }) => (
-  <div style={shell}>
+  <div className="cena-glass-panel" style={shell}>
     <div style={header}><span style={{ ...headerLabel, letterSpacing: '2.5px' }}>SELOS</span><span style={rule} /><span style={{ fontSize: 11, color: '#55555c', letterSpacing: '1px' }}>{seals.length}</span></div>
     <div style={{ ...body, flexDirection: 'column', flexWrap: 'nowrap' }}>
       {seals.length === 0
@@ -44,7 +44,7 @@ export const SealsPanel: React.FC<{ seals: Seal[] }> = ({ seals }) => (
 export const ActionsPanel: React.FC<{ cards: Card[]; items: ResolvedItem[]; weapons: Weapon[] }> = ({ cards, items, weapons }) => {
   const isEmpty = cards.length === 0 && items.length === 0 && weapons.length === 0;
   return (
-    <div style={shell}>
+    <div className="cena-glass-panel" style={shell}>
       <div style={header}><span style={headerLabel}>AÇÕES · CARTAS · ITENS</span><span style={rule} /></div>
       <div style={body}>
         {isEmpty

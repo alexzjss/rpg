@@ -2,19 +2,24 @@ import React from 'react';
 import { ScrollText } from 'lucide-react';
 import type { Card, Character, Item, Seal, Weapon } from '../types';
 import type { CenaState, SceneState, OngoingEffectState } from '../utils/cena';
-import { setScene, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken, updateNpcStats, appendLog, logEntry } from '../utils/cena';
+import { setScene, setEncounterPaused, removeNpc, toggleNpcHidden, toggleNpcPresent, setToken, updateNpcStats, appendLog, logEntry } from '../utils/cena';
 import { actorActions, normalizeArsenalCard, normalizeAbilityGraph, resolveAction, applyStatDelta, type ResolvedAction, type StatSnapshot } from '../utils/actions';
 import type { AbilityGraph } from '../utils/abilityGraph';
 import { mergeLevel } from '../utils/abilityGraph';
-import { resolveAbilityGraphAction, activatableGraphForms, graphFormaVisual, runOngoingEffect, graphComboConfig, advanceAbilityGraphCooldowns } from '../utils/abilityGraphAction';
-import type { OngoingEffectIntent } from '../utils/abilityInterpreter';
+import { resolveAbilityGraphAction, activatableGraphForms, graphFormaVisual, runOngoingEffect, graphComboConfig, advanceAbilityGraphCooldowns, unlockedAbilityGraphIds } from '../utils/abilityGraphAction';
+import type { MovementIntent, OngoingEffectIntent } from '../utils/abilityInterpreter';
+import { resolveMovementIntents } from '../utils/movementResolver';
+import { graphAreaConfig, resolveAreaTargets, type AreaShapeConfig } from '../utils/abilityArea';
+import { effectiveTokens } from '../utils/mapPositions';
+
+const AREA_SELF_CENTERED: ReadonlySet<AreaShapeConfig['shape']> = new Set(['raio', 'quadrado']);
 import { buildAbilityGraphCombatLog } from '../utils/combatLogGraph';
 import { graphComboStackCandidates, resolveGraphComboSelection } from '../utils/abilityGraphCombo';
-import { startEncounter, advanceTurn, prevTurn, reorderEncounter, tickFieldEffects, addParticipantToOrder, removeParticipantFromOrder } from '../utils/encounter';
-import { resolveCards, resolveSeals, resolveOwnedItems, resolveWeapons } from '../utils/items';
+import { startEncounter, advanceTurn, reorderEncounter, moveInOrder, tickFieldEffects, addParticipantToOrder, removeParticipantFromOrder } from '../utils/encounter';
+import { consumeItemActivation, resolveCards, resolveSeals, resolveOwnedItems, resolveWeapons } from '../utils/items';
 import LogPanel from './cena/LogPanel';
 import MapBoard, { type TargetEffect, type TargetEffectKind } from './cena/MapBoard';
-import RosterPanel, { type ActiveRef, type TokenFormaState } from './cena/RosterPanel';
+import RosterPanel, { type ActiveRef, type TargetImpactPreview, type TokenFormaState } from './cena/RosterPanel';
 import ActionMenu from './cena/ActionMenu';
 import type { RollResult } from '../utils/dice';
 import { rollDice } from '../utils/dice';
@@ -25,10 +30,11 @@ import CombatCinematics from './cena/CombatCinematics';
 import FieldEffectsBar from './cena/FieldEffectsBar';
 import { arsenalCardAtLevel, type ArsenalCard } from '../utils/arsenal';
 import { getPredefinedEffect } from '../utils/arsenalEffects';
-import { activatableForms, activateForm, advanceArsenalState, availableCardIds, comboStackCandidates, equipWeapon, resolveComboCards, type FormAvailability } from '../utils/arsenalState';
-import { activeOrderAdjustment, advanceTurnEndEffects, applyActiveEffect, consumePrincipalBlock, consumeTurnSkip, resolveArsenalAction, tickActiveEffects, type ArsenalActorState } from '../utils/arsenalPipeline';
+import { activatableForms, activateForm, advanceArsenalState, availableCardIds, comboStackCandidates, equipWeapon, isReactionCard, resolveComboCards, unlockedCardIds, type FormAvailability } from '../utils/arsenalState';
+import { activeOrderAdjustment, advanceTurnEndEffects, applyActiveEffect, consumePrincipalBlock, resolveArsenalAction, resolveComboAction, tickActiveEffects, type ArsenalActorState } from '../utils/arsenalPipeline';
 import { buildArsenalCombatLog } from '../utils/combatLog';
-import { migrateCharacterDefense, processDefenseRound, processStaggeredTurn } from '../utils/defense';
+import { migrateCharacterDefense, processDefenseRound, processStaggeredTurn, resolveDefenseHit } from '../utils/defense';
+import { removeActiveEffects } from '../utils/abilityPrimitives';
 
 export interface CenaTabProps {
   cena: CenaState;
@@ -44,6 +50,8 @@ export interface CenaTabProps {
   onDiceRoll?: (roll: RollResult, options?: {
     isSuccess?: boolean;
     customLabel?: string;
+    finalTotal?: number;
+    adjustments?: Array<{ label: string; value: number }>;
     defenderResult?: number;
     defenderRoll?: RollResult;
     defenderBase?: number;
@@ -61,12 +69,27 @@ const conditionColor = (name: string): string => {
   return `hsl(${Math.abs(hash) % 360} 78% 66%)`;
 };
 
+const diceBonusOf = (notation: string): number => {
+  const match = notation.match(/[+-]\d+(?!.*[+-]\d)/);
+  return match ? Number(match[0]) : 0;
+};
+
+const accuracyTone = (bonus: number, defense: number): { label: string; gap: number } => {
+  const expected = 10.5 + bonus;
+  const gap = Math.round(expected - defense);
+  if (gap >= 6) return { label: 'FAVORÁVEL', gap };
+  if (gap >= 0) return { label: 'EQUILIBRADO', gap };
+  if (gap >= -5) return { label: 'ARRISCADO', gap };
+  return { label: 'DIFÍCIL', gap };
+};
+
 const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items, weapons, arsenal = [], abilityGraphs = [], updateCena, updateCharacterStats, onDiceRoll }) => {
   const [active, setActive] = React.useState<ActiveRef | null>(null);
   const [armed, setArmed] = React.useState<ResolvedAction | null>(null);
   const [previewAction, setPreviewAction] = React.useState<ResolvedAction | null>(null);
   const [pendingLogIds, setPendingLogIds] = React.useState<string[]>([]);
   const [pendingProtection, setPendingProtection] = React.useState<{ targetId:string; action:ResolvedAction; cards:ArsenalCard[]; graphs?:AbilityGraph[] }|null>(null);
+  const [pendingTargetId, setPendingTargetId] = React.useState<string | null>(null);
   const [comboDraft, setComboDraft] = React.useState<ArsenalCard|null>(null);
   const [comboGraphDraft, setComboGraphDraft] = React.useState<AbilityGraph|null>(null);
   const [comboSelection, setComboSelection] = React.useState<string[]>([]);
@@ -75,6 +98,14 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
   const [gmDashboardOpen, setGmDashboardOpen] = React.useState(false);
   const [arsenalLevels,setArsenalLevels] = React.useState<Record<string,number>>({});
   const [targetEffect, setTargetEffect] = React.useState<TargetEffect | null>(null);
+  const hideLogUntilDiceComplete = React.useCallback((ids: string[], after?: () => void) => {
+    if (!ids.length || !onDiceRoll) return after;
+    setPendingLogIds(current => [...current, ...ids]);
+    return () => {
+      setPendingLogIds(current => current.filter(id => !ids.includes(id)));
+      after?.();
+    };
+  }, [onDiceRoll]);
   React.useEffect(() => {
     if (!armed) return;
     const handler = (event: KeyboardEvent) => {
@@ -83,11 +114,15 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
       event.preventDefault();
       setArmed(null);
+      setPendingTargetId(null);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [armed]);
+  React.useEffect(() => { setPendingTargetId(null); }, [armed?.id]);
   const [formaActivation, setFormaActivation] = React.useState<{ key:number; characterName:string; formName:string; color?:string; image?:string } | null>(null);
+  const [rareEvent, setRareEvent] = React.useState<{ key:number; kind:'break'|'defeat'|'stagger'|'critical'|'fumble'|'reaction'|'massive-heal'|'forma-expire'; label:string; detail?:string; image?:string } | null>(null);
+  const [consequence, setConsequence] = React.useState<{ key:number; tone:'damage'|'heal'|'condition'|'evade'; label:string; detail:string } | null>(null);
   const targetEffectTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const encounterInitialized = React.useRef(false);
   const gmDashboardWindow = React.useRef<Window | null>(null);
@@ -100,6 +135,24 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     gmDashboardWindow.current = opened;
     setGmDashboardOpen(!!opened);
   }, []);
+  const toggleEncounterPause = React.useCallback(() => {
+    updateCena(setEncounterPaused(cena, !cena.encounter.isPaused));
+  }, [cena, updateCena]);
+  React.useEffect(() => {
+    const isTyping = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null;
+      return !!el && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable);
+    };
+    const handler = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.repeat || isTyping(event.target)) return;
+      if (event.key !== 'Escape' && event.key.toLocaleLowerCase() !== 'm') return;
+      event.preventDefault();
+      if (event.key === 'Escape') toggleGmDashboard();
+      else toggleEncounterPause();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [toggleEncounterPause, toggleGmDashboard]);
   React.useEffect(() => {
     if (!gmDashboardOpen) return;
     const timer = window.setInterval(() => {
@@ -115,7 +168,29 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
   const playTargetEffect = React.useCallback((effect: Omit<TargetEffect, 'id'>) => {
     if (targetEffectTimer.current) clearTimeout(targetEffectTimer.current);
     setTargetEffect({ ...effect, id: `target-fx-${Date.now()}-${Math.random().toString(36).slice(2)}` });
+    const hp = effect.hpDelta ?? 0;
+    const tone = effect.kinds.includes('heal') ? 'heal' : effect.kinds.includes('evade') ? 'evade' : effect.kinds.includes('condition') ? 'condition' : 'damage';
+    const label = tone === 'heal' ? 'RECUPERACAO' : tone === 'evade' ? 'EVITOU' : tone === 'condition' ? 'CONDICAO' : 'IMPACTO';
+    const detail = effect.conditionName ?? (hp ? `${hp > 0 ? '+' : '-'}${Math.abs(hp)} HP` : effect.kinds.join(' / ').toUpperCase());
+    setConsequence({ key: Date.now(), tone, label, detail });
     targetEffectTimer.current = setTimeout(() => setTargetEffect(null), 1300);
+  }, []);
+  const playRareEvent = React.useCallback((before: Character, after: Character) => {
+    const beforeDefense = migrateCharacterDefense(before);
+    const afterDefense = migrateCharacterDefense(after);
+    const key = Date.now();
+    if (before.currentHp > 0 && after.currentHp <= 0) {
+      setRareEvent({ key, kind: 'defeat', label: after.name, detail: 'DERROTADO', image: after.icon });
+    } else if (!beforeDefense.isStaggered && afterDefense.isStaggered) {
+      setRareEvent({ key, kind: 'stagger', label: after.name, detail: 'DESNORTEADO', image: after.icon });
+    } else if (!beforeDefense.isDefenseBroken && afterDefense.isDefenseBroken) {
+      setRareEvent({ key, kind: 'break', label: after.name, detail: 'BREAK DE DEFESA', image: after.icon });
+    }
+  }, []);
+  const playRollRareEvent = React.useCallback((roll: RollResult, actorName: string, image?: string) => {
+    const key = Date.now();
+    if (roll.total === 20) setRareEvent({ key, kind: 'critical', label: actorName, detail: 'CRITICO', image });
+    else if (roll.total === 1) setRareEvent({ key, kind: 'fumble', label: actorName, detail: 'FALHA CRITICA', image });
   }, []);
   React.useEffect(() => () => {
     if (targetEffectTimer.current) clearTimeout(targetEffectTimer.current);
@@ -181,6 +256,64 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       : cena.npcRoster.find(n => n.id === active.id) ?? null;
   const activeChar: Character | null = combat ? turnActor : selectedChar;
 
+  const targetableIds = React.useMemo(() => {
+    if (!armed || !turnActor) return [];
+    if (armed.targeting === 'self') return [turnActor.id];
+    return participants.filter(p => p.currentHp > 0).map(p => p.id);
+  }, [armed, turnActor?.id, participants]);
+
+  /** Config de área (linha/raio/cone/quadrado) da habilidade armada, lida do nó 'alvo' do grafo sem
+   *  rodar o interpretador — usada só pra pré-visualizar a área no grid antes de resolver de fato. */
+  const armedAreaConfig = React.useMemo<AreaShapeConfig | null>(() => {
+    if (!armed?.abilityGraph) return null;
+    return graphAreaConfig(armed.abilityGraph, armed.abilityGraphLevel ?? 1);
+  }, [armed]);
+
+  /** Ids destacados no grid como "dentro da área" da habilidade armada — raio/quadrado calculam assim que
+   *  armada (centrados no próprio ator); linha/cone só depois que um alvo pendente define a mira. */
+  const areaPreviewIds = React.useMemo(() => {
+    if (!armedAreaConfig || !turnActor) return [];
+    const aimAtId = AREA_SELF_CENTERED.has(armedAreaConfig.shape) ? null : pendingTargetId;
+    if (!AREA_SELF_CENTERED.has(armedAreaConfig.shape) && !aimAtId) return [];
+    const candidateIds = participants.map(p => p.id);
+    // effectiveTokens preenche com a mesma posição visual de fallback do MapBoard pra quem ainda não
+    // foi arrastado no mapa — sem isso, a área nunca acertava ninguém que não tivesse cena.tokens[id].
+    const tokensForArea = effectiveTokens(cena.tokens, participants.map(p => p.id));
+    return resolveAreaTargets(armedAreaConfig, turnActor.id, aimAtId, tokensForArea, candidateIds);
+  }, [armedAreaConfig, turnActor?.id, pendingTargetId, participants, cena.tokens]);
+
+  const targetImpacts = React.useMemo<Record<string, TargetImpactPreview>>(() => {
+    if (!armed || !turnActor) return {};
+    const ids = armed.targeting === 'self' ? [turnActor.id] : targetableIds;
+    return ids.reduce<Record<string, TargetImpactPreview>>((acc, id) => {
+      const target = byId(id);
+      if (!target) return acc;
+      const intent: TargetImpactPreview['intent'] = armed.healHp ? 'heal' : armed.damage || armed.damageValue || armed.impactValue ? 'attack' : armed.conditionName ? 'debuff' : 'buff';
+      const defenseValue = target.defense ?? 10;
+      const bonus = diceBonusOf(armed.diceRoll || '1d20');
+      const tone = accuracyTone(bonus, defenseValue);
+      const impact: TargetImpactPreview = {
+        intent,
+        accuracyLabel: tone.label,
+        comparison: `${armed.diceRoll || '1d20'} vs DEF ${defenseValue}`,
+      };
+      const heal = Math.max(0, armed.healHp ?? 0);
+      const damage = Math.max(0, armed.damageValue ?? armed.damage ?? 0);
+      if (heal > 0) impact.hpDelta = Math.min(heal, Math.max(0, target.maxHp - target.currentHp));
+      if (damage > 0) {
+        const defense = resolveDefenseHit(migrateCharacterDefense(target), damage);
+        if (defense.defenseDamage > 0) impact.defenseDelta = -defense.defenseDamage;
+        if (defense.staggerDamage > 0) impact.staggerDelta = defense.staggerDamage;
+        if (defense.healthDamage > 0) impact.hpDelta = -(defense.healthDamage);
+        if (defense.defenseBroken) impact.note = 'BREAK';
+        if (defense.enteredStaggered) impact.note = 'STAGGER';
+      }
+      if (armed.conditionName) impact.note = impact.note ?? armed.conditionName;
+      acc[id] = impact;
+      return acc;
+    }, {});
+  }, [armed, targetableIds, turnActor?.id, party, cena.npcRoster]);
+
   const activeCards = activeChar ? resolveCards(activeChar, cards) : [];
   const activeSeals = activeChar ? resolveSeals(activeChar, seals) : [];
   const activeItems = activeChar ? resolveOwnedItems(activeChar, items) : [];
@@ -191,15 +324,24 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     activeFormIds:(character.arsenal??[]).filter(h=>h.active).map(h=>h.cardId),
   });
   const activeLoadout = activeChar ? loadoutOf(activeChar) : { holdings:[], equippedWeaponIds:[], activeFormIds:[] };
-  const leveledArsenal = arsenal.map(card=>arsenalCardAtLevel(card,arsenalLevels[card.id]??1));
-  const activeArsenalIds = activeChar ? availableCardIds(activeLoadout, leveledArsenal) : [];
+  const holdingLevelCap = (entryId:string) => activeLoadout.holdings.find(holding=>holding.cardId===entryId)?.maxLevel;
+  const cappedLevel = (entryId:string) => Math.max(1, Math.min(arsenalLevels[entryId]??holdingLevelCap(entryId)??1, holdingLevelCap(entryId)??Infinity));
+  const leveledArsenal = arsenal.map(card=>arsenalCardAtLevel(card,cappedLevel(card.id)));
+  /** Critérios de 'liberar_cartas' de efeitos contínuos ativos do personagem selecionado (ex.: forma que
+   *  libera cartas não atribuídas a ele enquanto durar). */
+  const activeUnlockCriteria = activeChar
+    ? cena.encounter.activeOngoingEffects.filter(entry => entry.ownerId === activeChar.id).flatMap(entry => entry.unlockCardIntents ?? [])
+    : [];
+  const activeUnlockedArsenalIds = unlockedCardIds(activeUnlockCriteria, leveledArsenal);
+  const activeArsenalIds = activeChar ? [...new Set([...availableCardIds(activeLoadout, leveledArsenal), ...activeUnlockedArsenalIds])] : [];
   const activeArsenalCards = leveledArsenal.filter(card => activeArsenalIds.includes(card.id));
-  const leveledAbilityGraphs = abilityGraphs.map(graph => mergeLevel(graph, arsenalLevels[graph.id]??1));
-  const activeAbilityGraphIds = activeChar ? (activeChar.arsenal??[]).map(h=>h.cardId) : [];
+  const leveledAbilityGraphs = abilityGraphs.map(graph => mergeLevel(graph,cappedLevel(graph.id)));
+  const activeUnlockedGraphIds = unlockedAbilityGraphIds(activeUnlockCriteria, abilityGraphs);
+  const activeAbilityGraphIds = activeChar ? [...new Set([...(activeChar.arsenal??[]).map(h=>h.cardId), ...activeUnlockedGraphIds])] : [];
   const activeAbilityGraphs = activeChar
     ? abilityGraphs
-        .filter(graph => (activeChar.arsenal??[]).some(h=>h.cardId===graph.id))
-        .map(graph => ({ graph, level: arsenalLevels[graph.id]??1 }))
+        .filter(graph => (activeChar.arsenal??[]).some(h=>h.cardId===graph.id) || activeUnlockedGraphIds.includes(graph.id))
+        .map(graph => ({ graph, level: cappedLevel(graph.id) }))
     : [];
   const activeArsenalWeapons = activeArsenalCards.filter(card => card.category==='arma');
 
@@ -324,6 +466,8 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     if (!intents.length) return cur;
     const entries: OngoingEffectState[] = intents.map(intent => ({
       id: `ongoing-${crypto.randomUUID()}`, ownerId: intent.targetId, casterId: intent.casterId, graphId, roundsRemaining: intent.rounds,
+      ...(intent.pendingReactions?.length ? { pendingReactions: intent.pendingReactions } : {}),
+      ...(intent.unlockCardIntents?.length ? { unlockCardIntents: intent.unlockCardIntents } : {}),
     }));
     return { ...cur, encounter: { ...cur.encounter, activeOngoingEffects: [...cur.encounter.activeOngoingEffects, ...entries] } };
   };
@@ -396,7 +540,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     updateCena(next);
   };
 
-  /** Equivalente de activateFormaFor para habilidades-grafo detectadas como forma (cor_token/icone_token) —
+  /** Equivalente de activateFormaFor para habilidades-grafo detectadas como forma (cor_token/icone_token) —?
    *  mesmo estado cena.encounter.activeFormas (genérico por id), mesma revertForma no toggle/expiração. */
   const activateAbilityGraphFormaFor = (character: Character, formId: string) => {
     let cur = cena;
@@ -432,17 +576,32 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     updateCena(next);
   };
 
+  /** Qualquer carta usável como reação (abilityType 'protecao', legado, ou marcada com a condição de uso
+   *  {type:'reacao'}) que o alvo possui e pode disparar agora. Não se restringe mais a bônus de defesa:
+   *  a carta resolve normalmente via resolveArsenalAction (isReaction:true), então pode causar dano,
+   *  curar ou aplicar condições — o bônus de defesa contra o ataque reagido vem da rolagem de teste dela. */
   const protectionCardsFor = (target:Character):ArsenalCard[] => {
     const ids=availableCardIds(loadoutOf(target),leveledArsenal);
     return leveledArsenal.filter(card=>{
       const holding=(target.arsenal??[]).find(item=>item.cardId===card.id);
-      return ids.includes(card.id)&&card.category==='habilidade'&&card.abilityType==='protecao'&&!(holding?.cooldownRemaining)&&(!card.charges||(holding?.currentCharges??card.charges.current)>0);
+      return ids.includes(card.id)&&card.category==='habilidade'&&isReactionCard(card)&&!(holding?.cooldownRemaining)&&(!card.charges||(holding?.currentCharges??card.charges.current)>0);
     });
   };
 
   /** Habilidades-grafo cuja raiz é "Quando alvejado" (ao_ser_alvejado), que o alvo possui e pode usar agora. */
-  const protectionAbilityGraphsFor = (target:Character):AbilityGraph[] =>
-    leveledAbilityGraphs.filter(graph=>{
+  const ongoingGraphProtectionsFor = (target: Character): { graph: AbilityGraph; nodeIds: string[] }[] =>
+    cena.encounter.activeOngoingEffects
+      .filter(entry => entry.ownerId === target.id)
+      .flatMap(entry => {
+        const graph = leveledAbilityGraphs.find(candidate => candidate.id === entry.graphId);
+        if (!graph) return [];
+        return (entry.pendingReactions ?? [])
+          .filter(reaction => reaction.eventType === 'ao_ser_alvejado')
+          .map(reaction => ({ graph, nodeIds: reaction.nodeIds }));
+      });
+
+  const protectionAbilityGraphsFor = (target:Character):AbilityGraph[] => {
+    const ownedReactions = leveledAbilityGraphs.filter(graph=>{
       const root = graph.nodes.find(n=>n.family==='gatilho');
       if(root?.type!=='ao_ser_alvejado')return false;
       const holding=(target.arsenal??[]).find(item=>item.cardId===graph.id);
@@ -451,28 +610,230 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       if(graph.header.charges&&(holding.currentCharges??graph.header.charges.current)<=0)return false;
       return true;
     });
+    const byId = new Map<string, AbilityGraph>();
+    for (const graph of ownedReactions) byId.set(graph.id, graph);
+    return [...byId.values()];
+  };
 
   /** Resolve uma habilidade-grafo de proteção como reação: rola 1d20 e aplica os efeitos do grafo no
-   *  próprio defensor; o resultado do teste vira defenseBonus do ataque.
-   *  Nota: com a remoção do nó teste_defesa (agora o teste de acerto é um nó 'teste' comum dentro do
-   *  próprio grafo), o dado usado aqui como bônus de proteção é fixo em 1d20 — não lê mais um dado
-   *  configurável do grafo. Todo o conteúdo atual já usava 1d20 como padrão, então não há regressão
-   *  observável hoje, mas uma habilidade de proteção customizada com outro dado perderia essa customização
-   *  para efeito do bônus externo (o teste dentro do próprio grafo continua respeitando o dado configurado). */
-  const resolveGraphProtection = (target: Character, attacker: Character, graph: AbilityGraph) => {
+   *  próprio defensor; o resultado vira defenseBonus do ataque.
+   *  O 1d20 é o padrão (mesma raiz de sempre, para qualquer nó 'teste' interno do próprio grafo), mas se
+   *  o grafo tiver um nó 'esquiva', o valor fixo/dado configurado nele substitui o 1d20 como defenseBonus
+   *  externo (ver `defenseRollOverride` em abilityInterpreter.ts) — grafos sem o nó novo continuam
+   *  exatamente como antes. */
+  const resolveGraphProtection = (
+    target: Character,
+    attacker: Character,
+    graph: AbilityGraph,
+    options: { targetState?: ArsenalActorState; attackerState?: ArsenalActorState; entryNodeIds?: string[] } = {},
+  ) => {
     const level = arsenalLevels[graph.id] ?? 1;
     const protectionRoll = rollDice('1d20');
-    const state = actorState(target);
-    const attackerState = actorState(attacker);
+    const state = options.targetState ?? actorState(target);
+    const attackerState = options.attackerState ?? actorState(attacker);
+    const ongoing = cena.encounter.activeOngoingEffects.find(entry =>
+      entry.ownerId === target.id
+      && entry.graphId === graph.id
+      && entry.pendingReactions?.some(reaction => reaction.eventType === 'ao_ser_alvejado')
+    );
+    const entryNodeIds = options.entryNodeIds ?? ongoing?.pendingReactions?.find(reaction => reaction.eventType === 'ao_ser_alvejado')?.nodeIds;
     const result = resolveAbilityGraphAction({
       graph, level, actor: state, targets: [state], additionalTargets: [attackerState],
       roller: notation => notation === '1d20' ? protectionRoll.total : rollDice(notation).total,
+      entryNodeIds,
     });
     return { result, protectionRoll };
   };
 
+  const resolveOngoingGraphProtections = (
+    target: Character,
+    attacker: Character,
+    targetState: ArsenalActorState,
+    attackerState: ArsenalActorState,
+  ) => {
+    let currentTargetState = targetState;
+    let currentAttackerState = attackerState;
+    let bonus = 0;
+    const logs: ReturnType<typeof logEntry>[] = [];
+    for (const protection of ongoingGraphProtectionsFor(target)) {
+      const beforeTarget = currentTargetState;
+      const beforeAttacker = currentAttackerState;
+      const { result, protectionRoll } = resolveGraphProtection(target, attacker, protection.graph, {
+        targetState: currentTargetState,
+        attackerState: currentAttackerState,
+        entryNodeIds: protection.nodeIds,
+      });
+      if (result.status !== 'concluida') continue;
+      bonus += result.defenseRollOverride ?? protectionRoll.total;
+      const reactionTarget = result.targets.find(t => t.id === target.id);
+      currentTargetState = reactionTarget
+        ? { ...result.actor, currentHp: reactionTarget.currentHp, currentAura: reactionTarget.currentAura, effects: reactionTarget.effects }
+        : result.actor;
+      currentAttackerState = result.additionalTargets.find(t => t.id === attacker.id) ?? currentAttackerState;
+      logs.push(...buildAbilityGraphCombatLog({ graph: protection.graph, beforeActor: beforeTarget, beforeTargets: [beforeTarget, beforeAttacker], result }));
+    }
+    return { bonus, targetState: currentTargetState, attackerState: currentAttackerState, logs, resolved: bonus !== 0 || logs.length > 0 };
+  };
+
+  /** Habilidades-grafo contínuas do próprio `owner` cujo `eventType` (ex.: 'ao_atacar'/'ao_esquivar') está pendente. */
+  const ownOngoingReactionsFor = (owner: Character, eventType: string): { graph: AbilityGraph; nodeIds: string[] }[] =>
+    cena.encounter.activeOngoingEffects
+      .filter(entry => entry.ownerId === owner.id)
+      .flatMap(entry => {
+        const graph = leveledAbilityGraphs.find(candidate => candidate.id === entry.graphId);
+        if (!graph) return [];
+        return (entry.pendingReactions ?? [])
+          .filter(reaction => reaction.eventType === eventType)
+          .map(reaction => ({ graph, nodeIds: reaction.nodeIds }));
+      });
+
+  /** Dispara as reações contínuas 'ao_atacar'/'ao_esquivar' do próprio dono (ex.: forma ativa com "quando
+   *  atacar, causa dano extra"). O outro personagem envolvido (alvo do ataque, ou atacante no caso da
+   *  esquiva) é o alvo padrão da reação — inclusive quando ela usa um nó 'alvo' com escopo 'escolha': sem
+   *  um prompt interativo de UI ainda plugado neste ponto, a escolha recai sobre esse alvo natural. */
+  const resolveOwnOngoingReactions = (
+    owner: Character, eventType: string, other: Character,
+    ownerState: ArsenalActorState, otherState: ArsenalActorState,
+  ) => {
+    let currentOwnerState = ownerState;
+    let currentOtherState = otherState;
+    const logs: ReturnType<typeof logEntry>[] = [];
+    let resolved = false;
+    for (const reaction of ownOngoingReactionsFor(owner, eventType)) {
+      const level = arsenalLevels[reaction.graph.id] ?? 1;
+      const beforeOwner = currentOwnerState;
+      const beforeOther = currentOtherState;
+      let result = resolveAbilityGraphAction({
+        graph: reaction.graph, level, actor: currentOwnerState, targets: [currentOtherState],
+        roller: notation => rollDice(notation).total, entryNodeIds: reaction.nodeIds,
+      });
+      if (result.status !== 'concluida') continue;
+      while (result.pendingTargetChoice) {
+        result = resolveAbilityGraphAction({
+          graph: reaction.graph, level, actor: result.actor, targets: [currentOtherState],
+          roller: notation => rollDice(notation).total, entryNodeIds: result.pendingTargetChoice.nodeIds,
+        });
+        if (result.status !== 'concluida') break;
+      }
+      if (result.status !== 'concluida') continue;
+      resolved = true;
+      currentOwnerState = result.actor;
+      currentOtherState = result.targets.find(t => t.id === other.id) ?? currentOtherState;
+      logs.push(...buildAbilityGraphCombatLog({ graph: reaction.graph, beforeActor: beforeOwner, beforeTargets: [beforeOther], result }));
+    }
+    return { ownerState: currentOwnerState, otherState: currentOtherState, logs, resolved };
+  };
+
+  /** Resolve um stack de combo clássico (2+ cartas): rola resolveComboAction e funde os resultados
+   *  num único log/estado final. Sem a coreografia de dados por carta do caminho de golpe único — cada
+   *  resultado gera sua própria linha de log, mas a animação de dado só acompanha a primeira carta. */
+  const resolveComboOn = (targetId:string, action:ResolvedAction, comboCards:ArsenalCard[], protection?:ArsenalCard) => {
+    if(!turnActor)return;
+    const target=byId(targetId);if(!target)return;
+    setPendingProtection(null);
+    let next=cena;
+    let protectionBonus=0;
+    let protectionRoll:RollResult|undefined;
+    let protectionResolved=false;
+    let resolvedTargetState=actorState(target);
+    const ongoingProtection=resolveOngoingGraphProtections(target,turnActor,resolvedTargetState,actorState(turnActor));
+    protectionBonus+=ongoingProtection.bonus;
+    resolvedTargetState=ongoingProtection.targetState;
+    const protectionLogs=ongoingProtection.logs;
+    if(ongoingProtection.resolved)protectionResolved=true;
+    if(protection){
+      protectionRoll=rollDice(protection.testDice??'1d20');
+      const protectionResult=resolveArsenalAction({card:protection,actor:resolvedTargetState,targets:[resolvedTargetState],isReaction:true,roller:notation=>notation===(protection.testDice??'1d20')?protectionRoll!.total:rollDice(notation).total});
+      if(protectionResult.status==='concluida'){
+        protectionResolved=true;
+        protectionBonus+=protectionRoll.total;
+        const reactionTarget=protectionResult.targets[0];
+        resolvedTargetState={
+          ...protectionResult.actor,
+          currentHp:reactionTarget.currentHp,
+          currentAura:Math.max(0,Math.min(protectionResult.actor.maxAura,protectionResult.actor.currentAura+(reactionTarget.currentAura-target.currentAura))),
+          effects:reactionTarget.effects,
+        };
+      }
+    }
+    const captured:RollResult[]=[];
+    const results=resolveComboAction({
+      cards:comboCards,actor:actorState(turnActor),targets:[resolvedTargetState],
+      reactions:protectionResolved?[{id:`protection-${protection?.id ?? 'ongoing'}`,ownerId:target.id,ownerKind:'alvo',defenseModifier:protectionBonus}]:[],
+      roller:notation=>{const roll=rollDice(notation);captured.push(roll);return roll.total;},
+    });
+    const blockedIndex=results.findIndex(result=>result.status==='bloqueada');
+    if(blockedIndex>=0){
+      next=appendLog(next,[...protectionLogs,...buildArsenalCombatLog({card:comboCards[blockedIndex],beforeActor:actorState(turnActor),beforeTargets:[resolvedTargetState],result:results[blockedIndex],rolls:captured})]);
+      updateCena(next);setArmed(null);return;
+    }
+    const final=results[results.length-1];
+    const targetResult=final.targets.find(entry=>entry.id===target.id)??final.targets[0];
+    const hitAny=results.some(result=>result.hitTargetIds.includes(target.id));
+    const effectKinds:TargetEffectKind[]=[];
+    if(protectionResolved&&!hitAny)effectKinds.push('evade');
+    if(hitAny&&targetResult.currentHp<target.currentHp)effectKinds.push('damage');
+    if(hitAny&&targetResult.currentHp>target.currentHp)effectKinds.push('heal');
+    if(hitAny&&action.conditionName)effectKinds.push('condition');
+    const hpDelta=targetResult.currentHp-target.currentHp;
+    const effect=effectKinds.length?{
+      targetId:target.id,kinds:effectKinds,conditionName:action.conditionName,
+      hpDelta:hpDelta||undefined,
+      conditionColor:action.conditionName?conditionColor(action.conditionName):undefined,
+      damageType:effectKinds.includes('damage')?action.damageType:undefined,
+    }:null;
+    const combatLogs=[
+      ...protectionLogs,
+      ...comboCards.flatMap((card,index)=>buildArsenalCombatLog({
+        card,
+        beforeActor:index===0?actorState(turnActor):results[index-1].actor,
+        beforeTargets:[index===0?resolvedTargetState:(results[index-1].targets.find(entry=>entry.id===target.id)??results[index-1].targets[0])],
+        result:results[index],
+        rolls:index===0?captured:[],
+      })),
+    ];
+    if(effect)playTargetEffect(effect);
+    if(turnActor.id===target.id){
+      const merged={
+        ...final.actor,
+        currentHp:targetResult.currentHp,
+        currentAura:Math.max(0,Math.min(final.actor.maxAura,final.actor.currentAura+(targetResult.currentAura-target.currentAura))),
+        effects:targetResult.effects,
+        defenseCurrent:targetResult.defenseCurrent,defenseMax:targetResult.defenseMax,
+        staggerCurrent:targetResult.staggerCurrent,staggerMax:targetResult.staggerMax,
+        isDefenseBroken:targetResult.isDefenseBroken,isStaggered:targetResult.isStaggered,
+        staggerTurnsRemaining:targetResult.staggerTurnsRemaining,
+      };
+      next=applyArsenalActor(next,turnActor,merged);
+    }else{
+      next=applyArsenalActor(next,turnActor,final.actor);
+      next=applyArsenalActor(next,target,targetResult);
+    }
+    playRareEvent(target, targetResult as Character);
+    next=appendLog(next,combatLogs);
+    if(turnActor.id!==target.id){
+      if(hitAny){
+        const reaction=resolveOwnOngoingReactions(turnActor,'ao_atacar',target,actorStateIn(next,turnActor),actorStateIn(next,target));
+        if(reaction.resolved){
+          next=applyArsenalActor(next,turnActor,reaction.ownerState);
+          next=applyArsenalActor(next,target,reaction.otherState);
+          next=appendLog(next,reaction.logs);
+        }
+      }else if(protectionResolved){
+        const reaction=resolveOwnOngoingReactions(target,'ao_esquivar',turnActor,actorStateIn(next,target),actorStateIn(next,turnActor));
+        if(reaction.resolved){
+          next=applyArsenalActor(next,target,reaction.ownerState);
+          next=applyArsenalActor(next,turnActor,reaction.otherState);
+          next=appendLog(next,reaction.logs);
+        }
+      }
+    }
+    updateCena(next);setArmed(null);setPendingProtection(null);
+  };
+
   const resolveCanonicalOn = (targetId:string, action:ResolvedAction, protection?:ArsenalCard) => {
     if(!turnActor||!action.arsenalCard)return;
+    if(action.comboArsenalCards&&action.comboArsenalCards.length>1){resolveComboOn(targetId,action,action.comboArsenalCards,protection);return;}
     const target=byId(targetId);if(!target)return;
     // A escolha terminou. Fecha a janela antes de resolver/animar, inclusive se
     // algum custo ou requisito bloquear uma das cartas mais adiante.
@@ -482,12 +843,17 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     let protectionRoll:RollResult|undefined;
     let protectionResolved=false;
     let resolvedTargetState=actorState(target);
+    const ongoingProtection = resolveOngoingGraphProtections(target, turnActor, resolvedTargetState, actorState(turnActor));
+    protectionBonus += ongoingProtection.bonus;
+    resolvedTargetState = ongoingProtection.targetState;
+    const protectionLogs = ongoingProtection.logs;
+    if (ongoingProtection.resolved) protectionResolved = true;
     if(protection){
       protectionRoll=rollDice(protection.testDice??'1d20');
-      const protectionResult=resolveArsenalAction({card:protection,actor:actorState(target),targets:[actorState(target)],isReaction:true,roller:notation=>notation===(protection.testDice??'1d20')?protectionRoll.total:rollDice(notation).total});
+      const protectionResult=resolveArsenalAction({card:protection,actor:resolvedTargetState,targets:[resolvedTargetState],isReaction:true,roller:notation=>notation===(protection.testDice??'1d20')?protectionRoll.total:rollDice(notation).total});
       if(protectionResult.status==='concluida'){
         protectionResolved=true;
-        protectionBonus=protectionRoll.total;
+        protectionBonus+=protectionRoll.total;
         const reactionTarget=protectionResult.targets[0];
         resolvedTargetState={
           ...protectionResult.actor,
@@ -501,7 +867,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     const result=resolveArsenalAction({
       card:action.arsenalCard,actor:actorState(turnActor),targets:[resolvedTargetState],
       resumePreparation:action.resumePreparation,
-      reactions:protection&&protectionResolved?[{id:`protection-${protection.id}`,ownerId:target.id,ownerKind:'alvo',defenseModifier:protectionBonus}]:[],
+      reactions:protectionResolved?[{id:`protection-${protection?.id ?? 'ongoing'}`,ownerId:target.id,ownerKind:'alvo',defenseModifier:protectionBonus}]:[],
       roller:notation=>{const roll=rollDice(notation);captured.push(roll);return roll.total;},
     });
     if(result.status==='bloqueada'){
@@ -532,6 +898,17 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       conditionColor:action.conditionName?conditionColor(action.conditionName):undefined,
       damageType:effectKinds.includes('damage')?action.damageType:undefined,
     }:null;
+    const combatLogs=[
+      ...protectionLogs,
+      ...buildArsenalCombatLog({
+      card:action.arsenalCard,
+      beforeActor:actorState(turnActor),
+      beforeTargets:[resolvedTargetState],
+      result,
+      rolls:captured,
+      }),
+    ];
+    const revealCombatLogs=hideLogUntilDiceComplete(captured.length?combatLogs.map(entry=>entry.id):[],effect?()=>playTargetEffect(effect):undefined);
     captured.forEach((roll,index)=>onDiceRoll?.(roll,{
       customLabel:index===0?action.name:`${action.name} · efeito`,
       actorLabel:turnActor.name,
@@ -539,10 +916,13 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       defenderResult:index===0?(target.defense??10)+protectionBonus:undefined,
       defenderRoll:index===0&&protectionResolved?protectionRoll:undefined,
       defenderBase:index===0&&protectionResolved?(target.defense??10):undefined,
+      finalTotal:index===0&&result.rolls.test!==undefined?result.rolls.test:undefined,
+      adjustments:index===0&&result.rolls.test!==undefined&&result.rolls.test!==roll.total?[{label:'Efeitos no dado',value:result.rolls.test-roll.total}]:undefined,
       isSuccess:result.hitTargetIds.includes(target.id),
       dramatic:index===0,
-      onComplete:effect&&index===captured.length-1?()=>playTargetEffect(effect):undefined,
+      onComplete:index===captured.length-1?revealCombatLogs:undefined,
     }));
+    if(captured[0]) playRollRareEvent(captured[0], turnActor.name, turnVisual);
     if(effect&&(!onDiceRoll||captured.length===0))playTargetEffect(effect);
     if(turnActor.id===target.id){
       const merged={
@@ -560,18 +940,32 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       next=applyArsenalActor(next,turnActor,result.actor);
       next=applyArsenalActor(next,target,result.targets[0]);
     }
-    next=appendLog(next,buildArsenalCombatLog({
-      card:action.arsenalCard,
-      beforeActor:actorState(turnActor),
-      beforeTargets:[resolvedTargetState],
-      result,
-      rolls:captured,
-    }));
+    playRareEvent(target, result.targets[0] as Character);
+    next=appendLog(next,combatLogs);
+    if(turnActor.id!==target.id){
+      if(hit){
+        const reaction=resolveOwnOngoingReactions(turnActor,'ao_atacar',target,actorStateIn(next,turnActor),actorStateIn(next,target));
+        if(reaction.resolved){
+          next=applyArsenalActor(next,turnActor,reaction.ownerState);
+          next=applyArsenalActor(next,target,reaction.otherState);
+          next=appendLog(next,reaction.logs);
+        }
+      }else if(protectionResolved){
+        const reaction=resolveOwnOngoingReactions(target,'ao_esquivar',turnActor,actorStateIn(next,target),actorStateIn(next,turnActor));
+        if(reaction.resolved){
+          next=applyArsenalActor(next,target,reaction.ownerState);
+          next=applyArsenalActor(next,turnActor,reaction.otherState);
+          next=appendLog(next,reaction.logs);
+        }
+      }
+    }
     updateCena(next);setArmed(null);setPendingProtection(null);
   };
 
-  /** Equivalente de resolveCanonicalOn para habilidades do novo sistema de grafo.
-   *  Sem proteção reativa nesta fase (ver plano da Fase 5, Task 4). */
+  /** Equivalente de resolveCanonicalOn para habilidades do novo sistema de grafo. Suporta reação: se o
+   *  alvo tiver uma habilidade-grafo ou carta clássica com raiz "Quando alvejado"/condição 'reacao'
+   *  disponível, ela resolve primeiro (podendo até causar dano de volta no atacante via alvo
+   *  "atacante_original") e só então a ação principal é resolvida contra o estado já atualizado. */
   const resolveAbilityGraphOn = (targetId: string, action: ResolvedAction, protection?: ArsenalCard | AbilityGraph) => {
     if (!turnActor || !action.abilityGraph) return;
     const target = byId(targetId); if (!target) return;
@@ -583,11 +977,20 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     let defenseBonus = 0;
     let resolvedTargetState = actorState(target);
     let protectionResolved = false;
+    const ongoingProtection = resolveOngoingGraphProtections(target, turnActor, resolvedTargetState, beforeActor);
+    defenseBonus += ongoingProtection.bonus;
+    resolvedTargetState = ongoingProtection.targetState;
+    beforeActor = ongoingProtection.attackerState;
+    protectionLogs.push(...ongoingProtection.logs);
+    if (ongoingProtection.resolved) protectionResolved = true;
     if (protection) {
       if ('kind' in protection && protection.kind === 'graph') {
-        const { result: protResult, protectionRoll } = resolveGraphProtection(target, turnActor, protection);
+        const { result: protResult, protectionRoll } = resolveGraphProtection(target, turnActor, protection, {
+          targetState: resolvedTargetState,
+          attackerState: beforeActor,
+        });
         if (protResult.status === 'concluida') {
-          protectionResolved = true; defenseBonus = protectionRoll.total;
+          protectionResolved = true; defenseBonus += protResult.defenseRollOverride ?? protectionRoll.total;
           const reactionTarget = protResult.targets.find(t => t.id === target.id);
           resolvedTargetState = reactionTarget
             ? { ...protResult.actor, currentHp: reactionTarget.currentHp, currentAura: reactionTarget.currentAura, effects: reactionTarget.effects }
@@ -599,21 +1002,30 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
         const card = protection as ArsenalCard;
         const protectionRoll = rollDice(card.testDice ?? '1d20');
         const protResult = resolveArsenalAction({
-          card, actor: actorState(target), targets: [actorState(target)], isReaction: true,
+          card, actor: resolvedTargetState, targets: [resolvedTargetState], isReaction: true,
           roller: notation => notation === (card.testDice ?? '1d20') ? protectionRoll.total : rollDice(notation).total,
         });
         if (protResult.status === 'concluida') {
-          protectionResolved = true; defenseBonus = protectionRoll.total;
+          protectionResolved = true; defenseBonus += protectionRoll.total;
           const reactionTarget = protResult.targets[0];
           resolvedTargetState = { ...protResult.actor, currentHp: reactionTarget.currentHp, currentAura: reactionTarget.currentAura, effects: reactionTarget.effects };
         }
       }
     }
     const beforeTarget = resolvedTargetState;
+    const areaConfig = graphAreaConfig(action.abilityGraph, level);
+    const beforeAreaTargets = areaConfig
+      ? resolveAreaTargets(
+          areaConfig, turnActor.id, target.id !== turnActor.id ? target.id : null,
+          effectiveTokens(cena.tokens, participants.map(p => p.id)),
+          participants.filter(p => p.id !== target.id).map(p => p.id),
+        ).map(id => byId(id)).filter((c): c is Character => !!c).map(actorState)
+      : [];
     const captured: { roll: RollResult; label?: string }[] = [];
     const result = resolveAbilityGraphAction({
       graph: action.abilityGraph, level, actor: beforeActor, targets: [beforeTarget],
       resumePreparation: action.resumePreparation, combos: action.comboAbilityGraphs, defenseBonus,
+      areaTargets: beforeAreaTargets,
       roller: (notation, label) => {
         const roll = rollDice(notation);
         captured.push({ roll, label });
@@ -655,6 +1067,11 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       conditionColor: newCondition ? conditionColor(newCondition) : undefined,
       damageType: effectKinds.includes('damage') ? action.damageType : undefined,
     } : null;
+    const graphLogs = [
+      ...protectionLogs,
+      ...buildAbilityGraphCombatLog({ graph: action.abilityGraph, beforeActor, beforeTargets: [beforeTarget], result }),
+    ];
+    const revealGraphLogs = hideLogUntilDiceComplete(captured.length ? graphLogs.map(entry => entry.id) : [], effect ? () => playTargetEffect(effect) : undefined);
     captured.forEach(({ roll, label }, index) => {
       const isTestRoll = hasTest && index === 0;
       onDiceRoll?.(roll, {
@@ -665,9 +1082,10 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
         defenderBase: isTestRoll && protectionResolved ? (target.defense ?? 10) : undefined,
         isSuccess: isTestRoll ? hit : true,
         dramatic: isTestRoll,
-        onComplete: effect && index === captured.length - 1 ? () => playTargetEffect(effect) : undefined,
+        onComplete: index === captured.length - 1 ? revealGraphLogs : undefined,
       });
     });
+    if (captured[0]) playRollRareEvent(captured[0].roll, turnActor.name, turnVisual);
     if (effect && (!onDiceRoll || captured.length === 0)) playTargetEffect(effect);
     if (turnActor.id === target.id) {
       const merged = { ...result.actor, currentHp: targetResult.currentHp,
@@ -678,11 +1096,32 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       next = applyArsenalActor(next, turnActor, result.actor);
       next = applyArsenalActor(next, target, targetResult);
     }
-    next = appendLog(next, [
-      ...protectionLogs,
-      ...buildAbilityGraphCombatLog({ graph: action.abilityGraph, beforeActor, beforeTargets: [beforeTarget], result }),
-    ]);
+    for (const areaState of result.areaTargets) {
+      const areaChar = byId(areaState.id);
+      if (areaChar) next = applyArsenalActor(next, areaChar, areaState);
+    }
+    playRareEvent(target, targetResult as Character);
+    next = appendLog(next, graphLogs);
     next = registerOngoingEffects(next, action.abilityGraph.id, result.ongoingEffectIntents);
+    const nextTokens = resolveMovementIntents(result.movementIntents, effectiveTokens(next.tokens, participants.map(p => p.id)), turnActor.id);
+    if (Object.keys(nextTokens).length > 0) next = { ...next, tokens: { ...next.tokens, ...nextTokens } };
+    if (turnActor.id !== target.id) {
+      if (hit) {
+        const reaction = resolveOwnOngoingReactions(turnActor, 'ao_atacar', target, actorStateIn(next, turnActor), actorStateIn(next, target));
+        if (reaction.resolved) {
+          next = applyArsenalActor(next, turnActor, reaction.ownerState);
+          next = applyArsenalActor(next, target, reaction.otherState);
+          next = appendLog(next, reaction.logs);
+        }
+      } else if (protectionResolved) {
+        const reaction = resolveOwnOngoingReactions(target, 'ao_esquivar', turnActor, actorStateIn(next, target), actorStateIn(next, turnActor));
+        if (reaction.resolved) {
+          next = applyArsenalActor(next, target, reaction.ownerState);
+          next = applyArsenalActor(next, turnActor, reaction.otherState);
+          next = appendLog(next, reaction.logs);
+        }
+      }
+    }
     updateCena(next); setArmed(null);
   };
 
@@ -691,6 +1130,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     const target = byId(targetId); if (!target) return;
     const res = resolveAction(turnActor.name, snapOf(turnActor), target.name, snapOf(target), action);
     const projectedTarget = applyStatDelta(target, res.targetDelta);
+    const projectedTargetWithDefense = { ...projectedTarget, ...(res.defenseDelta ?? {}) };
     const effectKinds:TargetEffectKind[] = [];
     if(res.success&&projectedTarget.currentHp<target.currentHp)effectKinds.push('damage');
     if(res.success&&projectedTarget.currentHp>target.currentHp)effectKinds.push('heal');
@@ -707,7 +1147,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       // Mantém todo o encadeamento (rolagem, dano e condições) fora do log
       // até o instante da revelação, evitando spoilers laterais.
       const concealedIds = res.log.map(entry => entry.id);
-      if (onDiceRoll && concealedIds.length) setPendingLogIds(ids => [...ids, ...concealedIds]);
+      const revealLogs = hideLogUntilDiceComplete(concealedIds, effect ? () => playTargetEffect(effect) : undefined);
       onDiceRoll?.(res.roll, {
         isSuccess: res.success,
         customLabel: action.name,
@@ -715,9 +1155,9 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
         actorLabel: turnActor.name,
         defenderLabel: comparison?.targetLabel,
         dramatic: comparison?.targetValue !== undefined,
-        onReveal: concealedIds.length ? () => setPendingLogIds(ids => ids.filter(id => !concealedIds.includes(id))) : undefined,
-        onComplete: effect ? () => playTargetEffect(effect) : undefined,
+        onComplete: revealLogs,
       });
+      playRollRareEvent(res.roll, turnActor.name, turnVisual);
     }
     if(effect&&(!res.roll||!onDiceRoll))playTargetEffect(effect);
     let next = appendLog(cena, res.log);
@@ -731,6 +1171,12 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     } else {
       next = applyDeltaTo(next, turnActor.id, res.actorDelta);
       next = applyDeltaTo(next, targetId, res.targetDelta, res.defenseDelta);
+    }
+    if (action.source === 'item' && action.item) {
+      const ownedItems = consumeItemActivation(turnActor, action.item);
+      if (party.some(character => character.id === turnActor.id)) updateCharacterStats(turnActor.id, { ownedItems });
+      else next = updateNpcStats(next, turnActor.id, { ownedItems });
+      next = appendLog(next, [logEntry('system', `${turnActor.name} gasta ${action.name}.`)]);
     }
     if (res.success && res.conditionApplied) {
       const preset = getPredefinedEffect(res.conditionApplied.name);
@@ -746,6 +1192,56 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       if (party.some(character => character.id === target.id)) updateCharacterStats(target.id, conditionUpdates);
       else next = updateNpcStats(next, target.id, conditionUpdates);
     }
+    if (res.success && action.advancedEffects?.length) {
+      let baseEffects = target.activeEffects ?? [];
+      if (res.conditionApplied) {
+        const preset = getPredefinedEffect(res.conditionApplied.name);
+        if (preset) {
+          baseEffects = applyActiveEffect(baseEffects, {
+            ...preset,
+            duration: res.conditionApplied.duration > 0 ? { type: 'rodadas', amount: res.conditionApplied.duration } : { type:'permanente' },
+          });
+        }
+      }
+      const movementIntents: MovementIntent[] = [];
+      const persistentEffects = action.advancedEffects.filter(effect => {
+        if (effect.dispel) {
+          const cleaned = removeActiveEffects(
+            { ...actorStateIn(next, target), effects: baseEffects },
+            effect.dispel.category,
+            effect.dispel.count,
+          );
+          baseEffects = cleaned.target.effects;
+          if (cleaned.removedNames.length) {
+            next = appendLog(next, [logEntry('condition', `${target.name} perde ${cleaned.removedNames.join(', ')}.`)]);
+          }
+          return false;
+        }
+        if (effect.movement) {
+          movementIntents.push({ targetId: target.id, kind: effect.movement.kind, distance: effect.movement.distance });
+          return false;
+        }
+        return true;
+      });
+      if (movementIntents.length) {
+        const nextTokens = resolveMovementIntents(movementIntents, effectiveTokens(next.tokens, participants.map(p => p.id)), turnActor.id);
+        if (Object.keys(nextTokens).length > 0) {
+          next = { ...next, tokens: { ...next.tokens, ...nextTokens } };
+          next = appendLog(next, [logEntry('system', `${action.name} move ${target.name}.`)]);
+        }
+      }
+      const activeEffects = persistentEffects.reduce(
+        (acc, effect) => applyActiveEffect(acc, effect, turnActor.id),
+        baseEffects,
+      );
+      const effectUpdates: Partial<Character> = { activeEffects };
+      if (party.some(character => character.id === target.id)) updateCharacterStats(target.id, effectUpdates);
+      else next = updateNpcStats(next, target.id, effectUpdates);
+      next = appendLog(next, persistentEffects.map(effect =>
+        logEntry('condition', `${target.name} recebe ${effect.name} por ${effect.duration.amount ?? 1} rodada(s).`),
+      ));
+    }
+    playRareEvent(target, projectedTargetWithDefense as Character);
     updateCena(next);
     setArmed(null);
   };
@@ -753,7 +1249,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
   /** Conjura uma habilidade/selo de alvo 'campo_de_batalha': sem seleção de alvo,
    *  os efeitos viram ActiveFieldEffect no encounter (não pertencem a ninguém). */
   /** Conjura uma habilidade-grafo mirando o campo de batalha: sem efeitos de campo instaláveis nesta
-   *  fase (ver plano da Fase 4) — roda o grafo, aplica custos/cooldown e loga a execução. */
+   *  fase (ver plano da Fase 4) —? roda o grafo, aplica custos/cooldown e loga a execução. */
   const resolveAbilityGraphFieldCast = (action: ResolvedAction) => {
     if (!turnActor || !action.abilityGraph) return;
     const level = action.abilityGraphLevel ?? 1;
@@ -782,6 +1278,8 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     next = { ...next, encounter: { ...next.encounter, preparations: next.encounter.preparations.filter(p => !(p.ownerId === turnActor.id && p.entryId === action.id)) } };
     next = appendLog(next, [logEntry('system', `${turnActor.name} conjura ${action.name}.`)]);
     next = registerOngoingEffects(next, action.abilityGraph.id, result.ongoingEffectIntents);
+    const nextTokens = resolveMovementIntents(result.movementIntents, effectiveTokens(next.tokens, participants.map(p => p.id)), turnActor.id);
+    if (Object.keys(nextTokens).length > 0) next = { ...next, tokens: { ...next.tokens, ...nextTokens } };
     updateCena(next);
   };
 
@@ -873,7 +1371,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     else setArmed(action);
   };
 
-  const onParticipantClick = (id: string) => {
+  const resolveArmedTarget = (id: string) => {
     if(combat&&armed?.arsenalCard){const target=byId(id);const protections=target&&turnActor&&target.id!==turnActor.id?protectionCardsFor(target):[];if(protections.length){setPendingProtection({targetId:id,action:armed,cards:protections});return;}resolveCanonicalOn(id,armed);}
     else if(combat&&armed?.abilityGraph){
       const target=byId(id);
@@ -883,6 +1381,15 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       resolveAbilityGraphOn(id,armed);
     }
     else if (combat && armed) resolveOn(id, armed);
+  };
+
+  const onParticipantClick = (id: string) => {
+    if (combat && armed) {
+      if (!targetableIds.includes(id)) return;
+      if (pendingTargetId !== id) { setPendingTargetId(id); return; }
+      resolveArmedTarget(id);
+      return;
+    }
     else selectById(id);
   };
 
@@ -907,8 +1414,8 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     if(outgoingId&&turnEnd&&outgoing?.activeEffects?.length)effectOverrides.set(outgoingId,turnEnd.effects);
     const effectsOf=(id:string)=>effectOverrides.get(id)??byId(id)?.activeEffects??[];
     const adjustments=Object.fromEntries(cena.encounter.order.map(entry=>[entry.refId,activeOrderAdjustment(effectsOf(entry.refId))]));
-    const reordered=reorderEncounter(cena.encounter,adjustments);
-    const skipped=new Map<string,ReturnType<typeof consumeTurnSkip>>();
+    const hasOrderAdjustment=Object.values(adjustments).some(adjustment=>adjustment.speed!==0||adjustment.positions!==0);
+    const reordered=hasOrderAdjustment?reorderEncounter(cena.encounter,adjustments):cena.encounter;
     const staggerSkipped=new Set<string>();
     const encNext = advanceTurn(reordered, entry => {
       if(isDefeatedEntry(entry))return true;
@@ -917,9 +1424,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
         staggerSkipped.add(entry.refId);
         return true;
       }
-      const control=consumeTurnSkip(effectsOf(entry.refId));
-      if(control.skipped)skipped.set(entry.refId,control);
-      return control.skipped;
+      return false;
     });
     let next: CenaState = { ...cena, encounter: encNext };
     const updates = new Map<string, Partial<Character>>();
@@ -930,10 +1435,6 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     if(outgoingId&&turnEnd&&outgoing?.activeEffects?.length){
       updates.set(outgoingId,{activeEffects:turnEnd.effects});
       if(outgoing)next=appendLog(next,turnEnd.expiredNames.map(name=>logEntry('condition',`${name} expirou em ${outgoing.name}.`)));
-    }
-    for(const [id,control] of skipped){
-      updates.set(id,{...(updates.get(id)??{}),activeEffects:control.effects});
-      const character=byId(id);if(character)next=appendLog(next,[logEntry('condition',`${character.name} perde o turno por ${control.source??'Congelamento'}.`)]);
     }
     for(const id of staggerSkipped){
       const character=byId(id);if(!character)continue;
@@ -1032,13 +1533,17 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
         const expiredLogs: ReturnType<typeof logEntry>[] = [];
         for (const entry of ownerOngoing) {
           const graph = leveledAbilityGraphs.find(g => g.id === entry.graphId);
+          let pendingReactions = entry.pendingReactions;
+          let unlockCardIntents = entry.unlockCardIntents;
           if (graph) {
             const result = runOngoingEffect(graph, arsenalLevels[graph.id] ?? 1, actorStateIn(next, character), notation => rollDice(notation).total);
             character = { ...character, currentHp: result.actor.currentHp, currentAura: result.actor.currentAura, activeEffects: result.actor.effects };
             updates.set(owner.id, { ...(updates.get(owner.id) ?? {}), currentHp: character.currentHp, currentAura: character.currentAura, activeEffects: character.activeEffects });
+            if (result.pendingReactions?.length) pendingReactions = result.pendingReactions;
+            if (result.unlockCardIntents?.length) unlockCardIntents = result.unlockCardIntents;
           }
           const remaining = entry.roundsRemaining - 1;
-          if (remaining > 0) survivors.push({ ...entry, roundsRemaining: remaining });
+          if (remaining > 0) survivors.push({ ...entry, roundsRemaining: remaining, pendingReactions, unlockCardIntents });
           else expiredLogs.push(logEntry('system', `${character.name} deixou de estar sob efeito de ${graph?.header.name ?? 'uma habilidade'}.`));
         }
         next = { ...next, encounter: { ...next.encounter, activeOngoingEffects: [
@@ -1072,11 +1577,11 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
   };
 
   return (
-    <div className={`cena-shell ${logOpen ? 'is-journal-open' : ''} is-combat`}>
+    <div className={`cena-shell ${logOpen ? 'is-journal-open' : ''} ${(targetEffect || rareEvent || pendingProtection) ? 'is-resolution-focus' : ''} is-combat`}>
       <SceneBackdrop image={cena.scene.image} imagePosition={cena.scene.imagePosition} combat={combat} />
-      <PauseCurtain isPaused={cena.encounter.isPaused} image={cena.scene.pausedImage} imagePosition={cena.scene.pausedImagePosition} />
-      <CombatCinematics combat={combat} round={cena.encounter.round} activeName={turnActor?.name} activeImage={turnVisual} formaActivation={formaActivation} />
-      {cena.streamingMode && <div className="cena-streaming-tag" role="status" aria-label="Modo streaming ativo — HP de NPCs e notas ocultos">
+      <PauseCurtain isPaused={cena.encounter.isPaused} image={cena.scene.pausedImage} imagePosition={cena.scene.pausedImagePosition} participants={participants} display={cena.pausedDisplay} onChangeDisplay={display => updateCena({ ...cena, pausedDisplay: display })} />
+      <CombatCinematics combat={combat} round={cena.encounter.round} activeName={turnActor?.name} activeImage={turnVisual} formaActivation={formaActivation} rareEvent={rareEvent} />
+      {cena.streamingMode && <div className="cena-streaming-tag" role="status" aria-label="Modo streaming ativo —? HP de NPCs e notas ocultos">
         <i /><span>STREAMING</span>
       </div>}
 
@@ -1090,17 +1595,29 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
       <main className="cena-arena-column">
         {combat && armed && (
           <div className="cena-target-callout">
-            <span>ESCOLHA O ALVO DE {armed.name.toUpperCase()}</span>
-            <button onClick={() => setArmed(null)}>cancelar (Esc)</button>
+            <div className="cena-turn-phase" aria-label="Fase do turno">
+              {['ACAO','ALVO','REACAO','ROLAGEM','RESULTADO'].map(step => <i key={step} className={step === (pendingProtection ? 'REACAO' : 'ALVO') ? 'is-active' : ''}>{step}</i>)}
+            </div>
+            <span>{pendingTargetId ? `ALVO: ${byId(pendingTargetId)?.name ?? 'selecionado'}`
+              : armedAreaConfig && AREA_SELF_CENTERED.has(armedAreaConfig.shape) ? `ÁREA DE ${armed.name.toUpperCase()} (${areaPreviewIds.length} alvo(s))`
+              : `ESCOLHA O ALVO DE ${armed.name.toUpperCase()}`}</span>
+            {pendingTargetId && <button onClick={() => resolveArmedTarget(pendingTargetId)}>confirmar</button>}
+            {!pendingTargetId && turnActor && armedAreaConfig && AREA_SELF_CENTERED.has(armedAreaConfig.shape) && (
+              <button onClick={() => resolveArmedTarget(turnActor.id)}>confirmar</button>
+            )}
+            <button onClick={() => { setArmed(null); setPendingTargetId(null); }}>cancelar (Esc)</button>
           </div>
         )}
+        {consequence && !rareEvent && <div key={consequence.key} className={`cena-consequence-panel is-${consequence.tone}`}><strong>{consequence.label}</strong><span>{consequence.detail}</span></div>}
         {combat && <FieldEffectsBar effects={cena.encounter.fieldEffects} onDispel={dispelFieldEffect} />}
         <div className="cena-arena-stage">
           <MapBoard image={cena.scene.image} imagePosition={cena.scene.imagePosition} participants={participants} tokens={cena.tokens}
             activeId={combat ? (turnEntry?.refId ?? null) : (active?.id ?? null)}
             onMoveToken={(id, pos) => updateCena(setToken(cena, id, pos))}
             onSelect={onParticipantClick}
-            combat={combat} enemyIds={presentNpcs.map(n => n.id)} targetEffect={targetEffect}
+            combat={combat} enemyIds={presentNpcs.map(n => n.id)} targetEffect={rareEvent ? null : targetEffect}
+            targetableIds={armed ? targetableIds : []} targetImpacts={armed ? targetImpacts : {}}
+            selectedTargetId={pendingTargetId} areaPreviewIds={armed ? areaPreviewIds : []}
             iconOverrides={formaIconOverrides} auraColors={formaAuraColors} formaAvailableColors={formaAvailableColors} />
         </div>
       </main>
@@ -1112,20 +1629,22 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
             targetFeedback={targetEffect}
             round={combat ? cena.encounter.round : undefined}
             orderIds={combat ? cena.encounter.order.map(entry => entry.refId) : []}
-            onPrevTurn={combat ? () => updateCena({ ...cena, encounter: prevTurn(cena.encounter, isDefeatedEntry) }) : undefined}
             onNextTurn={combat ? goNextTurn : undefined}
+            onSelectTurn={combat ? (turnIndex) => updateCena({ ...cena, encounter: { ...cena.encounter, turnIndex, turn: { majorUsed: false, minorUsed: false } } }) : undefined}
             onEditCharacter={setEditingId}
             onSelectActive={ref => (combat && armed) ? onParticipantClick(ref.id) : setActive(ref)}
             onToggleHidden={id => updateCena(toggleNpcHidden(cena, id))}
             onTogglePresent={id => updateCena(toggleNpcPresent(cena, id))}
             onRemoveNpc={removeNpcFromCombat}
-            onToggleGmDashboard={toggleGmDashboard}
-            gmDashboardOpen={gmDashboardOpen}
+            onReorderTurn={(fromIndex, toIndex) => {
+              updateCena({ ...cena, encounter: moveInOrder(cena.encounter, fromIndex, toIndex) });
+            }}
             turnControlsDisabled={cena.encounter.isPaused}
             streamingMode={cena.streamingMode}
             formaStates={formaStates}
             auraPreview={activeChar && previewAction?.auraCost ? { charId: activeChar.id, cost: previewAction.auraCost } : null}
             targetPreview={armed ? { diceRoll: armed.diceRoll, damage: armed.damage, damageType: armed.damageType, healHp: armed.healHp, conditionName: armed.conditionName, targeting: armed.targeting } : null}
+            targetImpacts={armed ? targetImpacts : {}}
           />
         </section>
         {combat && <section className="cena-deck-actions">
@@ -1138,7 +1657,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
         setEditingId(null);
       }} />}
       {pendingProtection&&<div role="dialog" aria-modal="true" style={modalOverlay}><div className="cena-reaction-modal" style={modalCard}><div style={{fontSize:10,color:'#7de6ff',fontWeight:900,letterSpacing:'2px'}}>JANELA DE REAÇÃO</div><h3 style={{fontSize:20,color:'#fff',margin:'6px 0'}}>Escolha uma proteção</h3><p style={{fontSize:12,color:'#8b9aab',marginBottom:14}}>O alvo pode somar a rolagem da proteção à defesa natural.</p>{pendingProtection.cards.map(card=><button key={card.id} onClick={()=>resolveCanonicalOn(pendingProtection.targetId,pendingProtection.action,card)} style={modalChoice}><span style={{flex:1,textAlign:'left'}}>{card.name}</span><span>{card.testDice??'1d20'}</span></button>)}{(pendingProtection.graphs??[]).map(graph=><button key={graph.id} onClick={()=>resolveAbilityGraphOn(pendingProtection.targetId,pendingProtection.action,graph)} style={modalChoice}><span style={{flex:1,textAlign:'left'}}>{graph.header.name}</span><span>{(graph.nodes.find(node=>node.type==='teste')?.props as {dice?:string}|undefined)?.dice??'1d20'}</span></button>)}<button onClick={()=>(pendingProtection.action.abilityGraph?resolveAbilityGraphOn(pendingProtection.targetId,pendingProtection.action):resolveCanonicalOn(pendingProtection.targetId,pendingProtection.action))} style={{...modalChoice,color:'#8993a0'}}>Não reagir</button></div></div>}
-      {comboDraft&&<div role="dialog" aria-modal="true" style={modalOverlay}><div className="cena-combo-modal" style={modalCard}><div style={{fontSize:10,color:'#c4b5fd',fontWeight:900,letterSpacing:'2px'}}>STACK DE COMBO</div><h3 style={{fontSize:20,color:'#fff',margin:'6px 0'}}>{comboDraft.name}</h3><p style={{fontSize:12,color:'#8b9aab',marginBottom:14}}>A carta inicial já ocupa 1 de {comboDraft.combo?.maxStacks??1} stacks. Acrescente apenas cartas disponíveis do mesmo grupo ou faça a jogada agora.</p>{comboStackCandidates(comboDraft,leveledArsenal,activeArsenalIds).map(card=>{const checked=comboSelection.includes(card.id);const full=comboSelection.length>=Math.max(0,(comboDraft.combo?.maxStacks??1)-1);return <label key={card.id} className={checked?'is-linked':''} style={{...modalChoice,opacity:!checked&&full?.45:1}}><input type="checkbox" checked={checked} disabled={!checked&&full} onChange={e=>setComboSelection(current=>e.target.checked?[...current,card.id]:current.filter(id=>id!==card.id))}/><span style={{flex:1}}>{card.name}</span><span style={{color:'#9b8bbd'}}>stack {comboSelection.indexOf(card.id)+2}</span></label>})}{comboStackCandidates(comboDraft,leveledArsenal,activeArsenalIds).length===0&&<p style={{padding:12,border:'1px dashed rgba(167,139,250,.25)',color:'#777f8d',fontSize:11}}>Nenhuma outra carta deste stack está disponível. A jogada ainda pode ser feita com a carta inicial.</p>}<div style={{display:'flex',gap:8,marginTop:14}}><button style={{...modalChoice,flex:1}} onClick={()=>setComboDraft(null)}>Cancelar</button><button style={{...modalChoice,flex:1,background:'rgba(124,58,237,.3)'}} onClick={()=>{const selected=resolveComboCards(comboDraft,comboSelection,leveledArsenal,activeArsenalIds);const grouped:ArsenalCard={...comboDraft,damage:comboDraft.damage||selected.some(card=>card.damage)?{flat:(comboDraft.damage?.flat??0)+selected.reduce((sum,card)=>sum+(card.damage?.flat??0),0)}:null,healing:comboDraft.healing||selected.some(card=>card.healing)?{flat:(comboDraft.healing?.flat??0)+selected.reduce((sum,card)=>sum+(card.healing?.flat??0),0)}:null,effects:[...comboDraft.effects,...selected.flatMap(card=>card.effects)],auraConsumed:comboDraft.auraConsumed||selected.some(card=>card.auraConsumed)?{flat:(comboDraft.auraConsumed?.flat??0)+selected.reduce((sum,card)=>sum+(card.auraConsumed?.flat??0),0)}:null};setArmed({...normalizeArsenalCard(grouped),name:selected.length?`${comboDraft.name} + ${selected.map(card=>card.name).join(' + ')}`:comboDraft.name});setComboDraft(null)}}><span key={comboSelection.length} className="cena-combo-counter">Fazer a jogada ({comboSelection.length+1}/{comboDraft.combo?.maxStacks??1})</span></button></div></div></div>}
+      {comboDraft&&<div role="dialog" aria-modal="true" style={modalOverlay}><div className="cena-combo-modal" style={modalCard}><div style={{fontSize:10,color:'#c4b5fd',fontWeight:900,letterSpacing:'2px'}}>STACK DE COMBO</div><h3 style={{fontSize:20,color:'#fff',margin:'6px 0'}}>{comboDraft.name}</h3><p style={{fontSize:12,color:'#8b9aab',marginBottom:14}}>A carta inicial já ocupa 1 de {comboDraft.combo?.maxStacks??1} stacks. Acrescente apenas cartas disponíveis do mesmo grupo ou faça a jogada agora.</p>{comboStackCandidates(comboDraft,leveledArsenal,activeArsenalIds).map(card=>{const checked=comboSelection.includes(card.id);const full=comboSelection.length>=Math.max(0,(comboDraft.combo?.maxStacks??1)-1);return <label key={card.id} className={checked?'is-linked':''} style={{...modalChoice,opacity:!checked&&full?.45:1}}><input type="checkbox" checked={checked} disabled={!checked&&full} onChange={e=>setComboSelection(current=>e.target.checked?[...current,card.id]:current.filter(id=>id!==card.id))}/><span style={{flex:1}}>{card.name}</span><span style={{color:'#9b8bbd'}}>stack {comboSelection.indexOf(card.id)+2}</span></label>})}{comboStackCandidates(comboDraft,leveledArsenal,activeArsenalIds).length===0&&<p style={{padding:12,border:'1px dashed rgba(167,139,250,.25)',color:'#777f8d',fontSize:11}}>Nenhuma outra carta deste stack está disponível. A jogada ainda pode ser feita com a carta inicial.</p>}<div style={{display:'flex',gap:8,marginTop:14}}><button style={{...modalChoice,flex:1}} onClick={()=>setComboDraft(null)}>Cancelar</button><button style={{...modalChoice,flex:1,background:'rgba(124,58,237,.3)'}} onClick={()=>{const selected=resolveComboCards(comboDraft,comboSelection,leveledArsenal,activeArsenalIds);setArmed({...normalizeArsenalCard(comboDraft),name:selected.length?`${comboDraft.name} + ${selected.map(card=>card.name).join(' + ')}`:comboDraft.name,comboArsenalCards:selected.length?[comboDraft,...selected]:undefined});setComboDraft(null)}}><span key={comboSelection.length} className="cena-combo-counter">Fazer a jogada ({comboSelection.length+1}/{comboDraft.combo?.maxStacks??1})</span></button></div></div></div>}
       {comboGraphDraft&&(()=>{const maxStacks=graphComboConfig(comboGraphDraft,arsenalLevels[comboGraphDraft.id]??1)?.maxStacks??1;return <div role="dialog" aria-modal="true" style={modalOverlay}><div className="cena-combo-modal" style={modalCard}><div style={{fontSize:10,color:'#c4b5fd',fontWeight:900,letterSpacing:'2px'}}>STACK DE COMBO</div><h3 style={{fontSize:20,color:'#fff',margin:'6px 0'}}>{comboGraphDraft.header.name}</h3><p style={{fontSize:12,color:'#8b9aab',marginBottom:14}}>A habilidade inicial já ocupa 1 de {maxStacks} stacks. Acrescente apenas habilidades disponíveis do mesmo grupo ou faça a jogada agora.</p>{graphComboStackCandidates(comboGraphDraft,leveledAbilityGraphs,activeAbilityGraphIds).map(graph=>{const checked=comboSelection.includes(graph.id);const full=comboSelection.length>=Math.max(0,maxStacks-1);return <label key={graph.id} className={checked?'is-linked':''} style={{...modalChoice,opacity:!checked&&full?.45:1}}><input type="checkbox" checked={checked} disabled={!checked&&full} onChange={e=>setComboSelection(current=>e.target.checked?[...current,graph.id]:current.filter(id=>id!==graph.id))}/><span style={{flex:1}}>{graph.header.name}</span><span style={{color:'#9b8bbd'}}>stack {comboSelection.indexOf(graph.id)+2}</span></label>})}{graphComboStackCandidates(comboGraphDraft,leveledAbilityGraphs,activeAbilityGraphIds).length===0&&<p style={{padding:12,border:'1px dashed rgba(167,139,250,.25)',color:'#777f8d',fontSize:11}}>Nenhuma outra habilidade deste stack está disponível. A jogada ainda pode ser feita com a habilidade inicial.</p>}<div style={{display:'flex',gap:8,marginTop:14}}><button style={{...modalChoice,flex:1}} onClick={()=>setComboGraphDraft(null)}>Cancelar</button><button style={{...modalChoice,flex:1,background:'rgba(124,58,237,.3)'}} onClick={()=>{const selected=resolveGraphComboSelection(comboGraphDraft,comboSelection,leveledAbilityGraphs,activeAbilityGraphIds);const base=normalizeAbilityGraph(comboGraphDraft,arsenalLevels[comboGraphDraft.id]??1);setArmed({...base,name:selected.length?`${comboGraphDraft.header.name} + ${selected.map(graph=>graph.header.name).join(' + ')}`:comboGraphDraft.header.name,comboAbilityGraphs:selected.map(graph=>({graph,level:arsenalLevels[graph.id]??1}))});setComboGraphDraft(null)}}><span key={comboSelection.length} className="cena-combo-counter">Fazer a jogada ({comboSelection.length+1}/{maxStacks})</span></button></div></div></div>;})()}
     </div>
   );
@@ -1149,3 +1668,4 @@ const modalCard:React.CSSProperties={width:420,maxHeight:'70vh',overflow:'auto',
 const modalChoice:React.CSSProperties={width:'100%',display:'flex',alignItems:'center',gap:10,padding:'10px 12px',marginBottom:6,background:'rgba(35,56,86,.65)',border:'1px solid rgba(125,210,240,.2)',color:'#e6f7ff',cursor:'pointer',fontSize:12};
 
 export default CenaTab;
+

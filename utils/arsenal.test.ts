@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import type { Card, Item, Weapon } from '../types';
+import type { Card, Item, Seal, Weapon } from '../types';
 import { arsenalCardAtLevel, createArsenalCard, type ArsenalEffect } from './arsenal';
 import { getPredefinedEffect, PREDEFINED_ARSENAL_EFFECTS } from './arsenalEffects';
-import { cardToArsenal, migrateCharacterArsenalHoldings, migrateLegacyArsenal } from './arsenalMigration';
-import { ACTION_PIPELINE_STEPS, activeOrderAdjustment, applyActiveEffect, cleanseByTag, consumePrincipalBlock, consumeTurnSkip, getActiveEffects, hasCondition, removeActiveEffect, resolveArsenalAction, sortReactions, tickActiveEffects, type ArsenalActorState } from './arsenalPipeline';
+import { cardToArsenal, itemToArsenal, migrateCharacterArsenalHoldings, migrateLegacyArsenal, sealToArsenal } from './arsenalMigration';
+import { ACTION_PIPELINE_STEPS, activeOrderAdjustment, applyActiveEffect, cleanseByTag, consumePrincipalBlock, getActiveEffects, hasCondition, removeActiveEffect, resolveArsenalAction, sortReactions, tickActiveEffects, type ArsenalActorState } from './arsenalPipeline';
 import { activateForm, assignCardToHoldings, availableCardIds, comboStackCandidates, createHolding, equipWeapon, resolveComboCards } from './arsenalState';
 
 const actor = (overrides: Partial<ArsenalActorState> = {}): ArsenalActorState => ({
   id: 'actor', teamId: 'a', name: 'Ator', currentHp: 20, maxHp: 20,
-  currentAura: 10, maxAura: 10, defense: 10, speed: 3, tags: ['mágico'],
+  currentAura: 10, maxAura: 10, currentAmmo: 0, maxAmmo: 0, defense: 10, speed: 3, tags: ['mágico'],
   equippedWeaponIds: [], activeFormIds: [], effects: [], holdings: [],
   isCurrentTurn: true, inCombat: true, ...overrides,
 });
@@ -23,22 +23,28 @@ describe('modelo do arsenal', () => {
     expect(card.weaponLinks).toEqual([]);
   });
 
-  it('oferece os dezesseis efeitos clássicos configuráveis', () => {
-    expect(PREDEFINED_ARSENAL_EFFECTS).toHaveLength(16);
-    expect(PREDEFINED_ARSENAL_EFFECTS.map(effect => effect.name)).toEqual([
-      'Queimadura','Congelamento','Lentidão','Molhado','Eletrocutado','Sangramento','Fraqueza','Acelerado','Desnorteado','Paralisado','Confuso',
-      'Enraizado','Desequilibrado','Fraturado','Iluminado','Amaldiçoado',
+  it('oferece as quinze condições base e os presets de poderes avançados', () => {
+    expect(PREDEFINED_ARSENAL_EFFECTS).toHaveLength(30);
+    expect(PREDEFINED_ARSENAL_EFFECTS.slice(0, 15).map(effect => effect.name)).toEqual([
+      'Vulnerável','Exposto','Marcado','Sangrando','Queimando','Congelado','Eletrizado','Molhado',
+      'Enraizado','Frágil','Silenciado','Atordoado','Derrubado','Cego','Amedrontado',
+    ]);
+    expect(PREDEFINED_ARSENAL_EFFECTS.slice(15).map(effect => effect.name)).toEqual([
+      'Provocado','Camuflado','Arremesso',
+      'Escudo Menor','Escudo Maior','Purificação',
+      'Ímpeto','Fluxo Ampliado','Recarga Tática','Bênção Econômica',
+      'Elo Espectral','Metamorfose','Fio da Vida','Corrente Ressonante','Sorte Selvagem',
     ]);
   });
 });
 
 describe('efeitos ativos por turno', () => {
-  it('reconhece nomes legados de condições periódicas', () => {
-    expect(getPredefinedEffect('Queimando')?.name).toBe('Queimadura');
-    expect(getPredefinedEffect('Sangrando')?.name).toBe('Sangramento');
+  it('reconhece nomes alternativos de condições periódicas', () => {
+    expect(getPredefinedEffect('queimadura')?.name).toBe('Queimando');
+    expect(getPredefinedEffect('sangramento')?.name).toBe('Sangrando');
   });
   it('aplica dano periódico, respeita stacks e expira na duração correta', () => {
-    const burn = PREDEFINED_ARSENAL_EFFECTS.find(effect => effect.name === 'Queimadura')!;
+    const burn = PREDEFINED_ARSENAL_EFFECTS.find(effect => effect.name === 'Queimando')!;
     const first = tickActiveEffects([{ effect: burn, stacks: 2, remaining: 2 }], { currentHp: 10, maxHp: 20, currentAura: 5, maxAura: 10 });
     expect(first.currentHp).toBe(6);
     expect(first.hpDelta).toBe(-4);
@@ -46,42 +52,73 @@ describe('efeitos ativos por turno', () => {
     const second = tickActiveEffects(first.effects, { currentHp: first.currentHp, maxHp: 20, currentAura: 5, maxAura: 10 });
     expect(second.currentHp).toBe(2);
     expect(second.effects).toEqual([]);
-    expect(second.expiredNames).toEqual(['Queimadura']);
+    expect(second.expiredNames).toEqual(['Queimando']);
   });
 
   it('aplica cura periódica sem ultrapassar o máximo', () => {
-    const custom = { ...PREDEFINED_ARSENAL_EFFECTS[0], id:'custom-heal', name:'Regeneração customizada', classic:undefined, periodicHealing:{flat:5} };
+    const custom = { ...PREDEFINED_ARSENAL_EFFECTS[0], id:'custom-heal', name:'Regeneração customizada', periodicDamage:null, periodicHealing:{flat:5} };
     const tick = tickActiveEffects([{ effect: custom, stacks: 1, remaining: 1 }], { currentHp: 18, maxHp: 20, currentAura: 5, maxAura: 10 });
     expect(tick.currentHp).toBe(20);
     expect(tick.hpDelta).toBe(2);
     expect(tick.events[0]).toMatchObject({ kind:'heal', amount:2 });
   });
 
-  it('calcula sangramento percentual sobre a vitalidade máxima', () => {
-    const bleeding={...getPredefinedEffect('Sangramento')!,classic:{kind:'sangramento' as const,value:10,mode:'percentual_vida_maxima' as const}};
+  it('calcula dano periódico percentual via dado configurado', () => {
+    const bleeding={...getPredefinedEffect('Sangrando')!,periodicDamage:{flat:10,dice:null}};
     const tick=tickActiveEffects([{effect:bleeding,stacks:1,remaining:2}],{currentHp:80,maxHp:100,currentAura:0,maxAura:0});
     expect(tick.currentHp).toBe(70);
   });
 
-  it('Eletrocutado interage com Molhado e consome o efeito',()=>{
-    const wet={...getPredefinedEffect('Molhado')!,classic:{kind:'molhado' as const,value:2}};
-    const shocked={...getPredefinedEffect('Eletrocutado')!,classic:{kind:'eletrocutado' as const,value:3}};
-    const tick=tickActiveEffects([{effect:wet,stacks:1,remaining:2},{effect:shocked,stacks:1,remaining:2}],{currentHp:20,maxHp:20,currentAura:0,maxAura:0});
-    expect(tick.currentHp).toBe(14);
-    expect(tick.effects.some(active=>active.effect.classic?.kind==='molhado')).toBe(false);
+  it('resistência elemental reduz o dano periódico próprio', () => {
+    const resistant={...getPredefinedEffect('Queimando')!,elementalAffinities:[{element:'fogo' as const,kind:'resistencia' as const,percent:50}]};
+    const tick=tickActiveEffects([{effect:resistant,stacks:1,remaining:2}],{currentHp:20,maxHp:20,currentAura:0,maxAura:0});
+    expect(tick.currentHp).toBe(19);
   });
 
-  it('consome congelamento e desnorteado pelos controles correspondentes', () => {
-    const frozen=applyActiveEffect([],getPredefinedEffect('Congelamento')!);
-    const skip=consumeTurnSkip(frozen);expect(skip.skipped).toBe(true);expect(skip.effects[0].turnSkipsRemaining).toBe(0);
-    const confused=applyActiveEffect([],getPredefinedEffect('Desnorteado')!);
-    const block=consumePrincipalBlock(confused);expect(block.blocked).toBe(true);expect(block.effects[0].principalBlocksRemaining).toBe(0);
+  it('um buff de dano (valueModifiers) aumenta o dano periódico próprio', () => {
+    const burn = { ...getPredefinedEffect('Queimando')!, periodicDamage: { flat: 2, dice: null } };
+    const vulnerable = { ...burn, id: 'debuff-vulneravel', name: 'Vulnerável a fogo', periodicDamage: null,
+      valueModifiers: [{ operation: 'somar' as const, target: 'dano' as const, value: 3, filter: { elements: ['fogo' as const] } }] };
+    const tick = tickActiveEffects([{ effect: burn, stacks: 1, remaining: 2 }, { effect: vulnerable, stacks: 1, remaining: 2 }], { currentHp: 20, maxHp: 20, currentAura: 0, maxAura: 0 });
+    // 2 (base) + 3 (Vulnerável a fogo) = 5
+    expect(tick.currentHp).toBe(15);
   });
 
-  it('expõe deslocamento reversível de Lentidão e Acelerado', () => {
-    const slow={...getPredefinedEffect('Lentidão')!,classic:{kind:'lentidao' as const,value:2}};
-    const haste={...getPredefinedEffect('Acelerado')!,classic:{kind:'acelerado' as const,value:1}};
-    expect(activeOrderAdjustment([{effect:slow,stacks:1},{effect:haste,stacks:1}]).positions).toBe(1);
+  it('um buff de cura (valueModifiers) aumenta a cura periódica recebida', () => {
+    const regen = { ...getPredefinedEffect('Queimando')!, id: 'regen', name: 'Regeneração', periodicDamage: null, periodicHealing: { flat: 3, dice: null } };
+    const blessed = { ...regen, id: 'buff-cura', name: 'Bênção', periodicHealing: null,
+      valueModifiers: [{ operation: 'multiplicar' as const, target: 'cura' as const, value: 2, filter: { resource: 'vida' as const } }] };
+    const tick = tickActiveEffects([{ effect: regen, stacks: 1, remaining: 2 }, { effect: blessed, stacks: 1, remaining: 2 }], { currentHp: 10, maxHp: 20, currentAura: 0, maxAura: 0 });
+    expect(tick.currentHp).toBe(16); // (3) * 2 = 6
+  });
+
+  it('um buff de recuperação de aura (valueModifiers) aumenta o regen de aura periódico', () => {
+    const auraRegen = { ...getPredefinedEffect('Queimando')!, id: 'aura-regen', name: 'Fluxo', periodicDamage: null, auraRestored: { flat: 2, dice: null } };
+    const focused = { ...auraRegen, id: 'buff-aura', name: 'Foco', auraRestored: null,
+      valueModifiers: [{ operation: 'somar' as const, target: 'recuperacao_aura' as const, value: 4 }] };
+    const tick = tickActiveEffects([{ effect: auraRegen, stacks: 1, remaining: 2 }, { effect: focused, stacks: 1, remaining: 2 }], { currentHp: 20, maxHp: 20, currentAura: 0, maxAura: 20 });
+    expect(tick.currentAura).toBe(6); // 2 + 4
+  });
+
+  it('Eletrizado soma dano extra ao próximo ataque de raio e se consome', () => {
+    const shocked={...getPredefinedEffect('Eletrizado')!};
+    const target=actor({id:'t',teamId:'b',currentHp:20,effects:applyActiveEffect([],shocked)});
+    const lightning=createArsenalCard({id:'zap',name:'Raio',category:'habilidade',element:'raio',damage:{flat:10}});
+    // roller fixo evita o proc elemental aleatório (raio -> Eletrizado, ~15% de chance) mascarar a asserção de consumo.
+    const result=resolveArsenalAction({card:lightning,actor:actor(),targets:[target],roller:dice=>dice==='1d100'?100:0});
+    expect(result.targets[0].currentHp).toBe(9);
+    expect(result.targets[0].effects.some(active=>active.effect.name==='Eletrizado')).toBe(false);
+  });
+
+  it('Atordoado bloqueia a ação principal', () => {
+    const stunned=applyActiveEffect([],getPredefinedEffect('Atordoado')!);
+    const block=consumePrincipalBlock(stunned);
+    expect(block.blocked).toBe(true);
+  });
+
+  it('Congelado e Derrubado reduzem a velocidade de iniciativa', () => {
+    const slow={...getPredefinedEffect('Congelado')!};
+    expect(activeOrderAdjustment([{effect:slow,stacks:1}]).speed).toBe(-50);
   });
 });
 
@@ -97,7 +134,7 @@ describe('migração do legado', () => {
     expect(card.abilityType).toBe('forma');
     expect(card.form?.grantedAbilityIds).toEqual(['raio']);
     expect(card.auraConsumed?.flat).toBe(3);
-    expect(card.effects[0].name).toBe('Queimadura');
+    expect(card.effects[0].name).toBe('Queimando');
     expect(card.area?.shape).toBe('circulo');
   });
 
@@ -111,6 +148,52 @@ describe('migração do legado', () => {
     expect(result).toHaveLength(3);
     expect(result.find(card => card.id === 'espada')?.weapon?.grantedAbilityIds).toContain('golpe');
     expect(result.find(card => card.id === 'pocao')?.item).toMatchObject({ consumable: true, quantity: 2 });
+  });
+
+  it('preserva efeitos, cooldown, cargas e area de itens e selos', () => {
+    const effect: ArsenalEffect = {
+      id: 'burn-extra', name: 'Chama persistente', description: '', tags: [],
+      duration: { type: 'rodadas', amount: 2 }, stackBehavior: 'renova_duracao', maxStacks: 1,
+      triggers: [], modifiers: [], periodicDamage: { flat: 3 }, periodicHealing: null,
+      auraConsumed: null, auraRestored: null, attackModifier: 0, defenseModifier: 0,
+      speedModifier: 0, customEffect: null,
+    };
+    const item: Item = {
+      id: 'bomba', name: 'Bomba', image: '', description: '', quantity: 2, usableInCombat: true,
+      combatTargeting: 'area', combatAreaShape: 'cone', combatAreaSize: 4, combatAuraCost: 1,
+      cooldown: { type: 'rodadas', amount: 2 },
+      charges: { maximum: 3, current: 3, recharge: { type: 'por_rodada', amount: 1 } },
+      effects: [effect],
+    };
+    const seal: Seal = {
+      id: 'sigilo', name: 'Sigilo', image: '', description: '', code: 'SIG',
+      combatTargeting: 'area', directionMode: 'line', areaSize: 5,
+      connectors: ['top', 'bottomRight'], ritualKey: 'sigilo-chave', ritualRole: 'amplificador',
+      rotationAllowed: false, maxPerRitual: 1, connectionTags: ['fogo'], forbiddenConnectionTags: ['agua'],
+      cooldown: { type: 'turnos', amount: 1 },
+      charges: { maximum: 2, current: 2, recharge: { type: 'nao_recarrega' } },
+      effects: [effect],
+    };
+    const itemCard = itemToArsenal(item);
+    const sealCard = sealToArsenal(seal);
+    expect(itemCard.effects[0].name).toBe('Chama persistente');
+    expect(itemCard.cooldown).toEqual({ type: 'rodadas', amount: 2 });
+    expect(itemCard.charges?.maximum).toBe(3);
+    expect(itemCard.auraConsumed?.flat).toBe(1);
+    expect(itemCard.area).toMatchObject({ shape: 'cone', size: 4 });
+    expect(sealCard.effects[0].name).toBe('Chama persistente');
+    expect(sealCard.cooldown).toEqual({ type: 'turnos', amount: 1 });
+    expect(sealCard.charges?.maximum).toBe(2);
+    expect(sealCard.area).toMatchObject({ shape: 'linha', size: 5 });
+    expect(sealCard.seal?.ritual).toMatchObject({
+      key: 'sigilo-chave',
+      role: 'amplificador',
+      connectors: ['top', 'bottomRight'],
+      rotationAllowed: false,
+      connectionTags: ['fogo'],
+      forbiddenConnectionTags: ['agua'],
+      maxPerRitual: 1,
+    });
   });
 
   it('adapta posses antigas sem duplicar entradas', () => {
@@ -199,7 +282,7 @@ describe('pipeline de resolução', () => {
   });
 
   it('executa as 16 etapas, custos, dano, efeitos, cooldown e cargas', () => {
-    const burn = PREDEFINED_ARSENAL_EFFECTS.find(effect => effect.name === 'Queimadura')!;
+    const burn = PREDEFINED_ARSENAL_EFFECTS.find(effect => effect.name === 'Queimando')!;
     const card = createArsenalCard({
       id: 'fire', name: 'Fogo', category: 'habilidade', tags: ['fogo'], testDice: '1d20',
       damage: { flat: 5 }, extraDamageDice: '1d4', auraConsumed: { flat: 2 },
@@ -213,8 +296,9 @@ describe('pipeline de resolução', () => {
     expect(result.status).toBe('concluida');
     expect(result.trace.map(entry => entry.step)).toEqual(ACTION_PIPELINE_STEPS);
     expect(result.actor.currentAura).toBe(8);
-    expect(result.targets[0].currentHp).toBe(12);
-    expect(result.targets[0].effects[0].effect.name).toBe('Queimadura');
+    expect(result.targets[0].currentHp).toBe(14);
+    expect(result.targets[0].defenseCurrent).toBe(12);
+    expect(result.targets[0].effects[0].effect.name).toBe('Queimando');
     expect(result.actor.holdings[0]).toMatchObject({ cooldownRemaining: 2, currentCharges: 2 });
   });
 
@@ -255,7 +339,7 @@ describe('pipeline de resolução', () => {
   });
 
   it('soma a rolagem de proteção à defesa contra a carta lançada', () => {
-    const burn = PREDEFINED_ARSENAL_EFFECTS.find(effect => effect.name === 'Queimadura')!;
+    const burn = PREDEFINED_ARSENAL_EFFECTS.find(effect => effect.name === 'Queimando')!;
     const attack=createArsenalCard({id:'atk',name:'Ataque',category:'habilidade',testDice:'1d20',damage:{flat:4},effects:[burn]});
     const target=actor({id:'target',teamId:'b',defense:10,currentHp:20});
     const result=resolveArsenalAction({card:attack,actor:actor(),targets:[target],reactions:[{id:'escudo',ownerId:'target',ownerKind:'alvo',defenseModifier:3}],roller:()=>12});
@@ -264,47 +348,52 @@ describe('pipeline de resolução', () => {
     expect(result.targets[0].effects).toEqual([]);
   });
 
-  it('Molhado multiplica dano elétrico e é consumido', () => {
-    const wet={...getPredefinedEffect('Molhado')!,classic:{kind:'molhado' as const,value:2}};
-    const lightning=createArsenalCard({id:'zap',name:'Raio',category:'habilidade',element:'raio',damage:{flat:5}});
+  it('Molhado aumenta o dano elétrico recebido e permanece ativo', () => {
+    const wet=getPredefinedEffect('Molhado')!;
+    const lightning=createArsenalCard({id:'zap',name:'Raio',category:'habilidade',element:'raio',damage:{flat:4}});
     const target=actor({id:'target',teamId:'b',currentHp:20,effects:applyActiveEffect([],wet)});
     const result=resolveArsenalAction({card:lightning,actor:actor(),targets:[target]});
-    expect(result.targets[0].currentHp).toBe(10);
-    expect(result.targets[0].effects.some(active=>active.effect.classic?.kind==='molhado')).toBe(false);
+    expect(result.targets[0].currentHp).toBe(16);
+    expect(result.targets[0].effects.some(active=>active.effect.name==='Molhado')).toBe(true);
   });
 
-  it('Fraqueza reduz somente o teste de ataque e arredonda divisão para baixo', () => {
-    const weak={...getPredefinedEffect('Fraqueza')!,classic:{kind:'fraqueza' as const,value:2,mode:'dividir' as const}};
+  it('Frágil reduz apenas a defesa do alvo', () => {
+    const fragile=getPredefinedEffect('Frágil')!;
     const attack=createArsenalCard({id:'weak-hit',name:'Golpe',category:'habilidade',testDice:'1d20',damage:{flat:4}});
-    const result=resolveArsenalAction({card:attack,actor:actor({effects:applyActiveEffect([],weak)}),targets:[actor({id:'t',teamId:'b',defense:10})],roller:()=>19});
-    expect(result.hitTargetIds).toEqual([]);
+    const result=resolveArsenalAction({card:attack,actor:actor(),targets:[actor({id:'t',teamId:'b',defense:10,effects:applyActiveEffect([],fragile)})],roller:()=>9});
+    expect(result.hitTargetIds).toEqual(['t']);
   });
 
-  it('Paralisado bloqueia a ação quando o teste falha', () => {
-    const paralyzed = getPredefinedEffect('Paralisado')!;
+  it('Atordoado bloqueia a ação declarada', () => {
+    const stunned = getPredefinedEffect('Atordoado')!;
     const card = createArsenalCard({ id: 'hit', name: 'Golpe', category: 'habilidade', damage: { flat: 5 } });
-    const failed = resolveArsenalAction({ card, actor: actor({ effects: applyActiveEffect([], paralyzed) }), targets: [actor({ id: 't', teamId: 'b' })], roller: () => 3 });
+    const blocked = resolveArsenalAction({ card, actor: actor({ effects: applyActiveEffect([], stunned) }), targets: [actor({ id: 't', teamId: 'b' })] });
+    expect(blocked.status).toBe('bloqueada');
+    expect(blocked.reason).toBe('Incapacitado: perde a ação');
+  });
+
+  it('actsRequireTest bloqueia a ação quando o teste falha', () => {
+    const frozen = { ...getPredefinedEffect('Congelado')!, actsRequireTest: { dice: '1d20', minimum: 10 } };
+    const card = createArsenalCard({ id: 'hit', name: 'Golpe', category: 'habilidade', damage: { flat: 5 } });
+    const failed = resolveArsenalAction({ card, actor: actor({ effects: applyActiveEffect([], frozen) }), targets: [actor({ id: 't', teamId: 'b' })], roller: () => 3 });
     expect(failed.status).toBe('bloqueada');
-    expect(failed.reason).toBe('Paralisado: falhou no teste (3 < 10)');
-    const passed = resolveArsenalAction({ card, actor: actor({ effects: applyActiveEffect([], paralyzed) }), targets: [actor({ id: 't', teamId: 'b' })], roller: () => 15 });
+    expect(failed.reason).toBe('Congelado: falhou no teste (3 < 10)');
+    const passed = resolveArsenalAction({ card, actor: actor({ effects: applyActiveEffect([], frozen) }), targets: [actor({ id: 't', teamId: 'b' })], roller: () => 15 });
     expect(passed.status).toBe('concluida');
   });
 
-  it('Confuso tem chance de cancelar a ação declarada', () => {
-    const confused = getPredefinedEffect('Confuso')!;
+  it('Congelado bloqueia reações', () => {
+    const frozen = getPredefinedEffect('Congelado')!;
     const card = createArsenalCard({ id: 'hit', name: 'Golpe', category: 'habilidade', damage: { flat: 5 } });
-    const cancelled = resolveArsenalAction({
-      card, actor: actor({ effects: applyActiveEffect([], confused) }), targets: [actor({ id: 't', teamId: 'b' })],
-      roller: notation => notation === '1d100' ? 10 : 15, // 10/100 = 0.10 < chance padrão (0.25) de Confuso
-    });
-    expect(cancelled.status).toBe('cancelada');
-    expect(cancelled.reason).toBe('Confuso: ação perdida');
+    const blocked = resolveArsenalAction({ card, actor: actor({ effects: applyActiveEffect([], frozen) }), targets: [actor({ id: 't', teamId: 'b' })], isReaction: true });
+    expect(blocked.status).toBe('bloqueada');
+    expect(blocked.reason).toBe('Reação bloqueada');
   });
 
-  it('carta de fogo tem chance de aplicar Queimadura após o dano', () => {
+  it('carta de fogo tem chance de aplicar Queimando após o dano', () => {
     const card = createArsenalCard({ id: 'fire', name: 'Fogo', category: 'habilidade', element: 'fogo', damage: { flat: 5 }, elementalConditionChance: 1 });
     const result = resolveArsenalAction({ card, actor: actor(), targets: [actor({ id: 't', teamId: 'b', currentHp: 20 })], roller: dice => dice === '1d100' ? 1 : 0 });
-    expect(result.targets[0].effects.some(active => active.effect.classic?.kind === 'queimadura')).toBe(true);
+    expect(result.targets[0].effects.some(active => active.effect.name === 'Queimando')).toBe(true);
   });
 
   it('applyElementalCondition:false nunca aplica a condição', () => {
@@ -317,7 +406,7 @@ describe('pipeline de resolução', () => {
 describe('capacidades expandidas de efeitos', () => {
   const template = getPredefinedEffect('Queimadura')!;
   const effect = (overrides: Partial<ArsenalEffect> = {}): ArsenalEffect => ({
-    ...template, classic: undefined, periodicDamage: null, ...overrides,
+    ...template, periodicDamage: null, periodicDamageElement: null, ...overrides,
   });
 
   it('modificador de dano só se aplica quando o elemento da carta bate', () => {
@@ -327,15 +416,15 @@ describe('capacidades expandidas de efeitos', () => {
     const user = actor({ effects: applyActiveEffect([], buff) });
     const withFire = resolveArsenalAction({ card: fireCard, actor: user, targets: [actor({ id: 't', teamId: 'b', currentHp: 20 })] });
     const withWater = resolveArsenalAction({ card: waterCard, actor: user, targets: [actor({ id: 't', teamId: 'b', currentHp: 20 })] });
-    expect(withFire.targets[0].currentHp).toBe(11);
-    expect(withWater.targets[0].currentHp).toBe(16);
+    expect(withFire.targets[0].currentHp).toBe(13);
+    expect(withWater.targets[0].currentHp).toBe(17);
   });
 
   it('modificador multiplicativo dobra o dano', () => {
     const buff = effect({ modifiers: [{ stat: 'dano', operation: 'multiplicar', value: 100 }] });
     const card = createArsenalCard({ id: 'hit', name: 'Golpe', category: 'habilidade', damage: { flat: 6 } });
     const result = resolveArsenalAction({ card, actor: actor({ effects: applyActiveEffect([], buff) }), targets: [actor({ id: 't', teamId: 'b', currentHp: 30 })] });
-    expect(result.targets[0].currentHp).toBe(18);
+    expect(result.targets[0].currentHp).toBe(20);
   });
 
   it('modificador de definir sobrepõe a defesa calculada do alvo', () => {
@@ -369,8 +458,8 @@ describe('capacidades expandidas de efeitos', () => {
     const card = createArsenalCard({ id: 'fire', name: 'Fogo', category: 'habilidade', element: 'fogo', damage: { flat: 10 } });
     const resistant = resolveArsenalAction({ card, actor: actor(), targets: [actor({ id: 't', teamId: 'b', currentHp: 30, maxHp: 40, effects: applyActiveEffect([], resist) })] });
     const vulnerableResult = resolveArsenalAction({ card, actor: actor(), targets: [actor({ id: 't', teamId: 'b', currentHp: 30, maxHp: 40, effects: applyActiveEffect([], vulnerable) })] });
-    expect(resistant.targets[0].currentHp).toBe(25);
-    expect(vulnerableResult.targets[0].currentHp).toBe(15);
+    expect(resistant.targets[0].currentHp).toBe(26);
+    expect(vulnerableResult.targets[0].currentHp).toBe(18);
   });
 
   it('imunidade elemental zera o dano e absorção converte em cura', () => {
@@ -386,9 +475,9 @@ describe('capacidades expandidas de efeitos', () => {
   it('roubo de vida cura o atacante com base no dano causado', () => {
     const drain = effect({ lifeSteal: 50 });
     const card = createArsenalCard({ id: 'hit', name: 'Golpe', category: 'habilidade', damage: { flat: 10 } });
-    const result = resolveArsenalAction({ card, actor: actor({ currentHp: 10, maxHp: 20, effects: applyActiveEffect([], drain) }), targets: [actor({ id: 't', teamId: 'b', currentHp: 30 })] });
-    expect(result.actor.currentHp).toBe(15);
-    expect(result.targets[0].currentHp).toBe(20);
+    const result = resolveArsenalAction({ card, actor: actor({ currentHp: 10, maxHp: 20, effects: applyActiveEffect([], drain) }), targets: [actor({ id: 't', teamId: 'b', currentHp: 30, maxHp: 40 })] });
+    expect(result.actor.currentHp).toBe(14);
+    expect(result.targets[0].currentHp).toBe(22);
   });
 
   it('espinhos refletem dano ao atacante quando o alvo é atingido', () => {
@@ -396,16 +485,16 @@ describe('capacidades expandidas de efeitos', () => {
     const card = createArsenalCard({ id: 'hit', name: 'Golpe', category: 'habilidade', damage: { flat: 6 } });
     const result = resolveArsenalAction({ card, actor: actor({ currentHp: 20 }), targets: [actor({ id: 't', teamId: 'b', currentHp: 30, maxHp: 40, effects: applyActiveEffect([], thorny) })] });
     expect(result.actor.currentHp).toBe(16);
-    expect(result.targets[0].currentHp).toBe(24);
+    expect(result.targets[0].currentHp).toBe(26);
   });
 
-  it('Fraturado reduz defesa e aumenta dano físico recebido', () => {
-    const fractured = getPredefinedEffect('Fraturado')!;
-    const card = createArsenalCard({ id: 'punch', name: 'Soco', category: 'habilidade', element: 'fisico', testDice: '1d20', damage: { flat: 10 } });
-    const target = actor({ id: 't', teamId: 'b', defense: 12, currentHp: 30, maxHp: 30, effects: applyActiveEffect([], fractured) });
+  it('Frágil reduz defesa e permite dano extra passar', () => {
+    const fragile = { ...getPredefinedEffect('Frágil')!, elementalAffinities: [{ element: 'fisico' as const, kind: 'vulnerabilidade' as const, percent: 25 }] };
+    const card = createArsenalCard({ id: 'punch', name: 'Soco', category: 'habilidade', element: 'fisico', testDice: '1d20', damage: { flat: 8 } });
+    const target = actor({ id: 't', teamId: 'b', defense: 12, currentHp: 30, maxHp: 30, effects: applyActiveEffect([], fragile) });
     const result = resolveArsenalAction({ card, actor: actor(), targets: [target], roller: () => 11 });
     expect(result.hitTargetIds).toEqual(['t']);
-    expect(result.targets[0].currentHp).toBe(17);
+    expect(result.targets[0].currentHp).toBe(22);
   });
 
   it('Amaldiçoado reduz cura e recuperação de aura recebidas', () => {
@@ -422,12 +511,12 @@ describe('capacidades expandidas de efeitos', () => {
     expect(result.targets[0].currentAura).toBe(2);
   });
 
-  it('imunidade a um efeito clássico impede sua aplicação no alvo', () => {
-    const burn = PREDEFINED_ARSENAL_EFFECTS.find(entry => entry.name === 'Queimadura')!;
-    const fireproof = effect({ id: 'fireproof', name: 'À Prova de Fogo', immunities: ['queimadura'] });
+  it('imunidade a uma condição impede sua aplicação no alvo', () => {
+    const burn = PREDEFINED_ARSENAL_EFFECTS.find(entry => entry.name === 'Queimando')!;
+    const fireproof = effect({ id: 'fireproof', name: 'À Prova de Fogo', immunities: [burn.id] });
     const card = createArsenalCard({ id: 'hit', name: 'Golpe', category: 'habilidade', damage: { flat: 2 }, effects: [burn] });
     const result = resolveArsenalAction({ card, actor: actor(), targets: [actor({ id: 't', teamId: 'b', currentHp: 30, effects: applyActiveEffect([], fireproof) })] });
-    expect(result.targets[0].effects.some(active => active.effect.name === 'Queimadura')).toBe(false);
+    expect(result.targets[0].effects.some(active => active.effect.name === 'Queimando')).toBe(false);
   });
 
   it('usesPerActivation consome múltiplas unidades por uso e bloqueia sem estoque suficiente', () => {
@@ -468,16 +557,66 @@ describe('capacidades expandidas de efeitos', () => {
     const effects=applyActiveEffect(applyActiveEffect([],stacking),stacking);
     const card=createArsenalCard({id:'hit',name:'Golpe',category:'arma',damage:{flat:1}});
     const result=resolveArsenalAction({card,actor:actor({effects}),targets:[actor({id:'t',teamId:'b',currentHp:20})]});
-    expect(result.targets[0].currentHp).toBe(15);
+    expect(result.targets[0].currentHp).toBe(16);
   });
 
   it('remove efeito ativo por id e por tag', () => {
-    const burn = getPredefinedEffect('Queimadura')!;
-    const cursed = getPredefinedEffect('Amaldiçoado')!;
-    const effects = applyActiveEffect(applyActiveEffect([], burn), cursed);
+    const burn = getPredefinedEffect('Queimando')!;
+    const fragile = getPredefinedEffect('Frágil')!;
+    const effects = applyActiveEffect(applyActiveEffect([], burn), fragile);
     expect(hasCondition({ effects }, burn.id)).toBe(true);
     expect(removeActiveEffect(effects, burn.id).some(active => active.effect.id === burn.id)).toBe(false);
-    expect(cleanseByTag(effects, 'debuff').some(active => active.effect.name === 'Amaldiçoado')).toBe(false);
+    expect(cleanseByTag(effects, 'debuff').some(active => active.effect.name === 'Frágil')).toBe(false);
     expect(getActiveEffects({ effects })).toBe(effects);
+  });
+});
+
+describe('motor clássico honra os modificadores de valor v2 (buff/debuff novo)', () => {
+  const buff = (overrides: ArsenalEffect['valueModifiers']): ArsenalEffect => ({
+    id: 'v2-buff', name: 'Buff v2', description: '', tags: [], duration: { type: 'rodadas', amount: 2 },
+    stackBehavior: 'renova_duracao', maxStacks: 1, triggers: [], modifiers: [],
+    periodicDamage: null, periodicHealing: null, auraConsumed: null, auraRestored: null,
+    attackModifier: 0, defenseModifier: 0, speedModifier: 0, customEffect: null, valueModifiers: overrides,
+  });
+
+  it('teste (ataque) soma o modificador novo ao total', () => {
+    const user = actor({ effects: applyActiveEffect([], buff([{ operation: 'somar', target: 'teste', value: 5, filter: { testKinds: ['ataque'] } }])) });
+    const card = createArsenalCard({ id: 'hit', name: 'Golpe', category: 'habilidade', testDice: '1d20', damage: { flat: 1 } });
+    const result = resolveArsenalAction({ card, actor: user, targets: [actor({ id: 't', teamId: 'b', defense: 14 })], roller: () => 9 });
+    expect(result.hitTargetIds).toEqual(['t']); // 9 + 5 = 14 >= 14
+  });
+
+  it('dano causado soma o modificador novo (sem contar duas vezes com o antigo)', () => {
+    const user = actor({ effects: applyActiveEffect([], buff([{ operation: 'somar', target: 'dano', value: 5 }])) });
+    const card = createArsenalCard({ id: 'hit', name: 'Golpe', category: 'habilidade', damage: { flat: 3 } });
+    // maxHp precisa acompanhar currentHp aqui — senão o clamp final (Math.min(maxHp,...)) mascara a diferença de dano.
+    const result = resolveArsenalAction({ card, actor: user, targets: [actor({ id: 't', teamId: 'b', currentHp: 30, maxHp: 30 })], roller: () => 0 });
+    expect(result.targets[0].currentHp).toBe(24); // 30 - floor((3+5)*0.8 de redução de defesa) = 30 - 6 = 24, sem duplicar
+  });
+
+  it('dano recebido (Vulnerável a fogo) multiplica o dano no lado do alvo', () => {
+    const target = actor({ id: 't', teamId: 'b', currentHp: 30, maxHp: 30, effects: applyActiveEffect([], buff([{ operation: 'multiplicar', target: 'dano', value: 2, filter: { elements: ['fogo'], direction: 'recebido' } }])) });
+    const card = createArsenalCard({ id: 'hit', name: 'Bola de Fogo', category: 'habilidade', element: 'fogo', damage: { flat: 4 } });
+    const result = resolveArsenalAction({ card, actor: actor(), targets: [target], roller: () => 0 });
+    expect(result.targets[0].currentHp).toBe(24); // 30 - floor((4*2)*0.8) = 30 - 6 = 24
+  });
+
+  it('cura causada soma dado extra do modificador novo', () => {
+    const user = actor({ currentHp: 10, effects: applyActiveEffect([], buff([{ operation: 'adicionar_dado', target: 'cura', dice: '1d6' }])) });
+    const card = createArsenalCard({ id: 'heal', name: 'Cura', category: 'habilidade', healing: { flat: 5 } });
+    const rolls: Record<string, number> = { '1d6': 3 };
+    const result = resolveArsenalAction({ card, actor: user, targets: [actor({ id: 't', teamId: 'b', currentHp: 10, maxHp: 30 })], roller: dice => rolls[dice] ?? 0 });
+    expect(result.targets[0].currentHp).toBe(18); // 10 + (5+3) = 18
+  });
+
+  it('custo de aura e cooldown respeitam reduções do modificador novo', () => {
+    const card = createArsenalCard({ id: 'spell', name: 'Feitiço', category: 'habilidade', auraConsumed: { flat: 3 }, cooldown: { type: 'rodadas', amount: 2 } });
+    const user = actor({ currentAura: 10, holdings: [{ cardId: 'spell', quantity: 1, equipped: false, active: false }], effects: applyActiveEffect([], buff([
+      { operation: 'subtrair', target: 'custo_aura', value: 2 },
+      { operation: 'subtrair', target: 'cooldown', value: 1 },
+    ])) });
+    const result = resolveArsenalAction({ card, actor: user, targets: [actor({ id: 't', teamId: 'b' })], roller: () => 0 });
+    expect(result.actor.currentAura).toBe(9); // 10 - (3-2) = 9
+    expect(result.actor.holdings[0].cooldownRemaining).toBe(1); // 2 - 1 = 1
   });
 });

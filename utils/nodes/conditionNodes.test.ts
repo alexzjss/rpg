@@ -23,16 +23,38 @@ describe('registerConditionNodes', () => {
     expect(getNodeType('se_vida_alvo')!.evaluate!({ comparacao: 'acima', percent: 30 }, c)).toBe(false);
   });
 
-  it('se_condicao_ativa: verdadeiro quando o alvo tem a condição clássica', () => {
-    const queimado = { effect: { id: 'q', name: 'Queimadura', description: '', tags: [], duration: { type: 'rodadas' as const, amount: 2 }, stackBehavior: 'renova_duracao' as const, maxStacks: 1, triggers: [], modifiers: [], periodicDamage: null, periodicHealing: null, auraConsumed: null, auraRestored: null, attackModifier: 0, defenseModifier: 0, speedModifier: 0, customEffect: null, classic: { kind: 'queimadura' as const, value: 2 } }, stacks: 1 };
+  it('se_condicao_ativa: verdadeiro quando o alvo tem a condição', () => {
+    const queimado = { effect: { id: 'q', name: 'Queimando', description: '', tags: [], duration: { type: 'rodadas' as const, amount: 2 }, stackBehavior: 'renova_duracao' as const, maxStacks: 1, triggers: [], modifiers: [], periodicDamage: { flat: 2, dice: null }, periodicHealing: null, auraConsumed: null, auraRestored: null, attackModifier: 0, defenseModifier: 0, speedModifier: 0, customEffect: null }, stacks: 1 };
     const c = ctx({ scope: [alvo({ effects: [queimado] })] });
-    expect(getNodeType('se_condicao_ativa')!.evaluate!({ classicKind: 'queimadura' }, c)).toBe(true);
-    expect(getNodeType('se_condicao_ativa')!.evaluate!({ classicKind: 'molhado' }, c)).toBe(false);
+    expect(getNodeType('se_condicao_ativa')!.evaluate!({ conditionName: 'Queimando' }, c)).toBe(true);
+    expect(getNodeType('se_condicao_ativa')!.evaluate!({ conditionName: 'Molhado' }, c)).toBe(false);
   });
 
   it('se_aura_minima: verdadeiro quando a aura do usuário atinge o mínimo', () => {
     const c = ctx({ actor: alvo({ currentAura: 4 }) });
     expect(getNodeType('se_aura_minima')!.evaluate!({ amount: 3 }, c)).toBe(true);
     expect(getNodeType('se_aura_minima')!.evaluate!({ amount: 5 }, c)).toBe(false);
+  });
+
+  it('se_arma_equipada: verifica arma específica ou qualquer arma', () => {
+    const c = ctx({ actor: alvo({ equippedWeaponIds: ['espada'] }) });
+    expect(getNodeType('se_arma_equipada')!.evaluate!({ weaponId: 'espada' }, c)).toBe(true);
+    expect(getNodeType('se_arma_equipada')!.evaluate!({ weaponId: 'lanca' }, c)).toBe(false);
+    expect(getNodeType('se_arma_equipada')!.evaluate!({ weaponId: '' }, c)).toBe(true);
+    expect(getNodeType('se_arma_equipada')!.evaluate!({ weaponId: '' }, ctx())).toBe(false);
+  });
+
+  it('se_forma_ativa: verifica forma específica ou qualquer forma', () => {
+    const c = ctx({ actor: alvo({ activeFormIds: ['forma-solar'] }) });
+    expect(getNodeType('se_forma_ativa')!.evaluate!({ formId: 'forma-solar' }, c)).toBe(true);
+    expect(getNodeType('se_forma_ativa')!.evaluate!({ formId: 'forma-lunar' }, c)).toBe(false);
+    expect(getNodeType('se_forma_ativa')!.evaluate!({ formId: '' }, c)).toBe(true);
+    expect(getNodeType('se_forma_ativa')!.evaluate!({ formId: '' }, ctx())).toBe(false);
+  });
+
+  it('se_elemento_carta: verdadeiro quando o elemento da carta bate', () => {
+    const c = ctx({ element: 'fogo' });
+    expect(getNodeType('se_elemento_carta')!.evaluate!({ element: 'fogo' }, c)).toBe(true);
+    expect(getNodeType('se_elemento_carta')!.evaluate!({ element: 'água' }, c)).toBe(false);
   });
 });

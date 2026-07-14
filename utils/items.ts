@@ -3,6 +3,8 @@ import { Card, Character, Item, OwnedItem, Seal, Weapon } from '../types';
 /** Item do catálogo com a quantidade possuída anexada. */
 export interface ResolvedItem extends Item {
   quantity: number;
+  durability?: number;
+  maxDurability?: number;
 }
 
 /** Reconstrói os itens completos que um personagem possui, a partir do catálogo.
@@ -13,7 +15,7 @@ export function resolveOwnedItems(char: Character, catalog: Item[]): ResolvedIte
   for (const o of owned) {
     const tpl = catalog.find(i => i.id === o.itemId);
     if (!tpl) continue;
-    out.push({ ...tpl, quantity: o.quantity });
+    out.push({ ...tpl, quantity: o.quantity, durability: o.durability ?? tpl.durability, maxDurability: o.maxDurability ?? tpl.maxDurability });
   }
   return out;
 }
@@ -51,6 +53,36 @@ export function setOwnedQuantity(char: Character, itemId: string, qty: number): 
 /** Remove totalmente a posse de um item. */
 export function removeOwned(char: Character, itemId: string): OwnedItem[] {
   return (char.ownedItems ?? []).filter(o => o.itemId !== itemId);
+}
+
+/** Aplica o gasto de uso de combate: pode consumir quantidade, durabilidade, ou ambos. */
+export function consumeItemActivation(char: Character, item: ResolvedItem): OwnedItem[] {
+  const owned = [...(char.ownedItems ?? [])];
+  const idx = owned.findIndex(o => o.itemId === item.id);
+  if (idx < 0) return owned;
+  const current = owned[idx];
+  const quantityCost = item.consumeOnUse ? Math.max(1, item.usesPerActivation ?? 1) : 0;
+  const wear = Math.max(0, item.wearPerUse ?? 0);
+  let nextQuantity = current.quantity - quantityCost;
+  let nextDurability = current.durability ?? item.durability ?? item.maxDurability;
+  const maxDurability = current.maxDurability ?? item.maxDurability;
+
+  if (wear > 0 && nextDurability !== undefined) {
+    nextDurability -= wear;
+    if (nextDurability <= 0) {
+      nextQuantity -= 1;
+      nextDurability = maxDurability;
+    }
+  }
+
+  if (nextQuantity <= 0) owned.splice(idx, 1);
+  else owned[idx] = {
+    ...current,
+    quantity: nextQuantity,
+    ...(nextDurability !== undefined ? { durability: nextDurability } : {}),
+    ...(maxDurability !== undefined ? { maxDurability } : {}),
+  };
+  return owned;
 }
 
 /** Reconstrói as armas que um personagem possui, a partir do catálogo. */

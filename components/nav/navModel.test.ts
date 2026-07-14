@@ -2,15 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { NAV_DESTS, MODES, SATELLITES, NAV_ORDER } from './navModel';
 
 describe('navModel', () => {
-  it('tem exatamente 1 modo (cena) e 2 satélites', () => {
+  it('tem exatamente 1 modo (cena) e nenhum satélite navegável', () => {
     expect(MODES).toEqual(['cena']);
-    expect(SATELLITES).toEqual(['characters', 'arsenal']);
-    expect(SATELLITES).not.toContain('cena');
+    expect(SATELLITES).toEqual([]);
   });
 
-  it('NAV_ORDER cobre os 3 destinos sem repetição, começando por cena', () => {
-    expect(NAV_ORDER).toEqual(['cena', 'characters', 'arsenal']);
-    expect(new Set(NAV_ORDER).size).toBe(3);
+  it('NAV_ORDER cobre só a Cena', () => {
+    expect(NAV_ORDER).toEqual(['cena']);
+    expect(new Set(NAV_ORDER).size).toBe(1);
   });
 
   it('cada destino navegável tem label, ícone e tipo coerente', () => {

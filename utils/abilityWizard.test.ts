@@ -23,12 +23,12 @@ describe('buildGraphFromWizard', () => {
       targetScope: 'atacante_original',
       hasCost: true, auraCost: 2,
       effectKinds: ['dano', 'condicao'],
-      conditionKind: 'sangramento', conditionRounds: 3,
+      conditionKind: 'Sangrando', conditionRounds: 3,
     });
     expect(graph.nodes.find(n => n.family === 'gatilho')!.type).toBe('ao_ser_alvejado');
     expect(graph.nodes.some(n => n.type === 'custo' && n.props.amount === 2)).toBe(true);
     expect(graph.nodes.some(n => n.type === 'alvo' && n.props.scope === 'atacante_original')).toBe(true);
-    expect(graph.nodes.some(n => n.type === 'aplicar_condicao' && n.props.classicKind === 'sangramento')).toBe(true);
+    expect(graph.nodes.some(n => n.type === 'aplicar_condicao' && n.props.conditionName === 'Sangrando')).toBe(true);
     expect(validateAbilityGraph(graph).filter(i => i.severity === 'erro')).toEqual([]);
   });
 

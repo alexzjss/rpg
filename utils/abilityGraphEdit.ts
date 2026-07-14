@@ -95,5 +95,58 @@ export function addSecondaryTrigger(graph: AbilityGraph, type: string): AbilityG
   if (graph.nodes.some(n => n.type === type)) return graph;
   const def = getNodeType(type);
   const node: GraphNode = { id: `gatilho-${type}-${crypto.randomUUID()}`, type, family: 'gatilho', props: def?.defaults() ?? {} };
-  return { ...graph, nodes: [...graph.nodes, node] };
+  return ensureStandardCards({ ...graph, nodes: [...graph.nodes, node] }, node.id);
+}
+
+function reachableFrom(graph: AbilityGraph, rootId: string): Set<string> {
+  const reachable = new Set<string>([rootId]);
+  const queue = [rootId];
+  while (queue.length) {
+    const id = queue.pop()!;
+    for (const edge of graph.edges) {
+      if (edge.from === id && !reachable.has(edge.to)) { reachable.add(edge.to); queue.push(edge.to); }
+    }
+  }
+  return reachable;
+}
+
+/** Garante que o gatilho `triggerId` venha com os dois "cartões padrão": um nó 'alvo' CONECTADO
+ *  como filho direto (scope 'alvo_da_habilidade' — o mesmo comportamento implícito de sempre, então
+ *  não muda nada ao ser inserido), reconectando quaisquer filhos já existentes por baixo dele; e um
+ *  nó 'teste' DESCONECTADO (sem aresta nenhuma), só disponível no canvas pra o designer ligar quando
+ *  quiser — nunca afeta a execução sozinho. Idempotente: seguro de chamar de novo sobre o mesmo gatilho. */
+export function ensureStandardCards(graph: AbilityGraph, triggerId: string): AbilityGraph {
+  return ensureTestCard(ensureTargetCard(graph, triggerId), triggerId);
+}
+
+function ensureTargetCard(graph: AbilityGraph, triggerId: string): AbilityGraph {
+  const directChildren = graph.edges.filter(e => e.from === triggerId);
+  const hasAlvo = directChildren.some(e => graph.nodes.find(n => n.id === e.to)?.type === 'alvo');
+  if (hasAlvo) return graph;
+  const alvoId = `alvo-standard-${triggerId}`;
+  if (graph.nodes.some(n => n.id === alvoId)) return graph;
+  const def = getNodeType('alvo');
+  const alvoNode: GraphNode = { id: alvoId, type: 'alvo', family: 'alvo', props: def?.defaults() ?? {} };
+  const rewired = graph.edges.map(e => e.from === triggerId ? { ...e, from: alvoId } : e);
+  const newEdge: GraphEdge = { id: newId('edge'), from: triggerId, to: alvoId };
+  return { ...graph, nodes: [...graph.nodes, alvoNode], edges: [...rewired, newEdge] };
+}
+
+function ensureTestCard(graph: AbilityGraph, triggerId: string): AbilityGraph {
+  const testeId = `teste-standard-${triggerId}`;
+  if (graph.nodes.some(n => n.id === testeId)) return graph;
+  const reachable = reachableFrom(graph, triggerId);
+  if (graph.nodes.some(n => reachable.has(n.id) && n.type === 'teste')) return graph;
+  const def = getNodeType('teste');
+  const testeNode: GraphNode = { id: testeId, type: 'teste', family: 'ramo', props: def?.defaults() ?? {} };
+  return { ...graph, nodes: [...graph.nodes, testeNode] };
+}
+
+/** Aplica `ensureStandardCards` a todo gatilho do grafo — usado na migração de grafos já salvos
+ *  (ver runMigrations em utils/database.ts) e reaproveitável sempre que for preciso garantir os
+ *  cartões padrão num grafo inteiro de uma vez. Idempotente, como ensureStandardCards. */
+export function ensureStandardCardsOnAllTriggers(graph: AbilityGraph): AbilityGraph {
+  return graph.nodes
+    .filter(n => n.family === 'gatilho')
+    .reduce((g, trigger) => ensureStandardCards(g, trigger.id), graph);
 }

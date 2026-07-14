@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sortInitiative, startEncounter, advanceTurn, prevTurn, endEncounter, type InitiativeParticipant } from './encounter';
+import { sortInitiative, startEncounter, advanceTurn, prevTurn, reorderEncounter, moveInOrder, endEncounter, rerollInitiativeOrder, type InitiativeParticipant } from './encounter';
 import { createDefaultCena, createDefaultEncounter, type EncounterEntry, type EncounterState } from './cena';
 import {
   addBuff, buffTotal, canReact, markReaction, markSlot, slotAvailable, tickBuffs,
@@ -36,6 +36,30 @@ describe('startEncounter', () => {
   });
 });
 
+describe('rerollInitiativeOrder', () => {
+  it('rerola e reordena, resetando turnIndex/turn/reactionsUsed e preservando round/fieldEffects', () => {
+    const base: EncounterState = {
+      ...createDefaultEncounter(), isActive: true, round: 3, turnIndex: 1,
+      turn: { majorUsed: true, minorUsed: true },
+      reactionsUsed: { a: true },
+      fieldEffects: [{ id: 'fx1', sourceId: 'a', sourceName: 'A', entryId: 'e1', effect: {} as any, roundsRemaining: 2 }],
+      order: [
+        { refId: 'a', side: 'party', initiative: 5 },
+        { refId: 'b', side: 'npc', initiative: 30 },
+      ],
+    };
+    const { encounter, log } = rerollInitiativeOrder(base, [P('a', 'party', 0), P('b', 'npc', 0)]);
+    expect(encounter.turnIndex).toBe(0);
+    expect(encounter.turn).toEqual({ majorUsed: false, minorUsed: false });
+    expect(encounter.reactionsUsed).toEqual({});
+    expect(encounter.round).toBe(3);
+    expect(encounter.fieldEffects).toEqual(base.fieldEffects);
+    expect(encounter.order).toHaveLength(2);
+    expect(log.length).toBeGreaterThanOrEqual(3);
+    expect(log[0].text).toContain('rerolada');
+  });
+});
+
 describe('advanceTurn / prevTurn', () => {
   const enc = (turnIndex: number, round = 1): EncounterState => ({
     ...createDefaultEncounter(),
@@ -56,6 +80,12 @@ describe('advanceTurn / prevTurn', () => {
     expect(r.turnIndex).toBe(0);
     expect(r.round).toBe(2);
   });
+  it('avança o tempo das preparações somente ao virar a rodada', () => {
+    const state={...enc(1,1),preparations:[{ownerId:'a',entryId:'ritual',roundsRemaining:2,participantIds:[]}]};
+    expect(advanceTurn(state,none).preparations[0].roundsRemaining).toBe(2);
+    const wrapped={...state,turnIndex:2};
+    expect(advanceTurn(wrapped,none).preparations[0].roundsRemaining).toBe(1);
+  });
   it('pula caídos', () => {
     const defeatedB = (e: EncounterEntry) => e.refId === 'b';
     expect(advanceTurn(enc(0), defeatedB).turnIndex).toBe(2);
@@ -72,12 +102,37 @@ describe('advanceTurn / prevTurn', () => {
 });
 
 describe('endEncounter', () => {
-  it('desliga e limpa a ordem', () => {
+  it('desliga, limpa a ordem e apaga totalmente o log de combate', () => {
     const started = startEncounter(createDefaultCena(), [P('a', 'party', 0)]);
     const ended = endEncounter(started);
     expect(ended.encounter.isActive).toBe(false);
     expect(ended.encounter.order).toEqual([]);
     expect(ended.encounter.round).toBe(1);
+    expect(ended.log).toEqual([]);
+  });
+});
+
+describe('ordem efetiva',()=>{
+  it('mantem a ordem manual ao avancar o turno',()=>{
+    const state={...createDefaultEncounter(),isActive:true,turnIndex:0,order:[
+      {refId:'a',side:'party' as const,initiative:30},{refId:'b',side:'party' as const,initiative:20},{refId:'c',side:'npc' as const,initiative:10},
+    ]};
+    const moved=moveInOrder(state,2,0);
+    const next=advanceTurn(moved,()=>false);
+    expect(moved.order.map(entry=>entry.refId)).toEqual(['c','a','b']);
+    expect(next.order.map(entry=>entry.refId)).toEqual(['c','a','b']);
+    expect(next.order[next.turnIndex]?.refId).toBe('b');
+  });
+
+  it('aplica velocidade e deslocamentos sem alterar a iniciativa original',()=>{
+    const state={...createDefaultEncounter(),isActive:true,turnIndex:0,order:[
+      {refId:'a',side:'party' as const,initiative:20},{refId:'b',side:'party' as const,initiative:15},{refId:'c',side:'npc' as const,initiative:10},
+    ]};
+    const reordered=reorderEncounter(state,{a:{speed:0,positions:1},b:{speed:0,positions:0},c:{speed:10,positions:0}});
+    expect(reordered.order.map(entry=>entry.refId)).toEqual(['c','a','b']);
+    expect(reordered.order.find(entry=>entry.refId==='a')?.initiative).toBe(20);
+    const restored=reorderEncounter({...reordered,turnIndex:reordered.order.findIndex(entry=>entry.refId==='a')},{a:{speed:0,positions:0},b:{speed:0,positions:0},c:{speed:0,positions:0}});
+    expect(restored.order.map(entry=>entry.refId)).toEqual(['a','b','c']);
   });
 });
 

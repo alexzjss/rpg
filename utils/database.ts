@@ -14,6 +14,21 @@ import { Card, Character, CombatState, Item, JourneyState, Seal, Weapon } from '
 import { CenaState, createDefaultCena } from './cena';
 import type { ArsenalCard } from './arsenal';
 import { migrateCharacterArsenalHoldings, migrateLegacyArsenal, normalizeArsenalCard, cardToArsenal, itemToArsenal, sealToArsenal, weaponToArsenal } from './arsenalMigration';
+import type { AbilityGraph } from './abilityGraph';
+import { createAbilityGraph } from './abilityGraph';
+import { ensureStandardCardsOnAllTriggers } from './abilityGraphEdit';
+import { migrateCharacterDefense } from './defense';
+
+/** Discrimina, dentro do store `grimoire`, entradas do novo sistema de grafo das cartas legadas. */
+function isAbilityGraphEntry(raw: unknown): raw is AbilityGraph {
+  return !!raw && typeof raw === 'object' && (raw as { kind?: string }).kind === 'graph';
+}
+
+/** Preenche defaults ausentes (ex.: campo adicionado depois de o grafo já ter sido salvo) sem descartar o conteúdo salvo. */
+function normalizeAbilityGraph(raw: AbilityGraph): AbilityGraph {
+  const fallback = createAbilityGraph({ id: raw.id, name: raw.header?.name ?? 'Sem nome' });
+  return { ...fallback, ...raw, header: { ...fallback.header, ...raw.header } };
+}
 
 // ─────────────────────────────────────────────────────────────────
 // AppSnapshot — estado completo e versionado do app
@@ -28,12 +43,14 @@ export interface AppSnapshot {
   seals: Seal[];
   weapons: Weapon[];
   grimoire: ArsenalCard[];
+  /** Habilidades/formas do novo sistema de grafo (mesmo store `grimoire`, separadas aqui por tipo). */
+  abilityGraphs?: AbilityGraph[];
   combat: CombatState;
   journey: JourneyState;
   cena: CenaState;
 }
 
-export const SNAPSHOT_VERSION = 7;
+export const SNAPSHOT_VERSION = 8;
 
 // ─────────────────────────────────────────────────────────────────
 // Defaults
@@ -53,7 +70,6 @@ export const DEFAULT_COMBAT: CombatState = {
   maintainAspectRatio: true,
   gridVisible: true,
   gridDensity: 10,
-  escala: 10,
 };
 
 export const DEFAULT_JOURNEY: JourneyState = {
@@ -173,7 +189,10 @@ async function _writeSnapshotAtomic(snapshot: AppSnapshot): Promise<void> {
     replace('items', snapshot.items);
     replace('seals', snapshot.seals.map(ensureSeal));
     replace('weapons', snapshot.weapons ?? []);
-    replace('grimoire', (snapshot.grimoire ?? []).map(normalizeArsenalCard));
+    replace('grimoire', [
+      ...(snapshot.grimoire ?? []).map(normalizeArsenalCard),
+      ...(snapshot.abilityGraphs ?? []).map(normalizeAbilityGraph),
+    ]);
     const meta = tx.objectStore('meta');
     meta.put({ id: '__combat', value: snapshot.combat });
     meta.put({ id: '__journey', value: snapshot.journey });
@@ -189,8 +208,10 @@ async function _writeSnapshotAtomic(snapshot: AppSnapshot): Promise<void> {
 // Sanitizers / coercions
 // ─────────────────────────────────────────────────────────────────
 function ensureChar(c: any): Character {
-  const normalized = { ...c, items: c.items ?? [], ownedItems: c.ownedItems ?? [], conditions: [], cardIds: c.cardIds ?? [], weaponIds: c.weaponIds ?? [], sealIds: c.sealIds ?? [], grimoire: c.grimoire ?? [] };
-  return { ...normalized, arsenal: migrateCharacterArsenalHoldings(normalized) };
+  const { deslocamento: legacyMovement, ...rest } = c;
+  const normalized = { ...rest, speed: Number.isFinite(c.speed) ? c.speed : Number.isFinite(legacyMovement) ? legacyMovement : (c.baseInitiative ?? 0), items: c.items ?? [], ownedItems: c.ownedItems ?? [], conditions: Array.isArray(c.conditions) ? c.conditions : [], activeEffects: Array.isArray(c.activeEffects) ? c.activeEffects : [], cardIds: c.cardIds ?? [], weaponIds: c.weaponIds ?? [], sealIds: c.sealIds ?? [], grimoire: c.grimoire ?? [] };
+  const withDefense = migrateCharacterDefense(normalized);
+  return { ...withDefense, arsenal: migrateCharacterArsenalHoldings(withDefense) };
 }
 
 function ensureSeal(s: any): Seal {
@@ -203,7 +224,7 @@ function ensureCombat(raw: any): CombatState {
   return {
     ...DEFAULT_COMBAT,
     ...clean,
-    combatants: Array.isArray(raw.combatants) ? raw.combatants.map((combatant: any) => ({ ...combatant, conditions: [] })) : [],
+    combatants: Array.isArray(raw.combatants) ? raw.combatants.map((combatant: any) => migrateCharacterDefense({ ...combatant, conditions: [] })) : [],
     history: Array.isArray(raw.history) ? raw.history : [],
   };
 }
@@ -219,15 +240,19 @@ function ensureCena(raw: any): CenaState {
   const { backgroundImage: _legacyBackground, ...scene } = raw.scene ?? {};
   return {
     scene: { ...base.scene, ...scene },
-    npcRoster: Array.isArray(raw.npcRoster) ? raw.npcRoster.map((npc: any) => ({ ...npc, conditions: [] })) : [],
+    npcRoster: Array.isArray(raw.npcRoster) ? raw.npcRoster.map((npc: any) => { const { deslocamento, ...rest } = npc; return migrateCharacterDefense({ ...rest, speed:Number.isFinite(npc.speed)?npc.speed:Number.isFinite(deslocamento)?deslocamento:(npc.baseInitiative??0), conditions: Array.isArray(npc.conditions) ? npc.conditions : [], activeEffects: Array.isArray(npc.activeEffects) ? npc.activeEffects : [] }); }) : [],
     encounter: { ...base.encounter, ...(raw.encounter ?? {}),
       order: Array.isArray(raw.encounter?.order) ? raw.encounter.order : [],
       activeBuffs: Array.isArray(raw.encounter?.activeBuffs) ? raw.encounter.activeBuffs : [],
       activeFormas: Array.isArray(raw.encounter?.activeFormas) ? raw.encounter.activeFormas : [],
       preparations: Array.isArray(raw.encounter?.preparations) ? raw.encounter.preparations : [],
+      activeOngoingEffects: Array.isArray(raw.encounter?.activeOngoingEffects) ? raw.encounter.activeOngoingEffects : [],
       reactionsUsed: (raw.encounter?.reactionsUsed && typeof raw.encounter.reactionsUsed === 'object') ? raw.encounter.reactionsUsed : {} },
     log: Array.isArray(raw.log) ? raw.log : [],
     tokens: (raw.tokens && typeof raw.tokens === 'object') ? raw.tokens : {},
+    benchedCastIds: Array.isArray(raw.benchedCastIds) ? raw.benchedCastIds : [],
+    streamingMode: !!raw.streamingMode,
+    sceneLibrary: Array.isArray(raw.sceneLibrary) ? raw.sceneLibrary : [],
   };
 }
 
@@ -235,14 +260,33 @@ function ensureCena(raw: any): CenaState {
 // In-memory listener registry
 // ─────────────────────────────────────────────────────────────────
 type ListenerKey = 'characters' | 'cards' | 'items' | 'seals' | 'weapons' | 'grimoire' | 'combat' | 'journey' | 'cena';
+interface SyncOptions { emitInitial?: boolean }
 const _listeners: Record<ListenerKey, Function[]> = {
   characters: [], cards: [], items: [], seals: [], weapons: [], grimoire: [], combat: [], journey: [], cena: [],
 };
 
-function _notify(key: ListenerKey, data: any) {
+function _notifyLocal(key: ListenerKey, data: any) {
   for (const cb of [..._listeners[key]]) {
     try { cb(data); } catch (e) { console.error(`[DB] listener error (${key}):`, e); }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Sincronização genérica entre janelas: qualquer store que já usa
+// _notify/_subscribe (characters, cena, grimoire, etc.) passa a refletir
+// em outras janelas do mesmo app (ex.: o Dashboard do Mestre em janela
+// separada) sem precisar de um canal dedicado por feature.
+// ─────────────────────────────────────────────────────────────────
+const SYNC_CHANNEL = 'vat-db-sync';
+const _syncChannel: BroadcastChannel | null = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(SYNC_CHANNEL);
+_syncChannel?.addEventListener('message', (ev: MessageEvent) => {
+  const { key, data } = ev.data ?? {};
+  if (key && key in _listeners) _notifyLocal(key as ListenerKey, data);
+});
+
+function _notify(key: ListenerKey, data: any) {
+  _notifyLocal(key, data);
+  _syncChannel?.postMessage({ key, data });
 }
 
 function _subscribe<T>(key: ListenerKey, cb: (d: T) => void): () => void {
@@ -270,35 +314,6 @@ function _publishCombat(state: CombatState) {
 // Migration from older formats
 // ─────────────────────────────────────────────────────────────────
 async function runMigrations() {
-  const done = await _get<any>('meta', '__migration_v4');
-  if (!done?.ok) {
-    console.log('[DB] Verificando migrações...');
-    try {
-    // Tenta restaurar do autosave antigo do localStorage
-    const raw = localStorage.getItem('rpg_master_autosave');
-    if (raw) {
-      let snap: any;
-      try { snap = JSON.parse(raw); } catch { snap = null; }
-      if (snap) {
-        const existingChars = await _getAll<any>('characters');
-        // Só migra se o IDB estiver vazio (evita sobrescrever dados)
-        if (existingChars.length === 0) {
-          console.log('[DB] Migrando autosave do localStorage...');
-          if (Array.isArray(snap.characters)) for (const c of snap.characters) await _put('characters', ensureChar(c));
-          if (Array.isArray(snap.cards)) for (const c of snap.cards) await _put('cards', c);
-          if (Array.isArray(snap.seals)) for (const s of snap.seals) await _put('seals', ensureSeal(s));
-          if (snap.combat) await _put('meta', { id: '__combat', value: snap.combat });
-          if (snap.journey) await _put('meta', { id: '__journey', value: snap.journey });
-          console.log('[DB] Migração do localStorage concluída.');
-        }
-      }
-    }
-      await _put('meta', { id: '__migration_v4', ok: true });
-    } catch (e) {
-      console.error('[DB] Erro na migração:', e);
-    }
-  }
-
   const arsenalDone = await _get<any>('meta', '__migration_arsenal_v1');
   if (!arsenalDone?.ok) {
     try {
@@ -312,6 +327,20 @@ async function runMigrations() {
     } catch (e) {
       console.error('[DB] Erro ao unificar o arsenal:', e);
     }
+  }
+
+  // Sem flag "rodou uma vez": ensureStandardCardsOnAllTriggers é puro e idempotente (retorna a mesma
+  // referência quando não há nada a fazer), então é seguro e barato rodar em todo boot — cobre grafos
+  // que ainda não tinham os cartões padrão sem depender de acertar isso numa única execução histórica.
+  try {
+    const grimoireRaw = await _getAll<unknown>('grimoire');
+    const others = grimoireRaw.filter(item => !isAbilityGraphEntry(item));
+    const normalized = grimoireRaw.filter(isAbilityGraphEntry).map(normalizeAbilityGraph);
+    const migrated = normalized.map(ensureStandardCardsOnAllTriggers);
+    const changed = normalized.some((g, i) => g !== migrated[i]);
+    if (changed) await _replaceAll('grimoire', [...others, ...migrated]);
+  } catch (e) {
+    console.error('[DB] Erro ao adicionar cartões padrão aos grafos existentes:', e);
   }
 }
 
@@ -336,7 +365,8 @@ async function loadAll() {
     items: items as Item[],
     seals: seals.map(ensureSeal) as Seal[],
     weapons: weapons as Weapon[],
-    grimoire: (grimoire as ArsenalCard[]).map(normalizeArsenalCard),
+    grimoire: (grimoire as unknown[]).filter(item => !isAbilityGraphEntry(item)).map(item => normalizeArsenalCard(item as ArsenalCard)),
+    abilityGraphs: (grimoire as unknown[]).filter(isAbilityGraphEntry).map(normalizeAbilityGraph),
     combat: ensureCombat(combatRec?.value),
     journey: ensureJourney(journeyRec?.value),
     cena: ensureCena(cenaRec?.value),
@@ -356,6 +386,7 @@ export const DatabaseService = {
     seals: Seal[];
     weapons: Weapon[];
     grimoire: ArsenalCard[];
+    abilityGraphs: AbilityGraph[];
     combat: CombatState;
     journey: JourneyState;
     cena: CenaState;
@@ -365,42 +396,49 @@ export const DatabaseService = {
   },
 
   // ── Subscriptions (chamadas no mount do componente) ─────────────
-  syncCharacters: (cb: (d: Character[]) => void) => {
-    _getAll<Character>('characters').then(d => cb(d.map(ensureChar))).catch(() => cb([]));
+  syncCharacters: (cb: (d: Character[]) => void, options: SyncOptions = {}) => {
+    if (options.emitInitial !== false) _getAll<Character>('characters').then(d => cb(d.map(ensureChar))).catch(() => cb([]));
     return _subscribe<Character[]>('characters', cb);
   },
-  syncCards: (cb: (d: Card[]) => void) => {
-    _getAll<Card>('cards').then(d => cb(d)).catch(() => cb([]));
+  syncCards: (cb: (d: Card[]) => void, options: SyncOptions = {}) => {
+    if (options.emitInitial !== false) _getAll<Card>('cards').then(d => cb(d)).catch(() => cb([]));
     return _subscribe<Card[]>('cards', cb);
   },
-  syncItems: (cb: (d: Item[]) => void) => {
-    _getAll<Item>('items').then(d => cb(d)).catch(() => cb([]));
+  syncItems: (cb: (d: Item[]) => void, options: SyncOptions = {}) => {
+    if (options.emitInitial !== false) _getAll<Item>('items').then(d => cb(d)).catch(() => cb([]));
     return _subscribe<Item[]>('items', cb);
   },
-  syncSeals: (cb: (d: Seal[]) => void) => {
-    _getAll<Seal>('seals').then(d => cb(d.map(ensureSeal))).catch(() => cb([]));
+  syncSeals: (cb: (d: Seal[]) => void, options: SyncOptions = {}) => {
+    if (options.emitInitial !== false) _getAll<Seal>('seals').then(d => cb(d.map(ensureSeal))).catch(() => cb([]));
     return _subscribe<Seal[]>('seals', cb);
   },
-  syncWeapons: (cb: (d: Weapon[]) => void) => {
-    _getAll<Weapon>('weapons').then(d => cb(d)).catch(() => cb([]));
+  syncWeapons: (cb: (d: Weapon[]) => void, options: SyncOptions = {}) => {
+    if (options.emitInitial !== false) _getAll<Weapon>('weapons').then(d => cb(d)).catch(() => cb([]));
     return _subscribe<Weapon[]>('weapons', cb);
   },
-  syncGrimoire: (cb: (d: ArsenalCard[]) => void) => {
-    _getAll<ArsenalCard>('grimoire').then(d => cb(d.map(normalizeArsenalCard))).catch(() => cb([]));
-    return _subscribe<ArsenalCard[]>('grimoire', cb);
+  syncGrimoire: (cb: (d: ArsenalCard[]) => void, options: SyncOptions = {}) => {
+    const normalize = (raw: unknown[]) => raw.filter(item => !isAbilityGraphEntry(item)).map(item => normalizeArsenalCard(item as ArsenalCard));
+    if (options.emitInitial !== false) _getAll<unknown>('grimoire').then(d => cb(normalize(d))).catch(() => cb([]));
+    return _subscribe<unknown[]>('grimoire', d => cb(normalize(d)));
   },
   // Alias canônico para a futura UI; syncGrimoire permanece por compatibilidade.
-  syncArsenalCards: (cb: (d: ArsenalCard[]) => void) => DatabaseService.syncGrimoire(cb),
-  syncCombatState: (cb: (d: CombatState) => void) => {
-    _get<any>('meta', '__combat').then(r => cb(ensureCombat(r?.value))).catch(() => cb({ ...DEFAULT_COMBAT }));
+  syncArsenalCards: (cb: (d: ArsenalCard[]) => void, options?: SyncOptions) => DatabaseService.syncGrimoire(cb, options),
+  /** Habilidades/formas do novo sistema de grafo — mesmo store `grimoire`, entradas com kind:'graph'. */
+  syncAbilityGraphs: (cb: (d: AbilityGraph[]) => void, options: SyncOptions = {}) => {
+    const normalize = (raw: unknown[]) => raw.filter(isAbilityGraphEntry).map(normalizeAbilityGraph);
+    if (options.emitInitial !== false) _getAll<unknown>('grimoire').then(d => cb(normalize(d))).catch(() => cb([]));
+    return _subscribe<unknown[]>('grimoire', d => cb(normalize(d)));
+  },
+  syncCombatState: (cb: (d: CombatState) => void, options: SyncOptions = {}) => {
+    if (options.emitInitial !== false) _get<any>('meta', '__combat').then(r => cb(ensureCombat(r?.value))).catch(() => cb({ ...DEFAULT_COMBAT }));
     return _subscribe<CombatState>('combat', cb);
   },
-  syncJourneyState: (cb: (d: JourneyState) => void) => {
-    _get<any>('meta', '__journey').then(r => cb(ensureJourney(r?.value))).catch(() => cb({ ...DEFAULT_JOURNEY }));
+  syncJourneyState: (cb: (d: JourneyState) => void, options: SyncOptions = {}) => {
+    if (options.emitInitial !== false) _get<any>('meta', '__journey').then(r => cb(ensureJourney(r?.value))).catch(() => cb({ ...DEFAULT_JOURNEY }));
     return _subscribe<JourneyState>('journey', cb);
   },
-  syncCenaState: (cb: (d: CenaState) => void) => {
-    _get<any>('meta', '__cena').then(r => cb(ensureCena(r?.value))).catch(() => cb(createDefaultCena()));
+  syncCenaState: (cb: (d: CenaState) => void, options: SyncOptions = {}) => {
+    if (options.emitInitial !== false) _get<any>('meta', '__cena').then(r => cb(ensureCena(r?.value))).catch(() => cb(createDefaultCena()));
     return _subscribe<CenaState>('cena', cb);
   },
 
@@ -485,6 +523,15 @@ export const DatabaseService = {
     if (legacyStore) _notify(legacyStore, await _getAll(legacyStore) as any);
   },
 
+  saveAbilityGraph: async (graph: AbilityGraph) => {
+    await _put('grimoire', normalizeAbilityGraph(graph));
+    _notify('grimoire', await _getAll('grimoire'));
+  },
+  deleteAbilityGraph: async (id: string) => {
+    await _delete('grimoire', id);
+    _notify('grimoire', await _getAll('grimoire'));
+  },
+
   updateCombat: async (state: CombatState) => {
     await _put('meta', { id: '__combat', value: state });
     _notify('combat', state);
@@ -535,55 +582,14 @@ export const DatabaseService = {
     _notify('items', snapshot.items);
     _notify('seals', snapshot.seals.map(ensureSeal));
     _notify('weapons', snapshot.weapons ?? []);
-    _notify('grimoire', (snapshot.grimoire ?? []).map(normalizeArsenalCard));
+    _notify('grimoire', [
+      ...(snapshot.grimoire ?? []).map(normalizeArsenalCard),
+      ...(snapshot.abilityGraphs ?? []).map(normalizeAbilityGraph),
+    ]);
     _notify('combat', snapshot.combat);
     _publishCombat(snapshot.combat);
     _notify('journey', snapshot.journey);
     _notify('cena', snapshot.cena);
   },
 
-  // ── Constrói snapshot a partir dos dados atuais no IDB ──────────
-  buildSnapshot: async (): Promise<AppSnapshot> => {
-    const data = await loadAll();
-    return {
-      version: SNAPSHOT_VERSION,
-      savedAt: new Date().toISOString(),
-      ...data,
-    };
-  },
-
-  // ── Restaura snapshot (import de arquivo) ────────────────────────
-  restoreSnapshot: async (raw: any): Promise<{ ok: boolean; error?: string }> => {
-    try {
-      if (!raw || typeof raw !== 'object') return { ok: false, error: 'Arquivo inválido (não é um objeto JSON)' };
-
-      const snapshot: AppSnapshot = {
-        version: raw.version ?? 1,
-        savedAt: raw.savedAt ?? new Date().toISOString(),
-        characters: Array.isArray(raw.characters) ? raw.characters.map(ensureChar) : [],
-        cards: Array.isArray(raw.cards) ? raw.cards : [],
-        items: Array.isArray(raw.items) ? raw.items : [],
-        seals: Array.isArray(raw.seals) ? raw.seals : [],
-        weapons: Array.isArray(raw.weapons) ? raw.weapons : [],
-        grimoire: migrateLegacyArsenal(
-          {
-            cards: Array.isArray(raw.cards) ? raw.cards : [],
-            items: Array.isArray(raw.items) ? raw.items : [],
-            seals: Array.isArray(raw.seals) ? raw.seals : [],
-            weapons: Array.isArray(raw.weapons) ? raw.weapons : [],
-          },
-          Array.isArray(raw.grimoire) ? raw.grimoire.map(normalizeArsenalCard) : [],
-        ),
-        combat: ensureCombat(raw.combat),
-        journey: ensureJourney(raw.journey),
-        cena: ensureCena(raw.cena),
-      };
-
-      await DatabaseService.saveFullSnapshot(snapshot);
-      return { ok: true };
-    } catch (e: any) {
-      console.error('[DB] Erro ao restaurar snapshot:', e);
-      return { ok: false, error: e?.message ?? 'Erro desconhecido' };
-    }
-  },
 };

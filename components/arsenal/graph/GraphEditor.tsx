@@ -1,10 +1,12 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { GitBranch, X } from 'lucide-react';
 import { ImagePickerButton } from '../../ui';
 import type { AbilityGraph } from '../../../utils/abilityGraph';
 import { mergeLevel } from '../../../utils/abilityGraph';
 import { addNode, removeNode, updateNodeProps, moveNode, setLevelOverride, setRootTrigger, addSecondaryTrigger } from '../../../utils/abilityGraphEdit';
 import { listAbilityTemplates, type AbilityTemplateOptions } from '../../../utils/abilityTemplates';
+import { validateAbilityGraph } from '../../../utils/abilityValidate';
+import { arrangeGraph } from '../../../utils/graphLayout';
 import NodePalette, { type PendingConnection } from './NodePalette';
 import GraphCanvas from './GraphCanvas';
 import NodeInspector from './NodeInspector';
@@ -38,6 +40,7 @@ const GraphEditor: React.FC<Props> = ({ initial, onSave, onClose }) => {
 
   const displayed = React.useMemo(() => mergeLevel(graph, level), [graph, level]);
   const selectedNode = displayed.nodes.find(n => n.id === selectedNodeId) ?? null;
+  const issues = React.useMemo(() => validateAbilityGraph(displayed), [displayed]);
   const patchHeader = (patch: Partial<AbilityGraph['header']>) => setGraph(g => ({ ...g, header: { ...g.header, ...patch } }));
 
   const handlePick = (type: string) => {
@@ -51,7 +54,12 @@ const GraphEditor: React.FC<Props> = ({ initial, onSave, onClose }) => {
     setSelectedNodeId(nodeId);
   };
 
+  const confirmReplace = () =>
+    graph.nodes.length <= 1
+    || window.confirm('Isso substitui todo o grafo atual pelo novo, descartando o que já foi montado manualmente. Continuar?');
+
   const handleLoadTemplate = (templateId: string, options?: AbilityTemplateOptions) => {
+    if (!confirmReplace()) return;
     const template = listAbilityTemplates().find(t => t.id === templateId);
     if (!template) return;
     const built = template.build(options);
@@ -60,6 +68,7 @@ const GraphEditor: React.FC<Props> = ({ initial, onSave, onClose }) => {
   };
 
   const handleWizardBuild = (built: AbilityGraph) => {
+    if (!confirmReplace()) return;
     setGraph({ ...built, id: graph.id, header: { ...built.header, name: built.header.name || graph.header.name } });
     setSelectedNodeId(null);
   };
@@ -93,6 +102,9 @@ const GraphEditor: React.FC<Props> = ({ initial, onSave, onClose }) => {
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+          <button type="button" style={button} onClick={() => setGraph(g => arrangeGraph(g))} title="Organizar blocos automaticamente">
+            <GitBranch size={13} /> Organizar
+          </button>
           <button type="button" style={saveButton} onClick={() => onSave(graph)}>Salvar</button>
           <button type="button" aria-label="Fechar" style={button} onClick={onClose}><X size={13} /></button>
         </div>
@@ -114,6 +126,7 @@ const GraphEditor: React.FC<Props> = ({ initial, onSave, onClose }) => {
           <GraphCanvas
             graph={displayed}
             selectedNodeId={selectedNodeId}
+            issues={issues}
             onSelect={setSelectedNodeId}
             onMove={(nodeId, position) => setGraph(g => moveNode(g, nodeId, position))}
             onRequestConnect={(parentId, branch) => setPendingConnection({ parentId, branch })}

@@ -3,9 +3,9 @@ import {
   Play, ChevronRight, Clock, UserPlus, ScrollText, XCircle,
   Hourglass, Layers, MapPin, Users, Dices, BookOpen,
   Plus, Minus, RefreshCw, Pause, ChevronDown, ChevronUp,
-  Trash2, X, Check, Zap, ShieldAlert, Star,
+  Trash2, X, Check, Zap, ShieldAlert,
 } from 'lucide-react';
-import { CombatState, Combatant, Card, PRESET_CONDITIONS } from '../../types';
+import { CombatState, Combatant, Card } from '../../types';
 import { PIN_COLORS } from '../../utils/theme';
 import CardFusionPanel from './CardFusionPanel';
 
@@ -31,10 +31,6 @@ export interface CombatControlPanelProps {
   onTimerPlayPause: () => void;
   onTimerReset: () => void;
   onTimerSecondsChange: (v: number) => void;
-  // Field conditions
-  onAddFieldCondition: (name: string, duration: number) => void;
-  onRemoveFieldCondition: (id: string) => void;
-  onUpdateFieldCondition: (id: string, duration: number) => void;
   // Custom pins
   placingPin: { label: string; color: string } | null;
   onPlacePin: (label: string, color: string) => void;
@@ -127,50 +123,6 @@ const Section: React.FC<SectionProps> = ({ label, icon, isOpen, onToggle, childr
   </div>
 );
 
-// Minimal preset condition picker for field conditions
-const PresetPicker: React.FC<{ onSelect: (name: string, duration: number) => void }> = ({ onSelect }) => {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <button type="button" onClick={() => setOpen(v => !v)} style={{
-        display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6,
-        background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
-        color: '#f59e0b', fontSize: 8, fontWeight: 700, cursor: 'pointer',
-      }}>
-        <Star size={7} /> Pré-definidas <ChevronDown size={7} />
-      </button>
-      {open && (
-        <div style={{
-          position: 'absolute', top: '110%', left: 0, zIndex: 9999,
-          background: '#0f1117', border: '1px solid rgba(245,158,11,0.2)',
-          borderRadius: 10, padding: 6, width: 230,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.8)',
-        }}>
-          {PRESET_CONDITIONS.map(pc => (
-            <button key={pc.name} type="button"
-              onClick={() => { onSelect(pc.name, pc.defaultDuration); setOpen(false); }}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'flex-start', gap: 6,
-                padding: '5px 7px', borderRadius: 7, border: 'none',
-                background: 'transparent', cursor: 'pointer', marginBottom: 1,
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >
-              <span style={{ fontSize: 12, lineHeight: 1 }}>{pc.emoji}</span>
-              <div style={{ textAlign: 'left', flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: pc.color }}>{pc.name}</div>
-                <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pc.description}</div>
-              </div>
-              <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap', flexShrink: 0 }}>{pc.defaultDuration}t</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
 // ─── Main component ─────────────────────────────────────────────────
 
 const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
@@ -178,7 +130,6 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
   onStartCombat, onNextTurn, onEndCombat, onAddCombatant, onOpenHistory,
   turnTimerEnabled, turnTimerRemaining, turnTimerRunning, turnTimerSeconds,
   onTimerToggle, onTimerPlayPause, onTimerReset, onTimerSecondsChange,
-  onAddFieldCondition, onRemoveFieldCondition, onUpdateFieldCondition,
   placingPin, onPlacePin, onCancelPin, onRemovePin,
   onGlobalBonus,
   showMassDmgPanel, massDmgMode, massDmgAmount, massDmgTargets,
@@ -196,10 +147,6 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
   // Pin creator local state
   const [pinLabel, setPinLabel] = useState('');
   const [pinColor, setPinColor] = useState('#ef4444');
-
-  // Field condition form local state
-  const [fcName, setFcName] = useState('');
-  const [fcDuration, setFcDuration] = useState(3);
 
   // Fusion open state
   const [fusionActive, setFusionActive] = useState(false);
@@ -219,18 +166,6 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
     const allIds = [...currentActor.cardIds, ...extraIds];
     return allIds.map(id => cards.find(c => c.id === id)).filter((c): c is Card => c !== undefined);
   }, [currentActor, combat, cards]);
-
-  const handleFcPreset = (name: string, duration: number) => {
-    setFcName(name);
-    setFcDuration(duration);
-  };
-
-  const handleFcAdd = () => {
-    if (!fcName.trim()) return;
-    onAddFieldCondition(fcName.trim(), fcDuration);
-    setFcName('');
-    setFcDuration(3);
-  };
 
   return (
     <div
@@ -462,7 +397,7 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
             icon={<MapPin size={10} />}
             isOpen={isOpen('campo')}
             onToggle={() => toggleSection('campo')}
-            badge={(combat.fieldConditions?.length ?? 0) + (combat.customPins?.length ?? 0)}
+            badge={(combat.customPins?.length ?? 0)}
           >
             {/* Global Bonus */}
             <div style={{ paddingTop: 8 }}>
@@ -539,56 +474,6 @@ const CombatControlPanel: React.FC<CombatControlPanelProps> = ({
                   )}
                 </div>
               )}
-            </div>
-
-            {/* Field Conditions */}
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-faint)' }}>
-              <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Zap size={8} style={{ color: '#facc15' }} /> Condições de Campo
-              </div>
-              {/* Preset picker + form */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 6 }}>
-                <PresetPicker onSelect={handleFcPreset} />
-                <input type="text" placeholder="Nome da condição..." value={fcName}
-                  onChange={e => setFcName(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleFcAdd()}
-                  style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, padding: '4px 7px', fontSize: 9, color: '#e8c878', outline: 'none', width: '100%' }} />
-                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                  <input type="number" value={fcDuration} min={1}
-                    onChange={e => setFcDuration(Math.max(1, Number(e.target.value)))}
-                    style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, padding: '4px 5px', fontSize: 9, color: '#c9983a', outline: 'none', width: 44, textAlign: 'center' }} />
-                  <span style={{ fontSize: 7, color: 'var(--text-faint)', flexShrink: 0 }}>rodadas</span>
-                  <button onClick={handleFcAdd} style={{
-                    marginLeft: 'auto', padding: '3px 8px', borderRadius: 6, fontSize: 7, fontWeight: 700,
-                    textTransform: 'uppercase', letterSpacing: '0.08em',
-                    background: 'rgba(120,90,20,0.3)', border: '1px solid rgba(201,152,58,0.3)', color: '#c9983a', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 3,
-                  }}>
-                    <Plus size={7} /> Add
-                  </button>
-                </div>
-              </div>
-              {/* Condition list */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {(combat.fieldConditions ?? []).map(f => (
-                  <div key={f.id} style={{ background: 'rgba(201,152,58,0.08)', border: '1px solid rgba(201,152,58,0.2)', borderRadius: 7, padding: '6px 8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--gold-pale)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 5 }}>{f.name}</p>
-                      <button onClick={() => onRemoveFieldCondition(f.id)} style={{ color: 'var(--text-faint)', flexShrink: 0, background: 'transparent', border: 'none', cursor: 'pointer' }} className="hover:text-rose-400 transition-colors">
-                        <Trash2 size={10} />
-                      </button>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 0, background: 'rgba(0,0,0,0.3)', borderRadius: 6, padding: '1px 4px', width: 'fit-content' }}>
-                      <button onClick={() => onUpdateFieldCondition(f.id, f.duration - 1)} style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', padding: '0 6px', lineHeight: 1, background: 'transparent', border: 'none', cursor: 'pointer' }} className="hover:text-white transition-colors">−</button>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold-mid)', minWidth: 20, textAlign: 'center', fontFamily: "'JetBrains Mono',monospace" }}>{f.duration}</span>
-                      <button onClick={() => onUpdateFieldCondition(f.id, f.duration + 1)} style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', padding: '0 6px', lineHeight: 1, background: 'transparent', border: 'none', cursor: 'pointer' }} className="hover:text-white transition-colors">+</button>
-                    </div>
-                  </div>
-                ))}
-                {(combat.fieldConditions?.length ?? 0) === 0 && (
-                  <p style={{ fontSize: 9, color: 'var(--text-faint)', textAlign: 'center', padding: '4px 0' }}>Nenhuma condição ativa</p>
-                )}
-              </div>
             </div>
 
             {/* Custom Pins */}

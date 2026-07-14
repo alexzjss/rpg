@@ -11,41 +11,44 @@ const ra = (over: Partial<ResolvedAction>): ResolvedAction => ({
   source: 'card', id: 'a', name: 'Golpe', category: 'atacar', diceRoll: '1d20', targeting: 'other', ...over,
 });
 const groups = (over: Partial<Record<ActionCategory, ResolvedAction[]>> = {}): Record<ActionCategory, ResolvedAction[]> => ({
-  atacar: [], habilidade: [], forma: [], item: [], guarda: [GUARD_ACTION], ...over,
+  atacar: [], habilidade: [GUARD_ACTION], item: [], ...over,
 });
 
 describe('ActionMenu', () => {
   it('mostra as categorias', () => {
     render(<ActionMenu actions={groups()} />);
-    for (const label of ['ATACAR', 'HABILIDADE', 'FORMA', 'ITEM', 'GUARDA']) {
+    for (const label of ['ATAQUES', 'HABILIDADES', 'ITENS']) {
       expect(screen.getByText(label)).toBeTruthy();
     }
+    expect(screen.queryByText('FORMA')).toBeNull();
+    expect(screen.queryByText('GUARDA')).toBeNull();
+    fireEvent.click(screen.getByText('HABILIDADES'));
+    expect(screen.getByText('Guarda')).toBeTruthy();
   });
   it('abre a categoria e seleciona uma ação real', () => {
     const onSelectAction = vi.fn();
     render(<ActionMenu actions={groups({ atacar: [ra({ name: 'Bola de Fogo' })] })} onSelectAction={onSelectAction} />);
-    fireEvent.click(screen.getByText('ATACAR'));
+    fireEvent.click(screen.getByText('ATAQUES'));
     fireEvent.click(screen.getByText('Bola de Fogo'));
     expect(onSelectAction).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'USAR' }));
+    fireEvent.click(screen.getByRole('button', { name: 'USAR CARTA' }));
     expect(onSelectAction).toHaveBeenCalledWith(expect.objectContaining({ name: 'Bola de Fogo' }));
   });
 
   it('mostra a arte da carta selecionada quando existe imagem', () => {
     render(<ActionMenu actions={groups({ atacar: [ra({ name: 'Bola de Fogo', image: 'https://x/fogo.png' })] })} />);
-    fireEvent.click(screen.getByText('ATACAR'));
+    fireEvent.click(screen.getByText('ATAQUES'));
     fireEvent.click(screen.getByText('Bola de Fogo'));
-    const art = document.querySelector('.cena-ability-card__art') as HTMLElement;
-    expect(art).toBeTruthy();
-    expect(art.style.backgroundImage).toContain('https://x/fogo.png');
+    const preview=screen.getByTestId('arsenal-card-preview');
+    expect(preview.getAttribute('data-has-art')).toBe('true');
   });
 
   it('sem imagem, cai no cabeçalho neutro', () => {
     render(<ActionMenu actions={groups({ atacar: [ra({ name: 'Golpe Simples' })] })} />);
-    fireEvent.click(screen.getByText('ATACAR'));
+    fireEvent.click(screen.getByText('ATAQUES'));
     fireEvent.click(screen.getByText('Golpe Simples'));
-    expect(document.querySelector('.cena-ability-card__art')).toBeNull();
-    expect(document.querySelector('.cena-floating-card__heading')).toBeTruthy();
+    expect(screen.getByTestId('arsenal-card-preview')).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Golpe Simples'})).toBeTruthy();
   });
 });
 

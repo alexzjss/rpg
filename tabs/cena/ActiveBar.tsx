@@ -1,46 +1,91 @@
 import React from 'react';
 import type { Character } from '../../types';
+import { isDefenseActive, migrateCharacterDefense } from '../../utils/defense';
 
-export interface ActiveBarProps {
-  active: Character | null;
-  combat?: boolean;
+export interface ActiveBarProps { active: Character | null; combat?: boolean }
+
+const ammoStackSize = (current: number) => current > 30 ? 10 : current > 12 ? 5 : 1;
+
+function AmmoPile({ current, max }: { current: number; max: number }) {
+  const size = ammoStackSize(current);
+  const fullStacks = Math.floor(current / size);
+  const remainder = current % size;
+  const visibleFullStacks = Math.min(fullStacks, 16);
+  const stacks = [
+    ...Array.from({ length: visibleFullStacks }, () => size),
+    ...(remainder ? [remainder] : []),
+  ];
+  const hiddenAmmo = Math.max(0, fullStacks - visibleFullStacks) * size;
+  return <span className="cena-active-ammo-pile" aria-label={`Municao: ${current} de ${max}`}>
+    <span aria-hidden>
+      {stacks.map((amount, index) => <i key={index} data-stack={amount > 1 ? amount : undefined} />)}
+      {hiddenAmmo > 0 && <em>+{hiddenAmmo}</em>}
+    </span>
+  </span>;
 }
 
-function Bar({ label, current, max, gradient }: { label: string; current: number; max: number; gradient: string }) {
-  const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-      <span style={{ width: 34, fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: '1px', color: '#8a8a90' }}>{label}</span>
-      <span style={{ flex: 1, height: 9, background: '#26262c', borderRadius: 2, overflow: 'hidden' }}>
-        <span style={{ display: 'block', width: `${pct}%`, height: '100%', background: gradient }} />
-      </span>
-      <span style={{ width: 42, textAlign: 'right', fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 13, color: '#e9e9ee' }}>{current}/{max}</span>
-    </div>
-  );
+function HpBar({ current, max }: { current: number; max: number }) {
+  const pct = max > 0 ? Math.max(0, Math.min(100, current / max * 100)) : 0;
+  return <div className="cena-active-vital cena-active-vital--hp">
+    <div><span>VITALIDADE</span><strong>{current}/{max}</strong></div>
+    <i>
+      <b style={{ width: `${pct}%` }} />
+    </i>
+  </div>;
+}
+
+function AuraBar({ current, max }: { current: number; max: number }) {
+  const pct = max > 0 ? Math.max(0, Math.min(100, current / max * 100)) : 0;
+  return <div className="cena-active-vital cena-active-vital--aura">
+    <div><span>AURA</span><strong>{current}/{max}</strong></div>
+    <i className="cena-aura-track"><b style={{ width: `${pct}%` }} /></i>
+  </div>;
+}
+
+function AmmoBar({ current, max }: { current: number; max: number }) {
+  return <div className="cena-active-vital cena-active-vital--ammo">
+    <div><span>MUNIÇÃO</span><strong>{current}/{max}</strong></div>
+    <AmmoPile current={current} max={max} />
+  </div>;
+}
+
+function DefenseBar({ character }: { character: Character }) {
+  const stats = migrateCharacterDefense(character);
+  const pct = stats.defenseMax > 0 ? Math.max(0, Math.min(100, stats.defenseCurrent / stats.defenseMax * 100)) : 0;
+  const active = isDefenseActive(stats);
+  const reduction = Math.round(stats.defenseReduction * 100);
+  return <div className={`cena-active-vital cena-active-vital--defense ${stats.isDefenseBroken ? 'is-break' : active ? 'is-active' : 'is-recovering'}`}>
+    <div><span>{stats.isDefenseBroken ? 'BREAK' : 'DEFESA'}</span><strong>DEF {stats.defenseCurrent}/{stats.defenseMax}</strong></div>
+    <i className="cena-defense-track"><b style={{ width: `${pct}%` }} /></i>
+    <small>Redução: {reduction}%</small>
+  </div>;
+}
+
+function StaggerBar({ character }: { character: Character }) {
+  const stats = migrateCharacterDefense(character);
+  if (!stats.isDefenseBroken && !stats.isStaggered) return null;
+  const pct = stats.staggerMax > 0 ? Math.max(0, Math.min(100, stats.staggerCurrent / stats.staggerMax * 100)) : 0;
+  return <div className={`cena-active-vital cena-active-vital--stagger ${pct >= 80 ? 'is-danger' : ''} ${stats.isStaggered ? 'is-staggered' : ''}`}>
+    <div><span>{stats.isStaggered ? 'DESNORTEADO' : 'STAGGER'}</span><strong>{stats.staggerCurrent}/{stats.staggerMax}</strong></div>
+    <i className="cena-stagger-track"><b style={{ width: `${pct}%` }} /></i>
+  </div>;
 }
 
 const ActiveBar: React.FC<ActiveBarProps> = ({ active, combat = false }) => {
   if (!active) return null;
+  const hasAmmo = active.maxAmmo > 0;
   return (
-    <div style={{ flex: 'none', alignSelf: 'center', width: 460, background: 'linear-gradient(180deg,#141417,#0e0e11)',
-      border: combat ? '1px solid #3a1620' : '1px solid #2a2a30',
-      ...(combat ? { boxShadow: '0 0 16px rgba(224,16,43,.4)' } : {}),
-      borderRadius: 3, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 16, position: 'relative',
-      clipPath: 'polygon(0 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%)' }}>
-      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: '#E0102B' }} />
-      {active.icon
-        ? <img src={active.icon} alt="" style={{ width: 58, height: 58, flex: 'none', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E0102B' }} />
-        : <div style={{ width: 58, height: 58, flex: 'none', borderRadius: '50%', background: '#15151a', border: '2px solid #E0102B' }} />}
-      <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontFamily: "'Anton',sans-serif", fontSize: combat ? 26 : 22, letterSpacing: '2px', color: '#f1f1f4', lineHeight: 1, textTransform: 'uppercase' }}>{active.name}</span>
-          {combat && <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1px', color: '#fff', background: '#E0102B', padding: '2px 6px' }}>SEU TURNO</span>}
-        </div>
-        <div style={{ marginTop: 9, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <Bar label="HP" current={active.currentHp} max={active.maxHp} gradient="linear-gradient(90deg,#B00C22,#E0102B)" />
-          <Bar label="AURA" current={active.currentAura} max={active.maxAura} gradient="linear-gradient(90deg,#6f6f9e,#cfcfe6)" />
-        </div>
+    <div className={`cena-active-bar ${combat ? 'is-combat' : ''} ${hasAmmo ? 'has-ammo' : ''}`}>
+      <HpBar current={active.currentHp} max={active.maxHp} />
+      <div className="cena-active-hero">
+        <div className="cena-active-hero__portrait" style={active.icon ? { backgroundImage: `url(${active.icon})` } : undefined}>{!active.icon && active.name.charAt(0)}</div>
+        <strong>{active.name}</strong>
+        {combat && <span>SEU TURNO</span>}
       </div>
+      <AuraBar current={active.currentAura} max={active.maxAura} />
+      <DefenseBar character={active} />
+      <StaggerBar character={active} />
+      {hasAmmo && <AmmoBar current={active.currentAmmo} max={active.maxAmmo} />}
     </div>
   );
 };

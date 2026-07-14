@@ -1,6 +1,7 @@
 import type { Character } from '../types';
 import type { BuffStat } from './grimoire';
 import type { ArsenalEffect } from './arsenal';
+import { migrateCharacterDefense } from './defense';
 
 /** Clima da cena (mesma união usada na jornada legada, mantida por familiaridade). */
 /** Estado narrativo/ambiental do local atual. */
@@ -8,8 +9,45 @@ export interface SceneState {
   locationName: string;
   subtitle: string;
   image: string;
+  /** CSS `background-position` da imagem de cena (ex.: "50% 30%"). */
+  imagePosition?: string;
+  /** Imagem exibida em tela cheia, por cima da cena, só enquanto o combate está pausado. */
+  pausedImage?: string;
+  pausedImagePosition?: string;
   isNight: boolean;
   notes: string;
+}
+
+export type PausedDisplayKind = 'habilidade' | 'selo' | 'arma' | 'item' | 'personagem' | 'custom';
+
+export interface PausedDisplayItemState {
+  id: string;
+  kind: PausedDisplayKind;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  image: string;
+  imagePosition?: string;
+  preset?: 'center' | 'left' | 'right' | 'full' | 'corner';
+  size: number;
+  width?: number;
+  height?: number;
+  x?: number;
+  y?: number;
+  nonce: number;
+}
+
+export interface PausedDisplayState extends PausedDisplayItemState {
+  items?: PausedDisplayItemState[];
+}
+
+export interface SceneLibraryTemplate {
+  id: string;
+  name: string;
+  description: string;
+  scene: SceneState;
+  npcIds: string[];
+  tokens: Record<string, { x: number; y: number }>;
 }
 
 /**
@@ -43,7 +81,15 @@ export interface ActiveBuff {
 }
 
 /** Forma (transformação) ativa. roundsRemaining 0 = permanente até o fim do combate. */
-export interface ActiveFormaState { ownerId: string; entryId: string; roundsRemaining: number }
+export interface ActiveFormaState {
+  ownerId: string;
+  entryId: string;
+  roundsRemaining: number;
+  /** Quanto de maxHp a forma somou, para desfazer ao reverter. */
+  hpBonusApplied: number;
+  /** Quanto de maxAura a forma somou, para desfazer ao reverter. */
+  auraBonusApplied: number;
+}
 
 /**
  * Efeito de campo de batalha: origem em `TargetConfig` do tipo `campo_de_batalha`.
@@ -61,6 +107,18 @@ export interface ActiveFieldEffect {
   effect: ArsenalEffect;
   /** null = permanente até dissipar manualmente ou o combate encerrar. */
   roundsRemaining: number | null;
+}
+
+/** Efeito contínuo aplicado por um bloco 'aplicar_como_efeito' — roda a árvore 'enquanto_ativa' do grafo a cada início de turno do dono. */
+export interface OngoingEffectState {
+  id: string;
+  ownerId: string;
+  casterId: string;
+  graphId: string;
+  roundsRemaining: number;
+  pendingReactions?: { eventType: string; nodeIds: string[] }[];
+  /** Cartas liberadas por um nó 'liberar_cartas' alcançável enquanto este efeito estiver ativo. */
+  unlockCardIntents?: { cardIds: string[]; tags: string[]; element: string | null; cardType: string | null }[];
 }
 
 /** Combo em preparação (dispara quando roundsRemaining chega a 0). */
@@ -88,12 +146,13 @@ export interface EncounterState {
   activeFormas: ActiveFormaState[];
   preparations: PreparationState[];
   fieldEffects: ActiveFieldEffect[];
+  activeOngoingEffects: OngoingEffectState[];
 }
 
 /** Uma linha do log automático (rolagens, dano, condições, sistema). */
 export interface CenaLogEntry {
   id: string;
-  kind: 'roll' | 'damage' | 'condition' | 'system';
+  kind: 'roll' | 'damage' | 'condition' | 'system' | 'round';
   text: string;
   timestamp: number;
   /** Dados estruturados para apresentar a rolagem sem interpretar o texto do log. */
@@ -108,6 +167,21 @@ export interface CenaLogEntry {
     targetValue?: number;
     success?: boolean;
   };
+  /** Metadados opcionais permitem que o painel apresente o resultado sem
+   * precisar extrair números do texto. Entradas antigas continuam válidas. */
+  details?: {
+    actionLabel?: string;
+    actorLabel?: string;
+    targetLabel?: string;
+    sourceLabel?: string;
+    amount?: number;
+    resource?: 'HP' | 'Aura' | 'Munição';
+    damageType?: string;
+    durationLabel?: string;
+    remainingLabel?: string;
+    outcome?: 'success' | 'failure' | 'critical' | 'fumble' | 'applied' | 'renewed' | 'expired' | 'immune' | 'defeated';
+    notes?: string[];
+  };
 }
 
 /** Estado completo e próprio da aba Cena. */
@@ -120,6 +194,10 @@ export interface CenaState {
   tokens: Record<string, { x: number; y: number }>;
   /** ids de personagens do elenco (role 'cast') temporariamente fora do combate atual. */
   benchedCastIds: string[];
+  /** Quando ativo, oculta HP/Aura exatos de NPCs e as notas do mestre na tela principal — pra streaming/captura de tela. */
+  streamingMode?: boolean;
+  sceneLibrary: SceneLibraryTemplate[];
+  pausedDisplay?: PausedDisplayState | null;
 }
 
 export const DEFAULT_SCENE: SceneState = {
@@ -142,6 +220,7 @@ export const DEFAULT_ENCOUNTER: EncounterState = {
   activeFormas: [],
   preparations: [],
   fieldEffects: [],
+  activeOngoingEffects: [],
 };
 
 /** Cópia profunda e independente do encounter default. */
@@ -155,6 +234,7 @@ export function createDefaultEncounter(): EncounterState {
     activeFormas: [],
     preparations: [],
     fieldEffects: [],
+    activeOngoingEffects: [],
   };
 }
 
@@ -167,6 +247,9 @@ export function createDefaultCena(): CenaState {
     log: [],
     tokens: {},
     benchedCastIds: [],
+    streamingMode: false,
+    sceneLibrary: [],
+    pausedDisplay: null,
   };
 }
 
@@ -175,11 +258,20 @@ export function setScene(cena: CenaState, partial: Partial<SceneState>): CenaSta
   return { ...cena, scene: { ...cena.scene, ...partial } };
 }
 
+export function setPausedDisplay(cena: CenaState, pausedDisplay: PausedDisplayState | null): CenaState {
+  return { ...cena, pausedDisplay };
+}
+
+/** Liga/desliga o modo streaming (oculta HP de NPCs e notas do mestre na tela principal). */
+export function setStreamingMode(cena: CenaState, streamingMode: boolean): CenaState {
+  return { ...cena, streamingMode };
+}
+
 /** Cria um NpcEntry (presente, revelado) a partir de um Character e o adiciona ao roster.
  *  No-op (retorna a mesma referência) se já houver NPC com o mesmo id. */
 export function addNpcFromCharacter(cena: CenaState, char: Character): CenaState {
   if (cena.npcRoster.some(n => n.id === char.id)) return cena;
-  const npc: NpcEntry = { ...char, isNpc: true, hidden: false, present: true };
+  const npc: NpcEntry = { ...migrateCharacterDefense(char), isNpc: true, hidden: false, present: true };
   return { ...cena, npcRoster: [...cena.npcRoster, npc] };
 }
 
@@ -231,9 +323,9 @@ export function clearLog(cena: CenaState): CenaState {
 
 let _logSeq = 0;
 /** Cria uma entrada de log com id único e timestamp atual. */
-export function logEntry(kind: CenaLogEntry['kind'], text: string, roll?: CenaLogEntry['roll']): CenaLogEntry {
+export function logEntry(kind: CenaLogEntry['kind'], text: string, roll?: CenaLogEntry['roll'], details?: CenaLogEntry['details']): CenaLogEntry {
   _logSeq += 1;
-  return { id: `log-${Date.now()}-${_logSeq}`, kind, text, timestamp: Date.now(), ...(roll ? { roll } : {}) };
+  return { id: `log-${Date.now()}-${_logSeq}`, kind, text, timestamp: Date.now(), ...(roll ? { roll } : {}), ...(details ? { details } : {}) };
 }
 /** Anexa entradas ao log (imutável). */
 export function appendLog(cena: CenaState, entries: CenaLogEntry[]): CenaState {
@@ -253,9 +345,10 @@ export function syncNpcFromCharacter(npc: NpcEntry, source: Character): NpcEntry
     return runtime?{...incoming,...runtime}:{...incoming};
   });
   return {
-    ...npc,...source,arsenal,
+    ...migrateCharacterDefense({ ...npc, ...source }),arsenal,
     currentHp:Math.min(npc.currentHp,source.maxHp),currentAura:Math.min(npc.currentAura,source.maxAura),currentAmmo:Math.min(npc.currentAmmo,source.maxAmmo),
     conditions:npc.conditions,activeEffects:npc.activeEffects,
+    defenseCurrent:npc.defenseCurrent,staggerCurrent:npc.staggerCurrent,isDefenseBroken:npc.isDefenseBroken,isStaggered:npc.isStaggered,staggerTurnsRemaining:npc.staggerTurnsRemaining,
     isNpc:true,hidden:npc.hidden,present:npc.present,
   };
 }

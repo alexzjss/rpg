@@ -9,6 +9,31 @@ export interface GraphIssue {
 const EFFECT_TYPES_WITH_DAMAGE = new Set(['dano', 'cura']);
 const AURA_COST_WARNING_THRESHOLD = 8;
 
+/** Nós que participam de algum ciclo no grafo (DFS com pilha de recursão). O motor de interpretação já se
+ *  protege de ciclo em runtime (para de andar ao revisitar um nó — ver abilityInterpreter.ts), mas isso
+ *  significa que parte do grafo simplesmente nunca roda de novo, silenciosamente; o autor precisa saber
+ *  disso ANTES de salvar, não descobrir só ao simular. */
+function nodesInCycles(graph: AbilityGraph): Set<string> {
+  const inCycle = new Set<string>();
+  const visiting = new Set<string>();
+  const done = new Set<string>();
+  const outgoing = (id: string) => graph.edges.filter(e => e.from === id).map(e => e.to);
+  const visit = (id: string, path: string[]) => {
+    if (done.has(id)) return;
+    if (visiting.has(id)) {
+      const cycleStart = path.indexOf(id);
+      for (const node of path.slice(cycleStart)) inCycle.add(node);
+      return;
+    }
+    visiting.add(id);
+    for (const next of outgoing(id)) visit(next, [...path, id]);
+    visiting.delete(id);
+    done.add(id);
+  };
+  for (const node of graph.nodes) visit(node.id, []);
+  return inCycle;
+}
+
 function ancestorsOf(graph: AbilityGraph, nodeId: string): Set<string> {
   const seen = new Set<string>();
   const stack = [nodeId];
@@ -49,6 +74,12 @@ export function validateAbilityGraph(graph: AbilityGraph): GraphIssue[] {
     if (node.id !== root.id && !reachable.has(node.id)) {
       issues.push({ severity: 'erro', message: `Nó "${node.type}" está desconectado do fluxo.`, nodeId: node.id });
     }
+  }
+
+  // Ciclo no fluxo: o motor não trava (para de andar ao revisitar um nó), mas parte do grafo depois do
+  // ciclo nunca roda de novo silenciosamente — o autor precisa ver isso antes de salvar.
+  for (const nodeId of nodesInCycles(graph)) {
+    issues.push({ severity: 'erro', message: 'Nó faz parte de um ciclo no fluxo — a habilidade para de andar ao revisitá-lo, então o que vem depois do ciclo nunca roda de novo.', nodeId });
   }
 
   // Habilidade sem resultado final: nenhum nó de família 'efeito' em todo o grafo.

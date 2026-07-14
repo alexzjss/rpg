@@ -1,4 +1,4 @@
-import type { ArsenalEffect, ArsenalHolding } from './utils/arsenal';
+import type { ArsenalEffect, ArsenalHolding, ChargeConfig, CooldownConfig } from './utils/arsenal';
 
 export type CardType = 'ataque' | 'reação' | 'ação' | 'reforço' | 'vínculo' | 'combinação' | 'forma';
 
@@ -34,6 +34,8 @@ export interface CardLevel {
   ammoCost?: number;
   diceRoll?: string;
   damage?: number;
+  damageValue?: number;
+  impactValue?: number;
   damageType?: DamageType;
   dc?: number;
   conditionEffect?: string;
@@ -83,7 +85,15 @@ export interface Item {
   link?: string;
   isHidden?: boolean;
   quantity?: number;
+  maxQuantity?: number;
+  durability?: number;
+  maxDurability?: number;
+  wearPerUse?: number;
+  usesPerActivation?: number;
+  cooldown?: CooldownConfig;
+  charges?: ChargeConfig | null;
   category?: string;
+  effects?: ArsenalEffect[];
   // Combat usage
   usableInCombat?: boolean;
   combatHeal?: number;
@@ -91,6 +101,7 @@ export interface Item {
   combatDamageType?: DamageType;
   combatAuraRecover?: number;
   combatAmmoRecover?: number;
+  combatAuraCost?: number;
   combatConditionEffect?: string;
   combatConditionDuration?: number;
   combatDc?: number;
@@ -98,6 +109,9 @@ export interface Item {
   combatAmmoCost?: number;
   combatTargeting?: "self" | "other" | "area" | "choice";
   combatDiceRoll?: string;
+  combatRange?: number;
+  combatAreaSize?: number;
+  combatAreaShape?: 'circle' | 'cone' | 'line' | 'square';
 }
 
 export interface Card {
@@ -109,6 +123,8 @@ export interface Card {
   type: CardType;
   dc?: number;
   damage?: number;
+  damageValue?: number;
+  impactValue?: number;
   damageType?: DamageType;
   description: string;
   conditionEffect?: string;
@@ -165,6 +181,8 @@ export interface Weapon {
 export interface OwnedItem {
   itemId: string;
   quantity: number;
+  durability?: number;
+  maxDurability?: number;
 }
 
 export interface ActiveForma {
@@ -242,7 +260,10 @@ export interface Character {
   id: string;
   name: string;
   icon: string;
+  /** CSS `object-position`/`background-position` do retrato (ex.: "50% 30%"). */
+  iconPosition?: string;
   bannerImage?: string;
+  bannerImagePosition?: string;
   maxHp: number;
   currentHp: number;
   maxAura: number;
@@ -251,6 +272,19 @@ export interface Character {
   currentAmmo: number;
   baseInitiative: number;
   defense?: number;   // defesa para teste de acerto (default DEFAULT_DEFENSE)
+  defenseMax?: number;
+  defenseCurrent?: number;
+  defenseReduction?: number;
+  defenseRegeneration?: number;
+  defenseActivationThreshold?: number;
+  staggerMax?: number;
+  staggerCurrent?: number;
+  staggerRecovery?: number;
+  staggerDamageMultiplier?: number;
+  staggerDuration?: number;
+  isDefenseBroken?: boolean;
+  isStaggered?: boolean;
+  staggerTurnsRemaining?: number;
   speed?: number;          // velocidade base; influencia iniciativa e ordem efetiva
   cardIds: string[];
   pinnedCardIds?: string[];
@@ -451,6 +485,20 @@ export interface Seal {
   healHp?: number;
   conditionEffect?: string;
   conditionDuration?: number;
+  effects?: ArsenalEffect[];
+  cooldown?: CooldownConfig;
+  charges?: ChargeConfig | null;
+  combatTargeting?: "self" | "other" | "area" | "choice";
+  directionMode?: 'source_to_target' | 'target_to_source' | 'around_user' | 'line' | 'cone' | 'free';
+  range?: number;
+  areaSize?: number;
+  connectors?: Array<'top' | 'right' | 'bottom' | 'left' | 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'>;
+  ritualKey?: string;
+  ritualRole?: 'nucleo' | 'condutor' | 'amplificador' | 'estabilizador' | 'material';
+  rotationAllowed?: boolean;
+  maxPerRitual?: number | null;
+  connectionTags?: string[];
+  forbiddenConnectionTags?: string[];
   duration?: number;
   damageModTarget?: SealDamageModTarget;
   damageModCardType?: string;

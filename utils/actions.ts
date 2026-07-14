@@ -1,6 +1,6 @@
 import type { Card, Character, DamageType, Seal, Weapon } from '../types';
 import type { ResolvedItem } from './items';
-import type { ArsenalCard } from './arsenal';
+import type { ArsenalCard, ArsenalEffect } from './arsenal';
 import type { AbilityGraph } from './abilityGraph';
 import { mergeLevel } from './abilityGraph';
 import { graphCosts } from './abilityGraphAction';
@@ -31,12 +31,16 @@ export interface ResolvedAction {
   abilityGraphLevel?: number;
   /** Habilidades-companhia de um combo armado junto com abilityGraph (ver actorActions/comboAbilityGraphs). */
   comboAbilityGraphs?: { graph: AbilityGraph; level: number }[];
+  /** Cartas de combo clássicas (Arsenal) armadas junto com esta: [inicial, ...companheiras]. Ausente/1 item = sem combo. */
+  comboArsenalCards?: ArsenalCard[];
   /** Retoma uma carta cujo tempo obrigatório de preparação terminou. */
   resumePreparation?: boolean;
   /** Texto descritivo da fonte original, para exibição no card de detalhes. */
   description?: string;
   /** Arte da carta/arma/item, exibida no cabeçalho do card de detalhes. */
   image?: string;
+  item?: ResolvedItem;
+  advancedEffects?: ArsenalEffect[];
 }
 
 export function normalizeCard(card: Card): ResolvedAction {
@@ -64,6 +68,7 @@ export function normalizeSeal(seal: Seal): ResolvedAction {
     auraCost: seal.cost?.aura, ammoCost: seal.cost?.ammo,
     targeting: isHeal ? 'self' : 'other', description: seal.description,
     image: seal.image,
+    advancedEffects: seal.effects ?? [],
   };
 }
 
@@ -89,9 +94,12 @@ export function normalizeItem(i: ResolvedItem): ResolvedAction {
     damage: i.combatDamage, damageValue: i.combatDamage, impactValue: i.combatDamage, damageType: i.combatDamageType,
     healHp: i.combatHeal, healAura: i.combatAuraRecover,
     conditionName: i.combatConditionEffect, conditionDuration: i.combatConditionDuration,
+    auraCost: i.combatAuraCost,
     ammoCost: i.combatAmmoCost,
     targeting: i.combatTargeting === 'self' || isHeal ? 'self' : 'other', description: i.description,
     image: i.image,
+    item: i,
+    advancedEffects: i.effects ?? [],
   };
 }
 
@@ -117,10 +125,7 @@ export function arsenalCardCausesDamage(card: ArsenalCard): boolean {
     !!amount && (amount.flat > 0 || !!amount.dice?.trim());
   return hasAmount(card.damage)
     || !!card.extraDamageDice?.trim()
-    || card.effects.some(effect => hasAmount(effect.periodicDamage)
-      || effect.classic?.kind === 'queimadura'
-      || effect.classic?.kind === 'eletrocutado'
-      || effect.classic?.kind === 'sangramento');
+    || card.effects.some(effect => hasAmount(effect.periodicDamage));
 }
 
 /** Um nó de dano é alcançável a partir de alguma raiz-gatilho (sem seguir grafo desconexo). */

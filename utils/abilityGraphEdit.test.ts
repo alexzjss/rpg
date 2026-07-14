@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { _resetRegistry } from './nodeRegistry';
 import { ensureNodesRegistered } from './nodes';
 import { createAbilityGraph } from './abilityGraph';
-import { addNode, removeNode, updateNodeProps, moveNode, setLevelOverride, setRootTrigger, addSecondaryTrigger } from './abilityGraphEdit';
+import { addNode, removeNode, updateNodeProps, moveNode, setLevelOverride, setRootTrigger, addSecondaryTrigger, ensureStandardCards, ensureStandardCardsOnAllTriggers } from './abilityGraphEdit';
 
 describe('abilityGraphEdit', () => {
   beforeEach(() => { _resetRegistry(); ensureNodesRegistered(); });
@@ -13,7 +13,7 @@ describe('abilityGraphEdit', () => {
     const { graph, nodeId } = addNode(base, rootId, 'dano');
     const node = graph.nodes.find(n => n.id === nodeId)!;
     expect(node.type).toBe('dano');
-    expect(node.props).toEqual({ dice: '1d6', flat: 0, element: null, perfurante: false });
+    expect(node.props).toEqual({ dice: '1d6', flat: 0, element: null, perfurante: false, hits: 1 });
     expect(graph.edges).toContainEqual({ id: expect.any(String), from: rootId, to: nodeId });
   });
 
@@ -64,7 +64,7 @@ describe('abilityGraphEdit', () => {
     const { graph, nodeId } = addNode(base, rootId, 'dano');
     const updated = updateNodeProps(graph, nodeId, { flat: 5 });
     const node = updated.nodes.find(n => n.id === nodeId)!;
-    expect(node.props).toEqual({ dice: '1d6', flat: 5, element: null, perfurante: false });
+    expect(node.props).toEqual({ dice: '1d6', flat: 5, element: null, perfurante: false, hits: 1 });
   });
 
   it('moveNode atualiza a posição do nó', () => {
@@ -102,5 +102,89 @@ describe('abilityGraphEdit', () => {
     const next = setRootTrigger(graph, 'ao_ser_alvejado');
     expect(next.edges).toHaveLength(1);
     expect(next.edges[0].from).toBe(rootId);
+  });
+
+  describe('ensureStandardCards', () => {
+    it('conecta um nó "alvo" (scope alvo_da_habilidade) direto no gatilho sem filhos', () => {
+      const base = createAbilityGraph({ id: 'a1', name: 'X' });
+      const rootId = base.nodes[0].id;
+      const next = ensureStandardCards(base, rootId);
+      const edge = next.edges.find(e => e.from === rootId)!;
+      const alvoNode = next.nodes.find(n => n.id === edge.to)!;
+      expect(alvoNode.type).toBe('alvo');
+      expect(alvoNode.props).toEqual(expect.objectContaining({ scope: 'alvo_da_habilidade' }));
+    });
+
+    it('deixa um nó "teste" solto (sem aresta nenhuma) disponível pra conectar depois', () => {
+      const base = createAbilityGraph({ id: 'a1', name: 'X' });
+      const rootId = base.nodes[0].id;
+      const next = ensureStandardCards(base, rootId);
+      const testeNode = next.nodes.find(n => n.type === 'teste')!;
+      expect(testeNode).toBeDefined();
+      expect(next.edges.some(e => e.to === testeNode.id || e.from === testeNode.id)).toBe(false);
+    });
+
+    it('quando o gatilho já tem filhos conectados, insere o alvo ENTRE o gatilho e os filhos existentes (rewiring)', () => {
+      const base = createAbilityGraph({ id: 'a1', name: 'X' });
+      const rootId = base.nodes[0].id;
+      const { graph, nodeId: danoId } = addNode(base, rootId, 'dano');
+      const next = ensureStandardCards(graph, rootId);
+      const rootEdge = next.edges.find(e => e.from === rootId)!;
+      const alvoNode = next.nodes.find(n => n.id === rootEdge.to)!;
+      expect(alvoNode.type).toBe('alvo');
+      const alvoToDano = next.edges.find(e => e.from === alvoNode.id);
+      expect(alvoToDano?.to).toBe(danoId);
+    });
+
+    it('não duplica o alvo se o gatilho já tiver um filho direto do tipo alvo', () => {
+      const base = createAbilityGraph({ id: 'a1', name: 'X' });
+      const rootId = base.nodes[0].id;
+      const { graph } = addNode(base, rootId, 'alvo');
+      const next = ensureStandardCards(graph, rootId);
+      expect(next.nodes.filter(n => n.type === 'alvo')).toHaveLength(1);
+    });
+
+    it('não duplica o teste se o gatilho já tiver um teste alcançável na subárvore', () => {
+      const base = createAbilityGraph({ id: 'a1', name: 'X' });
+      const rootId = base.nodes[0].id;
+      const { graph } = addNode(base, rootId, 'teste');
+      const next = ensureStandardCards(graph, rootId);
+      expect(next.nodes.filter(n => n.type === 'teste')).toHaveLength(1);
+    });
+
+    it('é idempotente: chamar duas vezes não duplica nada', () => {
+      const base = createAbilityGraph({ id: 'a1', name: 'X' });
+      const rootId = base.nodes[0].id;
+      const once = ensureStandardCards(base, rootId);
+      const twice = ensureStandardCards(once, rootId);
+      expect(twice.nodes.filter(n => n.type === 'alvo')).toHaveLength(1);
+      expect(twice.nodes.filter(n => n.type === 'teste')).toHaveLength(1);
+      expect(twice.edges).toHaveLength(once.edges.length);
+    });
+  });
+
+  describe('ensureStandardCardsOnAllTriggers (migração de grafos salvos)', () => {
+    it('aplica os cartões padrão em todos os gatilhos de um grafo antigo (gatilho principal + secundário)', () => {
+      const base = createAbilityGraph({ id: 'a1', name: 'X' });
+      const withCombo = addSecondaryTrigger(base, 'em_combo');
+      // Simula um grafo "antigo" salvo antes da mudança: remove os cartões que addSecondaryTrigger já
+      // teria adicionado, pra representar fielmente o estado de um grafo pré-existente no banco.
+      const legacyGraph = { ...withCombo, nodes: withCombo.nodes.filter(n => n.family === 'gatilho'), edges: [] };
+      const migrated = ensureStandardCardsOnAllTriggers(legacyGraph);
+      const rootId = migrated.nodes.find(n => n.type === 'ao_ativar')!.id;
+      const comboId = migrated.nodes.find(n => n.type === 'em_combo')!.id;
+      expect(migrated.edges.some(e => e.from === rootId && migrated.nodes.find(n => n.id === e.to)?.type === 'alvo')).toBe(true);
+      expect(migrated.edges.some(e => e.from === comboId && migrated.nodes.find(n => n.id === e.to)?.type === 'alvo')).toBe(true);
+      expect(migrated.nodes.some(n => n.id === `teste-standard-${rootId}`)).toBe(true);
+      expect(migrated.nodes.some(n => n.id === `teste-standard-${comboId}`)).toBe(true);
+    });
+
+    it('é idempotente sobre uma coleção de grafos e não duplica em quem já tem os cartões', () => {
+      const base = createAbilityGraph({ id: 'a1', name: 'X' });
+      const once = ensureStandardCardsOnAllTriggers(base);
+      const twice = ensureStandardCardsOnAllTriggers(once);
+      expect(twice.nodes.filter(n => n.type === 'alvo')).toHaveLength(1);
+      expect(twice.nodes.filter(n => n.type === 'teste')).toHaveLength(1);
+    });
   });
 });

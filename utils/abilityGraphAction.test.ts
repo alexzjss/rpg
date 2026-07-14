@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { _resetRegistry } from './nodeRegistry';
 import { ensureNodesRegistered } from './nodes';
 import { createAbilityGraph, type AbilityGraph, type GraphNode } from './abilityGraph';
-import { resolveAbilityGraphAction, activatableGraphForms, graphFormaVisual, graphCosts, graphComboConfig, graphCooldown, graphPreparation, advanceAbilityGraphCooldowns } from './abilityGraphAction';
+import { resolveAbilityGraphAction, activatableGraphForms, availableAbilityGraphIds, graphFormaVisual, graphCosts, graphComboConfig, graphCooldown, graphPreparation, advanceAbilityGraphCooldowns } from './abilityGraphAction';
 import type { ArsenalActorState } from './arsenalPipeline';
 
 const actor = (over: Partial<ArsenalActorState> = {}): ArsenalActorState => ({
@@ -312,6 +312,27 @@ describe('resolveAbilityGraphAction', () => {
     });
   });
 
+  describe('availableAbilityGraphIds', () => {
+    it('esconde habilidade-grafo vinculada a uma forma até a forma estar ativa', () => {
+      const linked: AbilityGraph = { ...createAbilityGraph({ id: 'golpe-solar', name: 'Golpe Solar' }), header: { ...createAbilityGraph({ id: 'x', name: 'x' }).header, formLinks: ['forma-solar'] } };
+      const loadout = { holdings: [{ cardId: 'golpe-solar', quantity: 1 }], equippedWeaponIds: [], activeFormIds: [] };
+      expect(availableAbilityGraphIds(loadout, [linked])).not.toContain('golpe-solar');
+      expect(availableAbilityGraphIds({ ...loadout, activeFormIds: ['forma-solar'] }, [linked])).toContain('golpe-solar');
+    });
+
+    it('habilidade sem weaponLinks/formLinks está sempre disponível se possuída', () => {
+      const free = createAbilityGraph({ id: 'golpe', name: 'Golpe' });
+      const loadout = { holdings: [{ cardId: 'golpe', quantity: 1 }], equippedWeaponIds: [], activeFormIds: [] };
+      expect(availableAbilityGraphIds(loadout, [free])).toContain('golpe');
+    });
+
+    it('não inclui habilidades não possuídas', () => {
+      const free = createAbilityGraph({ id: 'golpe', name: 'Golpe' });
+      const loadout = { holdings: [], equippedWeaponIds: [], activeFormIds: [] };
+      expect(availableAbilityGraphIds(loadout, [free])).not.toContain('golpe');
+    });
+  });
+
   describe('graphFormaVisual', () => {
     it('extrai cor/ícone/bônus de PV/Aura dos nós do grafo mesclado', () => {
       const forma = {
@@ -354,6 +375,31 @@ describe('resolveAbilityGraphAction', () => {
       const base = danoGraph();
       const desconectado = detached(base, { id: 'custo-solto', type: 'custo', family: 'efeito', props: { recurso: 'aura', amount: 99 } });
       expect(graphCosts(desconectado, 1)).toEqual({ aura: 0, municao: 0, vida: 0 });
+    });
+
+    it('ignora custo pendurado só no ramo em_combo — não conta quando a habilidade roda sozinha (sem companheiras)', () => {
+      const base: AbilityGraph = {
+        ...danoGraph(),
+        nodes: [
+          ...danoGraph().nodes,
+          { id: 'combo-root', type: 'em_combo', family: 'gatilho', props: { stackKey: 'x', maxStacks: 2 } },
+          { id: 'combo-custo', type: 'custo', family: 'efeito', props: { recurso: 'aura', amount: 99 } },
+        ],
+        edges: [...danoGraph().edges, { id: 'e2', from: 'combo-root', to: 'combo-custo' }],
+      };
+      expect(graphCosts(base, 1)).toEqual({ aura: 0, municao: 0, vida: 0 });
+    });
+
+    it('grafo cujo único trigger é em_combo (companheira pura de combo) ainda conta o custo do próprio ramo', () => {
+      const soCombo: AbilityGraph = {
+        ...createAbilityGraph({ id: 'combo-only', name: 'Só combo' }),
+        nodes: [
+          { id: 'combo-root', type: 'em_combo', family: 'gatilho', props: { stackKey: 'x', maxStacks: 2 } },
+          { id: 'combo-custo', type: 'custo', family: 'efeito', props: { recurso: 'aura', amount: 2 } },
+        ],
+        edges: [{ id: 'e1', from: 'combo-root', to: 'combo-custo' }],
+      };
+      expect(graphCosts(soCombo, 1)).toEqual({ aura: 2, municao: 0, vida: 0 });
     });
   });
 
@@ -423,5 +469,76 @@ describe('resolveAbilityGraphAction', () => {
     it('retorna null quando não há nó em_combo', () => {
       expect(graphComboConfig(danoGraph(), 1)).toBeNull();
     });
+  });
+
+  describe('integração: buff/debuff v2 de ponta a ponta', () => {
+    it('um buff de dano aplicado por um grafo afeta o dano de uma habilidade seguinte', () => {
+      const buffGraph: AbilityGraph = attachToRoot(createAbilityGraph({ id: 'buff', name: 'Fúria' }), {
+        id: 'mod', type: 'modificar_valor', family: 'efeito',
+        props: { name: 'Fúria', target: 'dano', operation: 'somar', value: 5, rounds: 3, chance: 100, stackRule: 'renovar' },
+      });
+      const attackGraph: AbilityGraph = attachToRoot(createAbilityGraph({ id: 'golpe', name: 'Golpe' }), {
+        id: 'dano', type: 'dano', family: 'efeito', props: { dice: undefined, flat: 4, element: null, perfurante: false, hits: 1 },
+      });
+
+      const buffed = resolveAbilityGraphAction({ graph: buffGraph, level: 1, actor: actor(), targets: [actor()], roller: () => 0 });
+      expect(buffed.status).toBe('concluida');
+
+      const result = resolveAbilityGraphAction({ graph: attackGraph, level: 1, actor: buffed.actor, targets: [target()], roller: () => 0 });
+      // 4 (base) + 5 (Fúria) = 9
+      expect(result.targets[0].currentHp).toBe(21);
+    });
+
+    it('custo de aura reduzido por um buff é respeitado ao pagar o custo da habilidade', () => {
+      const buffGraph: AbilityGraph = attachToRoot(createAbilityGraph({ id: 'buff', name: 'Economia' }), {
+        id: 'mod', type: 'modificar_valor', family: 'efeito',
+        props: { name: 'Economia', target: 'custo_aura', operation: 'subtrair', value: 2, rounds: 3, chance: 100, stackRule: 'renovar' },
+      });
+      const spell = withCusto(createAbilityGraph({ id: 'feitico', name: 'Feitiço' }), 'aura', 3);
+
+      const buffed = resolveAbilityGraphAction({ graph: buffGraph, level: 1, actor: actor(), targets: [actor()], roller: () => 0 });
+      const result = resolveAbilityGraphAction({ graph: spell, level: 1, actor: buffed.actor, targets: [target()], roller: () => 0 });
+      expect(result.status).toBe('concluida');
+      expect(result.actor.currentAura).toBe(9); // 10 - (3 - 2)
+    });
+  });
+
+  it('propaga defenseRollOverride do nó esquiva até o resultado da ação', () => {
+    const graph = attachToRoot(createAbilityGraph({ id: 'esquiva-graph', name: 'Esquiva' }), {
+      id: 'e', type: 'esquiva', family: 'efeito', props: { dice: undefined, flat: 7 },
+    });
+    const result = resolveAbilityGraphAction({ graph, level: 1, actor: actor(), targets: [actor()], roller: () => 0 });
+    expect(result.status).toBe('concluida');
+    expect(result.defenseRollOverride).toBe(7);
+  });
+
+  it('areaTargets do request chega ao nó alvo geométrico e afeta quem está na área, não os targets normais', () => {
+    const graph: AbilityGraph = {
+      ...createAbilityGraph({ id: 'explosao', name: 'Explosão' }),
+      nodes: [
+        { id: 'g', type: 'ao_ativar', family: 'gatilho', props: {} },
+        { id: 'a', type: 'alvo', family: 'alvo', props: { scope: 'raio' } },
+        { id: 'd', type: 'dano', family: 'efeito', props: { dice: undefined, flat: 6, element: 'fisico' } },
+      ],
+      edges: [{ id: 'e1', from: 'g', to: 'a' }, { id: 'e2', from: 'a', to: 'd' }],
+    };
+    const inArea = target({ id: 'in-area', currentHp: 20 });
+    const result = resolveAbilityGraphAction({
+      graph, level: 1, actor: actor(), targets: [target({ id: 'clicked', currentHp: 20 })],
+      areaTargets: [inArea], roller: () => 0,
+    });
+    expect(result.status).toBe('concluida');
+    // O alvo clicado (targets) não é afetado pelo escopo 'raio' — só quem está em areaTargets é.
+    expect(result.targets[0].currentHp).toBe(20);
+    expect(result.areaTargets.find(t => t.id === 'in-area')!.currentHp).toBe(14);
+  });
+
+  it('propaga movementIntents do nó mover até o resultado da ação', () => {
+    const graph = attachToRoot(createAbilityGraph({ id: 'empurrao', name: 'Empurrão' }), {
+      id: 'm', type: 'mover', family: 'efeito', props: { kind: 'empurrar', distance: 2 },
+    });
+    const result = resolveAbilityGraphAction({ graph, level: 1, actor: actor(), targets: [target()], roller: () => 0 });
+    expect(result.status).toBe('concluida');
+    expect(result.movementIntents).toEqual([{ targetId: 't', kind: 'empurrar', distance: 2 }]);
   });
 });

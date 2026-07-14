@@ -21,7 +21,6 @@ import {
   Database,
   Shield,
   Download,
-  Upload,
   Dices,
   UserPlus,
   Link as LinkIcon,
@@ -43,15 +42,12 @@ import { migrateCombatState } from './utils/combatMigration';
 import { applySectionTheme } from './utils/sectionTheme';
 import type { CenaState } from './utils/cena';
 import { createDefaultCena, mergeNpcLiveUpdates, syncNpcFromCharacter } from './utils/cena';
-import type { ArsenalCard } from './utils/arsenal';
+import type { ArsenalCard, ArsenalEffect } from './utils/arsenal';
+import type { AbilityGraph } from './utils/abilityGraph';
 import { TabSweep, Title, ImagePickerButton } from './components/ui';
 import { useKeyboardNav } from './components/nav';
 import CenaTab from './tabs/CenaTab';
-import ArsenalWorkspace from './components/arsenal/ArsenalWorkspace';
-import { getUserReducedMotion, setUserReducedMotion } from './utils/motionPref';
 import { useUnifiedAutosave } from './hooks/useUnifiedAutosave';
-import CharacterEditor from './components/characters/CharacterEditor';
-import { exportCharacterFile } from './utils/characterExport';
 
 
 // --- Portal de Confirmação (escapa stacking context de backdrop-filter/overflow) ---
@@ -316,39 +312,6 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
     </div>
   </div>
 );
-
-const QuickEditCharacter: React.FC<{ character: Character; onSave: (hp: number, aura: number, ammo?: number) => void }> = ({ character, onSave }) => {
-    const [hp, setHp] = useState(character.currentHp);
-    const [aura, setAura] = useState(character.currentAura);
-    const [ammo, setAmmo] = useState(character.currentAmmo ?? 0);
-    const hasAmmo = (character.maxAmmo || 0) > 0;
-
-    return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <img src={character.icon || undefined} className="w-16 h-16 rounded-2xl object-cover" />
-                <h4 className="text-xl font-extrabold uppercase italic text-white">{character.name}</h4>
-            </div>
-            <div className={`grid gap-6 ${hasAmmo ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                <div className="space-y-2">
-                   <label className="text-[10px] font-extrabold uppercase text-slate-500 ml-2">❤ Vida / {character.maxHp}</label>
-                   <input type="number" value={hp} onChange={e => setHp(Number(e.target.value))} className="bg-slate-900/80 border-slate-800 w-full border rounded-2xl px-4 py-4 text-center font-bold text-white text-xl focus:border-rose-600 outline-none" />
-                </div>
-                <div className="space-y-2">
-                   <label className="text-[10px] font-extrabold uppercase text-slate-500 ml-2">⚡ Aura / {character.maxAura}</label>
-                   <input type="number" value={aura} onChange={e => setAura(Number(e.target.value))} className="bg-slate-900/80 border-slate-800 w-full border rounded-2xl px-4 py-4 text-center font-bold text-white text-xl focus:border-amber-600 outline-none" />
-                </div>
-                {hasAmmo && (
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-extrabold uppercase text-slate-500 ml-2">🎯 Munição / {character.maxAmmo}</label>
-                    <input type="number" value={ammo} onChange={e => setAmmo(Number(e.target.value))} className="bg-slate-900/80 border-slate-800 w-full border rounded-2xl px-4 py-4 text-center font-bold text-white text-xl focus:border-orange-600 outline-none" />
-                  </div>
-                )}
-            </div>
-            <button onClick={() => onSave(hp, aura, hasAmmo ? ammo : undefined)} className="w-full py-4 bg-amber-600 rounded-2xl text-white font-extrabold uppercase">Salvar Alterações</button>
-        </div>
-    );
-};
 
 const CharacterForm: React.FC<{ cards: Card[]; weapons: Weapon[]; seals: Seal[]; initialData?: Character; onSubmit: (c: Character) => void; onDelete: (id: string) => void }> = ({ cards, weapons, seals, initialData, onSubmit, onDelete }) => {
   const [formData, setFormData] = useState<Character>(initialData?.id ? initialData : {
@@ -1435,12 +1398,130 @@ const CardForm: React.FC<{ initialData?: Card; onSubmit: (c: Card) => void; onDe
   );
 };
 
+type QuickEffectKind = 'periodicDamage' | 'periodicHealing' | 'auraRestored' | 'modifier' | 'shield' | 'silence' | 'incapacitate' | 'dispel' | 'movement';
+
+const blankEffect = (kind: QuickEffectKind): ArsenalEffect => {
+  const id = `effect-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const base: ArsenalEffect = {
+    id,
+    name: 'Novo efeito',
+    description: '',
+    tags: [],
+    duration: { type: 'rodadas', amount: 1 },
+    stackBehavior: 'renova_duracao',
+    maxStacks: 1,
+    triggers: [],
+    modifiers: [],
+    periodicDamage: null,
+    periodicHealing: null,
+    auraConsumed: null,
+    auraRestored: null,
+    attackModifier: 0,
+    defenseModifier: 0,
+    speedModifier: 0,
+    customEffect: null,
+  };
+  if (kind === 'periodicDamage') return { ...base, name: 'Dano continuo', periodicDamage: { flat: 1 } };
+  if (kind === 'periodicHealing') return { ...base, name: 'Regeneracao', periodicHealing: { flat: 1 } };
+  if (kind === 'auraRestored') return { ...base, name: 'Recupera aura', auraRestored: { flat: 1 } };
+  if (kind === 'modifier') return { ...base, name: 'Modificador', valueModifiers: [{ target: 'dano', operation: 'somar', value: 1 }] };
+  if (kind === 'shield') return { ...base, name: 'Escudo', shield: { flat: 3 } };
+  if (kind === 'silence') return { ...base, name: 'Silenciar', silence: { blocksBasicAttack: false } };
+  if (kind === 'incapacitate') return { ...base, name: 'Incapacitar', incapacitate: true };
+  if (kind === 'dispel') return { ...base, name: 'Dissipar', dispel: { category: 'negativo', count: 1 } };
+  return { ...base, name: 'Mover', movement: { kind: 'empurrar', distance: 1 } };
+};
+
+const effectKindOf = (effect: ArsenalEffect): QuickEffectKind => {
+  if (effect.periodicDamage) return 'periodicDamage';
+  if (effect.periodicHealing) return 'periodicHealing';
+  if (effect.auraRestored) return 'auraRestored';
+  if (effect.valueModifiers?.length) return 'modifier';
+  if (effect.shield) return 'shield';
+  if (effect.silence) return 'silence';
+  if (effect.incapacitate) return 'incapacitate';
+  if (effect.dispel) return 'dispel';
+  if (effect.movement) return 'movement';
+  return 'modifier';
+};
+
+const AdvancedEffectsEditor: React.FC<{ effects: ArsenalEffect[]; onChange: (effects: ArsenalEffect[]) => void; accent?: string }> = ({ effects, onChange, accent = 'violet' }) => {
+  const patch = (index: number, update: Partial<ArsenalEffect>) => onChange(effects.map((effect, i) => i === index ? { ...effect, ...update } : effect));
+  const patchAmount = (index: number, key: 'periodicDamage' | 'periodicHealing' | 'auraRestored' | 'shield', field: 'flat' | 'dice', value: string) => {
+    const current = effects[index][key] ?? { flat: 0 };
+    patch(index, { [key]: { ...current, [field]: field === 'flat' ? Number(value) || 0 : value || undefined } } as Partial<ArsenalEffect>);
+  };
+  const patchDuration = (index: number, amount: number) => patch(index, { duration: { ...(effects[index].duration ?? { type: 'rodadas' }), type: 'rodadas', amount } });
+  const patchModifier = (index: number, field: 'target' | 'operation' | 'value', value: string) => {
+    const current = effects[index].valueModifiers?.[0] ?? { target: 'dano' as const, operation: 'somar' as const, value: 1 };
+    patch(index, { valueModifiers: [{ ...current, [field]: field === 'value' ? Number(value) || 0 : value }] as ArsenalEffect['valueModifiers'] });
+  };
+  return (
+    <div className={`space-y-3 p-4 rounded-2xl border border-${accent}-900/40 bg-${accent}-950/10`}>
+      <div className="flex items-center justify-between gap-3">
+        <label className={`text-[10px] font-extrabold uppercase text-${accent}-300 tracking-widest`}>Efeitos avançados</label>
+        <select
+          value=""
+          onChange={event => {
+            if (!event.target.value) return;
+            onChange([...effects, blankEffect(event.target.value as QuickEffectKind)]);
+            event.currentTarget.value = '';
+          }}
+          className="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 text-xs font-bold outline-none"
+        >
+          <option value="">+ Adicionar efeito</option>
+          <option value="periodicDamage">Dano continuo</option>
+          <option value="periodicHealing">Regeneracao</option>
+          <option value="auraRestored">Recuperar aura</option>
+          <option value="modifier">Modificar valor</option>
+          <option value="shield">Escudo</option>
+          <option value="silence">Silenciar</option>
+          <option value="incapacitate">Incapacitar</option>
+          <option value="dispel">Dissipar</option>
+          <option value="movement">Movimento</option>
+        </select>
+      </div>
+      {effects.length === 0 && <p className="text-[10px] text-slate-500 italic">Nenhum efeito avançado configurado.</p>}
+      {effects.map((effect, index) => {
+        const kind = effectKindOf(effect);
+        return (
+          <div key={effect.id || index} className="space-y-3 p-3 rounded-xl border border-slate-800 bg-slate-950/55">
+            <div className="grid grid-cols-[1fr_92px_32px] gap-2">
+              <input value={effect.name} onChange={event => patch(index, { name: event.target.value })} className="bg-slate-900/80 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs font-bold outline-none" placeholder="Nome do efeito" />
+              <input type="number" min="0" value={effect.duration.amount ?? 1} onChange={event => patchDuration(index, Number(event.target.value) || 0)} className="bg-slate-900/80 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs font-bold text-center outline-none" />
+              <button type="button" onClick={() => onChange(effects.filter((_, i) => i !== index))} className="rounded-lg bg-rose-950/40 border border-rose-800/50 text-rose-300 font-black">×</button>
+            </div>
+            {(['periodicDamage', 'periodicHealing', 'auraRestored', 'shield'] as QuickEffectKind[]).includes(kind) && (
+              <div className="grid grid-cols-2 gap-2">
+                <input type="number" value={(effect[kind as 'periodicDamage'] as any)?.flat ?? 0} onChange={event => patchAmount(index, kind as 'periodicDamage' | 'periodicHealing' | 'auraRestored' | 'shield', 'flat', event.target.value)} className="bg-slate-900/80 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs text-center outline-none" placeholder="Valor fixo" />
+                <input value={(effect[kind as 'periodicDamage'] as any)?.dice ?? ''} onChange={event => patchAmount(index, kind as 'periodicDamage' | 'periodicHealing' | 'auraRestored' | 'shield', 'dice', event.target.value)} className="bg-slate-900/80 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs text-center outline-none" placeholder="Dado ex: 1d6" />
+              </div>
+            )}
+            {kind === 'modifier' && (
+              <div className="grid grid-cols-3 gap-2">
+                <select value={effect.valueModifiers?.[0]?.target ?? 'dano'} onChange={event => patchModifier(index, 'target', event.target.value)} className="bg-slate-900/80 border border-slate-800 rounded-lg px-2 py-2 text-white text-xs outline-none"><option value="teste">Teste</option><option value="dano">Dano</option><option value="cura">Cura</option><option value="defesa">Defesa</option><option value="velocidade">Velocidade</option></select>
+                <select value={effect.valueModifiers?.[0]?.operation ?? 'somar'} onChange={event => patchModifier(index, 'operation', event.target.value)} className="bg-slate-900/80 border border-slate-800 rounded-lg px-2 py-2 text-white text-xs outline-none"><option value="somar">Somar</option><option value="subtrair">Subtrair</option><option value="multiplicar">Multiplicar</option><option value="dividir">Dividir</option><option value="vantagem">Vantagem</option><option value="desvantagem">Desvantagem</option></select>
+                <input type="number" value={effect.valueModifiers?.[0]?.value ?? 0} onChange={event => patchModifier(index, 'value', event.target.value)} className="bg-slate-900/80 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs text-center outline-none" />
+              </div>
+            )}
+            {kind === 'silence' && <label className="flex items-center gap-2 text-[10px] text-slate-300"><input type="checkbox" checked={!!effect.silence?.blocksBasicAttack} onChange={event => patch(index, { silence: { blocksBasicAttack: event.target.checked } })} /> Bloqueia ataque basico</label>}
+            {kind === 'dispel' && <div className="grid grid-cols-2 gap-2"><select value={effect.dispel?.category ?? 'negativo'} onChange={event => patch(index, { dispel: { category: event.target.value as any, count: effect.dispel?.count ?? 1 } })} className="bg-slate-900/80 border border-slate-800 rounded-lg px-2 py-2 text-white text-xs outline-none"><option value="positivo">Positivo</option><option value="negativo">Negativo</option><option value="qualquer">Qualquer</option></select><input type="number" min="1" value={effect.dispel?.count ?? 1} onChange={event => patch(index, { dispel: { category: effect.dispel?.category ?? 'negativo', count: Number(event.target.value) || 1 } })} className="bg-slate-900/80 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs text-center outline-none" /></div>}
+            {kind === 'movement' && <div className="grid grid-cols-2 gap-2"><select value={effect.movement?.kind ?? 'empurrar'} onChange={event => patch(index, { movement: { kind: event.target.value as any, distance: effect.movement?.distance ?? 1 } })} className="bg-slate-900/80 border border-slate-800 rounded-lg px-2 py-2 text-white text-xs outline-none"><option value="empurrar">Empurrar</option><option value="puxar">Puxar</option><option value="teleportar">Teleportar</option><option value="trocar_lugar">Trocar lugar</option></select><input type="number" min="0" value={effect.movement?.distance ?? 1} onChange={event => patch(index, { movement: { kind: effect.movement?.kind ?? 'empurrar', distance: Number(event.target.value) || 0 } })} className="bg-slate-900/80 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs text-center outline-none" /></div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const ItemForm: React.FC<{ initialData?: Item; onSubmit: (item: Item) => void; onDelete: (id: string) => void }> = ({ initialData, onSubmit, onDelete }) => {
   const [formData, setFormData] = useState<Item>(initialData?.id ? initialData : {
     id: '', name: '', description: '', image: '', link: '', quantity: 1, usableInCombat: false
   });
+  const [effects, setEffects] = useState<ArsenalEffect[]>(initialData?.effects ?? []);
 
   const set = (patch: Partial<Item>) => setFormData(prev => ({ ...prev, ...patch }));
+  const submitItem = () => onSubmit({ ...formData, effects });
 
   return (
     <div className="space-y-6">
@@ -1476,6 +1557,25 @@ const ItemForm: React.FC<{ initialData?: Item; onSubmit: (item: Item) => void; o
             <option value="consumable">🧪 Consumível</option>
             <option value="special">✨ Especial</option>
           </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-3 p-4 rounded-2xl border border-slate-800 bg-slate-950/40">
+        <div className="space-y-1">
+          <label className="text-[9px] font-extrabold uppercase text-slate-500 tracking-widest ml-1">Máx. Estoque</label>
+          <input type="number" min="0" value={formData.maxQuantity ?? ''} onChange={e => set({ maxQuantity: e.target.value === '' ? undefined : Number(e.target.value) })} className="w-full bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-2.5 text-white font-bold text-center outline-none focus:border-amber-600" placeholder="∞" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[9px] font-extrabold uppercase text-slate-500 tracking-widest ml-1">Desgaste</label>
+          <input type="number" min="0" value={formData.durability ?? ''} onChange={e => set({ durability: e.target.value === '' ? undefined : Number(e.target.value) })} className="w-full bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-2.5 text-white font-bold text-center outline-none focus:border-amber-600" placeholder="Atual" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[9px] font-extrabold uppercase text-slate-500 tracking-widest ml-1">Máx. Desgaste</label>
+          <input type="number" min="0" value={formData.maxDurability ?? ''} onChange={e => set({ maxDurability: e.target.value === '' ? undefined : Number(e.target.value) })} className="w-full bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-2.5 text-white font-bold text-center outline-none focus:border-amber-600" placeholder="Máx." />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[9px] font-extrabold uppercase text-slate-500 tracking-widest ml-1">Gasta/Uso</label>
+          <input type="number" min="0" value={formData.wearPerUse ?? ''} onChange={e => set({ wearPerUse: e.target.value === '' ? undefined : Number(e.target.value) })} className="w-full bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-2.5 text-white font-bold text-center outline-none focus:border-amber-600" placeholder="0" />
         </div>
       </div>
 
@@ -1593,6 +1693,11 @@ const ItemForm: React.FC<{ initialData?: Item; onSubmit: (item: Item) => void; o
             </div>
 
             {/* Consume on use */}
+            <div className="space-y-1">
+              <label className="text-[9px] font-extrabold uppercase text-emerald-500/70 tracking-widest ml-1">Unidades por ativação</label>
+              <input type="number" min="1" value={formData.usesPerActivation ?? 1} onChange={e => set({ usesPerActivation: Math.max(1, Number(e.target.value) || 1) })} className="w-full bg-slate-900/60 border border-emerald-800/40 rounded-xl px-3 py-2.5 text-emerald-300 text-sm font-black text-center focus:border-emerald-500 outline-none" />
+            </div>
+
             <button
               type="button"
               onClick={() => set({ consumeOnUse: !formData.consumeOnUse })}
@@ -1610,13 +1715,15 @@ const ItemForm: React.FC<{ initialData?: Item; onSubmit: (item: Item) => void; o
         )}
       </div>
 
+      <AdvancedEffectsEditor effects={effects} onChange={setEffects} />
+
       <div className="flex gap-4 pt-4 border-t border-slate-800">
         {initialData?.id && (
           <button onClick={() => onDelete(initialData.id)} className="px-6 py-4 bg-rose-950/50 text-rose-500 hover:bg-rose-900/50 border border-rose-900/30 rounded-2xl font-extrabold uppercase text-xs tracking-widest transition-colors">
             Excluir
           </button>
         )}
-        <button onClick={() => onSubmit(formData)} className="flex-1 py-4 bg-amber-600 hover:bg-amber-500 text-white rounded-2xl font-extrabold uppercase text-xs tracking-widest shadow-xl transition-all">
+        <button onClick={submitItem} className="flex-1 py-4 bg-amber-600 hover:bg-amber-500 text-white rounded-2xl font-extrabold uppercase text-xs tracking-widest shadow-xl transition-all">
           {initialData?.id ? 'Salvar Alterações' : 'Adicionar ao Inventário'}
         </button>
       </div>
@@ -1976,105 +2083,6 @@ const AssignSealModal: React.FC<{
   );
 };
 
-// --- CharacterCard component for the Characters tab ---
-const CharacterCard: React.FC<{
-  char: Character;
-  idx: number;
-  isCharInCombat: (id: string) => boolean;
-  setEditingCharacter: (c: Character) => void;
-  deleteCharacter: (id: string) => void;
-  onExport: (character: Character) => void;
-}> = ({ char, idx, isCharInCombat, setEditingCharacter, deleteCharacter, onExport }) => {
-  const accentColor = '#5a9ae8';
-  const inCombat = isCharInCombat(char.id);
-
-  return (
-    <div
-      className={`mp-character-banner anim-fade-up`}
-      style={{ animationDelay: `${idx * 50}ms`, '--char-accent': accentColor } as React.CSSProperties}
-    >
-      {/* Portrait */}
-      <div className="mp-character-portrait">
-        {char.icon
-          ? <img src={char.icon} alt={char.name} />
-          : (
-            <div className="mp-character-portrait__fallback">
-              <Users style={{ width: 52, height: 52, color: accentColor, opacity: 0.45 }} />
-            </div>
-          )
-        }
-        <div className="mp-character-portrait__veil" />
-        <div className="mp-character-portrait__glow" />
-        <div className="mp-character-portrait__badge">
-          PERSONAGEM
-        </div>
-        {inCombat && (
-          <div className="mp-character-portrait__combat">
-            <Swords style={{ width: 9, height: 9 }} /> Em combate
-          </div>
-        )}
-      </div>
-
-      {/* Body */}
-      <div className="mp-character-body">
-        <div className="mp-character-name">{char.name}</div>
-        {char.code && <div className="mp-character-meta">#{char.code}</div>}
-
-        {/* Stat strip */}
-        <div className="mp-character-stat-strip">
-          <div className="mp-character-stat">
-            <span className="mp-character-stat__label">❤ HP</span>
-            <span className="mp-character-stat__value" style={{ '--stat-color': '#4ad08a' } as React.CSSProperties}>{char.maxHp}</span>
-          </div>
-          <div className="mp-character-stat">
-            <span className="mp-character-stat__label">⚡ Aura</span>
-            <span className="mp-character-stat__value" style={{ '--stat-color': '#5a9ae8' } as React.CSSProperties}>{char.maxAura}</span>
-          </div>
-          {char.maxAmmo > 0 && (
-            <div className="mp-character-stat">
-              <span className="mp-character-stat__label">🎯 Mun.</span>
-              <span className="mp-character-stat__value" style={{ '--stat-color': '#7fe0ff' } as React.CSSProperties}>{char.maxAmmo}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Stacks */}
-        {(char.stacks || []).length > 0 && (
-          <div className="mp-character-stacks">
-            {(char.stacks || []).map(stack => {
-              const pct = stack.max > 0 ? Math.min(1, stack.current / stack.max) : 0;
-              return (
-                <div key={stack.id}>
-                  <div className="mp-character-stack-row">
-                    <span style={{ fontSize:7, fontWeight:700, color: stack.color, textTransform:'uppercase', letterSpacing:'0.1em' }}>{stack.name}</span>
-                    <span style={{ fontSize:8, fontWeight:800, color: stack.color, fontFamily:"'JetBrains Mono',monospace" }}>{stack.current}/{stack.max}</span>
-                  </div>
-                  <div className="mp-character-stack-bar">
-                    <div className="mp-character-stack-fill" style={{ width:`${pct*100}%`, background:stack.color }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="mp-character-actions">
-          <button onClick={() => onExport(char)} className="mp-character-action-btn" title="Exportar personagem e cartas" aria-label={`Exportar ${char.name}`}>
-            <Download />
-          </button>
-          <button onClick={() => setEditingCharacter(char)} className="mp-character-action-btn mp-character-action-btn--edit" title="Editar">
-            <Edit3 />
-          </button>
-          <button onClick={() => deleteCharacter(char.id)} className="mp-character-action-btn mp-character-action-btn--delete" title="Excluir">
-            <Trash2 />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 //  SealForm Component
 // ─────────────────────────────────────────────────────────────────
 const SealForm: React.FC<{
@@ -2091,13 +2099,17 @@ const SealForm: React.FC<{
     executionMode: 'immediate', executionModes: ['immediate'], preparationRounds: 2,
     comboMinUsers: 2, comboMaxUsers: 4,
     damageModTarget: 'none', damageModValue: 0, damageModPercent: 0,
+    combatTargeting: 'other', directionMode: 'source_to_target', range: 1, areaSize: 1,
+    connectors: ['top', 'right', 'bottom', 'left'],
     cost: { hp: 0, aura: 0, ammo: 0 },
     requirements: [],
     symbol: '',
   };
   const [form, setForm] = React.useState<Partial<Seal>>({ ...blank, ...(initialData || {}) });
+  const [effects, setEffects] = React.useState<ArsenalEffect[]>(initialData?.effects ?? []);
   const set = (p: Partial<Seal>) => setForm(prev => ({ ...prev, ...p }));
   const setCost = (p: Partial<any>) => setForm(prev => ({ ...prev, cost: { ...(prev.cost || {}), ...p } }));
+  const submitSeal = () => onSubmit({ ...(form as Seal), effects });
 
   const addRequirement = () => {
     setForm(prev => ({ ...prev, requirements: [...(prev.requirements || []), { type: 'minHp', value: 50 }] }));
@@ -2177,6 +2189,30 @@ const SealForm: React.FC<{
       </div>
 
       {/* ── Damage Modifier ── */}
+      <div style={SECT}>
+        <p style={{ fontSize:10, fontWeight:900, color:'#38bdf8', textTransform:'uppercase', letterSpacing:'0.2em', marginBottom:12 }}>Direcionamento em Combate</p>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, marginBottom:10 }}>
+          <div><label style={LBL}>Alvo</label><select style={INPUT} value={form.combatTargeting || 'other'} onChange={e => set({ combatTargeting: e.target.value as any })}><option value="self">A si mesmo</option><option value="other">Um alvo</option><option value="area">Área</option><option value="choice">Escolher ao usar</option></select></div>
+          <div><label style={LBL}>Direção</label><select style={INPUT} value={form.directionMode || 'source_to_target'} onChange={e => set({ directionMode: e.target.value as any })}><option value="source_to_target">Usuário para alvo</option><option value="target_to_source">Alvo para usuário</option><option value="around_user">Ao redor do usuário</option><option value="line">Linha</option><option value="cone">Cone</option><option value="free">Livre</option></select></div>
+          <div><label style={LBL}>Alcance</label><input style={INPUT} type="number" min={0} value={form.range ?? 1} onChange={e => set({ range: +e.target.value })} /></div>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:10 }}>
+          <div><label style={LBL}>Tamanho da Área</label><input style={INPUT} type="number" min={0} value={form.areaSize ?? 1} onChange={e => set({ areaSize: +e.target.value })} /></div>
+          <div>
+            <label style={LBL}>Conectores do ritual</label>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' as const }}>
+              {(['top','right','bottom','left','topLeft','topRight','bottomLeft','bottomRight'] as const).map(connector => {
+                const active = (form.connectors ?? []).includes(connector);
+                return <button key={connector} type="button" onClick={() => {
+                  const current = form.connectors ?? [];
+                  set({ connectors: active ? current.filter(item => item !== connector) : [...current, connector] });
+                }} style={{ padding:'6px 9px', borderRadius:8, cursor:'pointer', fontSize:9, fontWeight:800, background: active ? 'rgba(56,189,248,0.24)' : 'rgba(0,0,0,0.3)', border: active ? '1px solid rgba(56,189,248,0.55)' : '1px solid rgba(255,255,255,0.07)', color: active ? '#7dd3fc' : '#64748b' }}>{connector}</button>;
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div style={SECT}>
         <p style={{ fontSize:10, fontWeight:900, color:'#a5b4fc', textTransform:'uppercase', letterSpacing:'0.2em', marginBottom:12 }}>Modificador de Dano</p>
         <div style={{ display:'flex', gap:8, marginBottom:10, flexWrap:'wrap' as const }}>
@@ -2284,6 +2320,8 @@ const SealForm: React.FC<{
       </div>
 
       {/* ── Requirements ── */}
+      <AdvancedEffectsEditor effects={effects} onChange={setEffects} />
+
       <div style={SECT}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
           <p style={{ fontSize:10, fontWeight:900, color:'#a5b4fc', textTransform:'uppercase', letterSpacing:'0.2em' }}>Requisitos</p>
@@ -2352,7 +2390,7 @@ const SealForm: React.FC<{
             Excluir
           </button>
         )}
-        <button onClick={() => form.name?.trim() && onSubmit(form as Seal)} disabled={!form.name?.trim()} style={{
+        <button onClick={() => form.name?.trim() && submitSeal()} disabled={!form.name?.trim()} style={{
           flex:1, padding:'10px', borderRadius:12, fontSize:11, fontWeight:900, cursor: form.name?.trim() ? 'pointer' : 'not-allowed',
           background: form.name?.trim() ? 'linear-gradient(135deg,rgba(234,88,12,0.7),rgba(249,115,22,0.8))' : 'rgba(20,15,10,0.5)',
           border: form.name?.trim() ? '1.5px solid rgba(234,88,12,0.6)' : '1px solid rgba(234,88,12,0.1)',
@@ -2616,7 +2654,6 @@ const ItemUseAnimation: React.FC<{
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cena' | 'combat' | 'arsenal' | 'characters' | 'journey'>('cena');
-  const [reducedMotion, setReducedMotion] = React.useState(getUserReducedMotion());
   React.useEffect(() => {
     applySectionTheme(activeTab);
   }, [activeTab]);
@@ -2643,6 +2680,7 @@ const App: React.FC = () => {
 
   const [cards, setCards] = useState<Card[]>([]);
   const [grimoire, setGrimoire] = useState<ArsenalCard[]>([]);
+  const [abilityGraphs, setAbilityGraphs] = useState<AbilityGraph[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [seals, setSeals] = useState<Seal[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -2656,18 +2694,8 @@ const App: React.FC = () => {
   useEffect(() => { latestCenaRef.current = cena; }, [cena]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // States para Tooltip e UX
-  const [hoveredCard, setHoveredCard] = useState<Card | null>(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const backupFileRef = useRef<HTMLInputElement>(null);
-  // Import flow state
-  const [importConfirmData, setImportConfirmData] = useState<any>(null);
-  const [importError, setImportError] = useState<string | null>(null);
-
   // Journey UI State
   const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
-  const [quickEditChar, setQuickEditChar] = useState<Character | null>(null);
   const [craftResult, setCraftResult] = useState<{ recipe: Recipe; character: Character } | null>(null);
   // Upgrade shop UI state
   const [upgradePurchaseResult, setUpgradePurchaseResult] = useState<{ offer: UpgradeOffer; targetChar: Character } | null>(null);
@@ -2716,7 +2744,7 @@ const App: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
 
-    DatabaseService.initialize().then(({ characters: chars, cards: cds, items: its, seals: sls, weapons: wps, grimoire: grim, combat: cbt, journey: jny, cena: cn }) => {
+    DatabaseService.initialize().then(({ characters: chars, cards: cds, items: its, seals: sls, weapons: wps, grimoire: grim, abilityGraphs: graphs, combat: cbt, journey: jny, cena: cn }) => {
       if (cancelled) return;
       latestCharactersRef.current = chars;
       setCharacters(chars);
@@ -2725,6 +2753,7 @@ const App: React.FC = () => {
       setSeals(sls);
       setWeapons(wps);
       setGrimoire(grim);
+      setAbilityGraphs(graphs);
       setCombat(migrateCombatState(cbt));
       setJourney(jny);
       latestCenaRef.current=cn;
@@ -2735,16 +2764,19 @@ const App: React.FC = () => {
       if (!cancelled) setIsLoading(false);
     });
 
-    // Subscriptions para atualizações em tempo real (ex: outra aba)
-    const unsubChars = DatabaseService.syncCharacters((data) => { if (!cancelled) { latestCharactersRef.current = data; setCharacters(data); } });
-    const unsubCards = DatabaseService.syncCards((data) => { if (!cancelled) setCards(data); });
-    const unsubItems = DatabaseService.syncItems((data) => { if (!cancelled) setItems(data); });
-    const unsubSeals = DatabaseService.syncSeals((data) => { if (!cancelled) setSeals(data); });
-    const unsubWeapons = DatabaseService.syncWeapons((data) => { if (!cancelled) setWeapons(data); });
-    const unsubGrimoire = DatabaseService.syncGrimoire((data) => { if (!cancelled) setGrimoire(data); });
-    const unsubCombat = DatabaseService.syncCombatState((data) => { if (!cancelled) setCombat(migrateCombatState(data)); });
-    const unsubJourney = DatabaseService.syncJourneyState((data) => { if (!cancelled) setJourney(data); });
-    const unsubCena = DatabaseService.syncCenaState((data) => { if (!cancelled) { latestCenaRef.current=data; setCena(data); } });
+    // Subscriptions para atualizações em tempo real (ex: outra aba). `emitInitial: false` porque
+    // o initialize() acima já entregou o valor inicial de cada domínio — sem isso, cada assinatura
+    // buscava tudo de novo no IndexedDB e disparava um segundo setState logo após o boot (double load).
+    const unsubChars = DatabaseService.syncCharacters((data) => { if (!cancelled) { latestCharactersRef.current = data; setCharacters(data); } }, { emitInitial: false });
+    const unsubCards = DatabaseService.syncCards((data) => { if (!cancelled) setCards(data); }, { emitInitial: false });
+    const unsubItems = DatabaseService.syncItems((data) => { if (!cancelled) setItems(data); }, { emitInitial: false });
+    const unsubSeals = DatabaseService.syncSeals((data) => { if (!cancelled) setSeals(data); }, { emitInitial: false });
+    const unsubWeapons = DatabaseService.syncWeapons((data) => { if (!cancelled) setWeapons(data); }, { emitInitial: false });
+    const unsubGrimoire = DatabaseService.syncGrimoire((data) => { if (!cancelled) setGrimoire(data); }, { emitInitial: false });
+    const unsubAbilityGraphs = DatabaseService.syncAbilityGraphs((data) => { if (!cancelled) setAbilityGraphs(data); }, { emitInitial: false });
+    const unsubCombat = DatabaseService.syncCombatState((data) => { if (!cancelled) setCombat(migrateCombatState(data)); }, { emitInitial: false });
+    const unsubJourney = DatabaseService.syncJourneyState((data) => { if (!cancelled) setJourney(data); }, { emitInitial: false });
+    const unsubCena = DatabaseService.syncCenaState((data) => { if (!cancelled) { latestCenaRef.current=data; setCena(data); } }, { emitInitial: false });
 
     // Responde a pedidos da janela de jogadores com o snapshot atual de combate
     const unsubReq = DatabaseService.onCombatRequest(() => {
@@ -2753,7 +2785,7 @@ const App: React.FC = () => {
 
     return () => {
       cancelled = true;
-      unsubChars(); unsubCards(); unsubItems(); unsubSeals(); unsubWeapons(); unsubGrimoire(); unsubCombat(); unsubJourney(); unsubCena(); unsubReq();
+      unsubChars(); unsubCards(); unsubItems(); unsubSeals(); unsubWeapons(); unsubGrimoire(); unsubAbilityGraphs(); unsubCombat(); unsubJourney(); unsubCena(); unsubReq();
     };
   }, []);
 
@@ -2762,9 +2794,9 @@ const App: React.FC = () => {
   const autosaveSnapshot = useMemo(() => combat && journey ? ({
     version: SNAPSHOT_VERSION,
     savedAt: new Date().toISOString(),
-    characters, cards, items, seals, weapons, grimoire, combat, journey, cena,
-  }) : null, [characters, cards, items, seals, weapons, grimoire, combat, journey, cena]);
-  const { saveNow: flushAutosave } = useUnifiedAutosave({
+    characters, cards, items, seals, weapons, grimoire, abilityGraphs, combat, journey, cena,
+  }) : null, [characters, cards, items, seals, weapons, grimoire, abilityGraphs, combat, journey, cena]);
+  useUnifiedAutosave({
     enabled: !isLoading,
     snapshot: autosaveSnapshot,
     onStatus: setAutoSaveStatus,
@@ -2796,23 +2828,24 @@ const App: React.FC = () => {
   const [sealRitualAnim, setSealRitualAnim] = useState<{seal: Seal; effects: string[]} | null>(null);
   const [itemUseAnim, setItemUseAnim] = useState<Item | null>(null);
   const [openInventoryCharId, setOpenInventoryCharId] = useState<string | null>(null);
-  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
   const [assignCardModal, setAssignCardModal] = useState<Card | null>(null);
   const [assignWeaponModal, setAssignWeaponModal] = useState<Weapon | null>(null);
   const [assignSealModal, setAssignSealModal] = useState<Seal | null>(null);
   // Initiative drag-to-reorder
-  const [diceAnimQueue, setDiceAnimQueue] = useState<Array<{ id: string; isVisible: boolean; result: number; defenderResult?: number; defenderRoll?: RollResult; defenderBase?: number; isSuccess: boolean; customLabel?: string; notation?: string; individualRolls?: number[]; numSides?: number; bonus?: number; dramatic?: boolean; actorLabel?: string; defenderLabel?: string; onReveal?: () => void; onComplete?: () => void }>>([]);
+  const [diceAnimQueue, setDiceAnimQueue] = useState<Array<{ id: string; isVisible: boolean; result: number; finalTotal?: number; adjustments?: Array<{ label: string; value: number }>; defenderResult?: number; defenderRoll?: RollResult; defenderBase?: number; isSuccess: boolean; customLabel?: string; notation?: string; individualRolls?: number[]; numSides?: number; bonus?: number; dramatic?: boolean; actorLabel?: string; defenderLabel?: string; onReveal?: () => void; onComplete?: () => void }>>([]);
   const diceAnim = diceAnimQueue[0] ?? null;
   const diceAnimQueueRef = useRef(diceAnimQueue);
   diceAnimQueueRef.current = diceAnimQueue;
   const showDiceAnimation = (
     roll: RollResult | { total: number; notation?: string; individualRolls?: number[]; numSides?: number; bonus?: number },
-    options: { isSuccess?: boolean; customLabel?: string; defenderResult?: number; defenderRoll?: RollResult; defenderBase?: number; dramatic?: boolean; actorLabel?: string; defenderLabel?: string; onReveal?: () => void; onComplete?: () => void } = {},
+    options: { isSuccess?: boolean; customLabel?: string; finalTotal?: number; adjustments?: Array<{ label: string; value: number }>; defenderResult?: number; defenderRoll?: RollResult; defenderBase?: number; dramatic?: boolean; actorLabel?: string; defenderLabel?: string; onReveal?: () => void; onComplete?: () => void } = {},
   ) => {
     setDiceAnimQueue(queue => [...queue, {
       id: `dice-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       isVisible: true,
       result: roll.total,
+      finalTotal: options.finalTotal,
+      adjustments: options.adjustments,
       isSuccess: options.isSuccess ?? true,
       customLabel: options.customLabel,
       notation: roll.notation || '1d20',
@@ -2857,108 +2890,51 @@ const App: React.FC = () => {
     w.name.toLowerCase().includes(weaponSearchTerm.toLowerCase())
   ), [weapons, weaponSearchTerm]);
   
-  // Filtros de Personagens
-  const filteredCharacters = useMemo(() => characters.filter(c => !!c.id), [characters]);
-
   const selectedInventoryChar = useMemo(() => characters.find(c => c.id === selectedInventoryCharId), [characters, selectedInventoryCharId]);
 
-  const isCharInCombat = (charId: string) => combat?.combatants.some(c => c.id === charId) ?? false;
-
-  // Handlers
-  const handleMouseMove = (e: React.MouseEvent) => {
-    setTooltipPos({ x: e.clientX, y: e.clientY });
-  };
-
-  // ── Export completo (inclui TODOS os dados) ─────────────
-  const handleDownloadBackup = async () => {
-    try {
-      setAutoSaveStatus('saving');
-      // Constrói snapshot direto do IDB (fonte da verdade)
-      const snapshot = await DatabaseService.buildSnapshot();
-      // Garante que os dados do React (mais recentes) são usados para as entidades principais também
-      snapshot.characters = characters;
-      snapshot.cards = cards;
-      snapshot.seals = seals;
-      if (combat) snapshot.combat = combat;
-      if (journey) snapshot.journey = journey;
-      snapshot.savedAt = new Date().toISOString();
-
-      const json = JSON.stringify(snapshot, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `vat_backup_${new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-')}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setAutoSaveStatus('saved');
-      setTimeout(() => setAutoSaveStatus('idle'), 2500);
-    } catch (e) {
-      console.error('[Export] Erro:', e);
-      setAutoSaveStatus('error');
-      setTimeout(() => setAutoSaveStatus('idle'), 3000);
-    }
-  };
-
-  // ── Salvar manualmente agora (Ctrl+S ou botão) ────────────────────
+  // ── Salvar manualmente agora (Ctrl+S ou botão): exporta arsenal + elenco
+  // como JSON de dados puros (sem imagens) para um arquivo escolhido pelo usuário.
   const handleManualSave = async () => {
-    if (isLoading || !combat || !journey) return;
+    if (isLoading) return;
     try {
-      await flushAutosave();
+      const strippedGrimoire = grimoire.map(({ icon, iconPosition, ...rest }) => rest);
+      const strippedCharacters = latestCharactersRef.current.map(
+        ({ icon, iconPosition, bannerImage, bannerImagePosition, ...rest }) => rest
+      );
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        version: SNAPSHOT_VERSION,
+        grimoire: strippedGrimoire,
+        characters: strippedCharacters,
+      };
+      const json = JSON.stringify(payload, null, 2);
+      const filename = `rpg-codex-backup-${new Date().toISOString().slice(0, 10)}.json`;
+
+      if ('showSaveFilePicker' in window) {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: filename,
+          types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(json);
+        await writable.close();
+      } else {
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } catch (e) {
-      console.error('[ManualSave] Erro:', e);
+      if ((e as any)?.name !== 'AbortError') {
+        console.error('[ManualSave] Erro:', e);
+      }
     }
   };
   // Keep ref in sync so Ctrl+S always uses latest closure
   handleManualSaveRef.current = handleManualSave;
-
-  // ── Import: restaura snapshot de arquivo ──────────────────────────
-  const handleUploadBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    // Reset input para permitir re-importar o mesmo arquivo
-    e.target.value = '';
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const raw = event.target?.result as string;
-      if (!raw) {
-        setImportError('Arquivo vazio ou ilegível.');
-        return;
-      }
-
-      let parsed: any;
-      try {
-        parsed = JSON.parse(raw);
-      } catch (parseErr) {
-        setImportError(`Erro ao ler JSON: ${(parseErr as Error).message}`);
-        return;
-      }
-
-      setImportError(null);
-      setImportConfirmData(parsed);
-    };
-    reader.onerror = () => setImportError('Erro ao ler o arquivo.');
-    reader.readAsText(file);
-  };
-
-  const confirmImport = async () => {
-    if (!importConfirmData) return;
-    setImportError(null);
-    setAutoSaveStatus('saving');
-    const result = await DatabaseService.restoreSnapshot(importConfirmData);
-    setImportConfirmData(null);
-    if (result.ok) {
-      setAutoSaveStatus('saved');
-      setTimeout(() => setAutoSaveStatus('idle'), 2500);
-    } else {
-      setAutoSaveStatus('error');
-      setImportError(result.error ?? 'Erro desconhecido ao importar.');
-      setTimeout(() => setAutoSaveStatus('idle'), 3000);
-    }
-  };
 
   const saveCharacter = (char: Character) => {
     const finalChar = char.id ? char : { ...char, id: Math.random().toString(36).substr(2, 9) };
@@ -2985,6 +2961,10 @@ const App: React.FC = () => {
     if (!selectedInventoryChar) return;
     const id = item.id || Math.random().toString(36).substr(2, 9);
     const toSave: Item = { ...item, id };
+    setItems(prev => {
+      const exists = prev.some(entry => entry.id === id);
+      return exists ? prev.map(entry => entry.id === id ? toSave : entry) : [...prev, toSave];
+    });
     DatabaseService.saveItem(toSave); // grava o modelo no catálogo
     // garante que o personagem possui ao menos a quantidade informada (se ainda não possui)
     const alreadyOwned = (selectedInventoryChar.ownedItems ?? []).some(o => o.itemId === id);
@@ -3016,7 +2996,6 @@ const App: React.FC = () => {
           setCombat(updatedCombat);
           DatabaseService.updateCombat(updatedCombat);
         }
-        setEditingCharacter(null);
         setConfirmModal(null);
         try {
           await DatabaseService.deleteCharacter(id);
@@ -3102,6 +3081,73 @@ const App: React.FC = () => {
     });
   };
 
+  const itemFromArsenalCard = (card: ArsenalCard): Item => ({
+    id: card.id,
+    name: card.name,
+    description: card.description,
+    image: card.icon,
+    category: typeof card.metadata?.legacyCategory === 'string' ? card.metadata.legacyCategory : 'Consumível',
+    quantity: card.item?.quantity ?? 1,
+    maxQuantity: typeof card.metadata?.maxQuantity === 'number' ? card.metadata.maxQuantity : undefined,
+    durability: typeof card.metadata?.durability === 'number' ? card.metadata.durability : undefined,
+    maxDurability: typeof card.metadata?.maxDurability === 'number' ? card.metadata.maxDurability : undefined,
+    wearPerUse: typeof card.metadata?.wearPerUse === 'number' ? card.metadata.wearPerUse : undefined,
+    usesPerActivation: card.item?.usesPerActivation ?? 1,
+    usableInCombat: card.metadata?.usableInCombat === true || !!(card.damage || card.healing || card.auraRestored || card.effects.length),
+    consumeOnUse: card.item?.consumable ?? card.item?.disappearsOnUse ?? false,
+    combatTargeting: card.target.type === 'proprio_usuario' ? 'self' : card.target.type === 'todos_em_area' ? 'area' : 'other',
+    combatDiceRoll: card.testDice ?? undefined,
+    combatDamage: card.damage?.flat ?? undefined,
+    combatDamageType: card.element ?? undefined,
+    combatHeal: card.healing?.flat ?? undefined,
+    combatAuraRecover: card.auraRestored?.flat ?? undefined,
+    effects: card.effects,
+  });
+
+  const sealFromArsenalCard = (card: ArsenalCard): Seal => ({
+    id: card.id,
+    name: card.name,
+    description: card.description,
+    image: card.icon,
+    code: typeof card.metadata?.legacyCode === 'string' ? card.metadata.legacyCode : card.id.slice(0, 6).toUpperCase(),
+    symbol: card.icon,
+    executionMode: card.preparation.timing.type === 'rodadas' ? 'preparation' : 'immediate',
+    executionModes: Array.isArray(card.metadata?.executionModes) ? card.metadata.executionModes as SealExecutionMode[] : undefined,
+    preparationRounds: card.preparation.timing.type === 'rodadas' ? card.preparation.timing.amount : 0,
+    diceRoll: card.testDice ?? undefined,
+    damage: card.damage?.flat ?? undefined,
+    damageType: card.element ?? undefined,
+    healHp: card.healing?.flat ?? undefined,
+    healAura: card.auraRestored?.flat ?? undefined,
+    duration: card.seal?.durationRounds ?? undefined,
+    combatTargeting: card.target.type === 'proprio_usuario' ? 'self' : card.target.type === 'todos_em_area' ? 'area' : 'other',
+    directionMode: typeof card.metadata?.directionMode === 'string' ? card.metadata.directionMode as Seal['directionMode'] : card.area?.shape === 'linha' ? 'line' : card.area?.shape === 'cone' ? 'cone' : 'source_to_target',
+    range: typeof card.metadata?.range === 'number' ? card.metadata.range : card.area?.size,
+    areaSize: card.area?.size,
+    connectors: card.seal?.ritual?.connectors as Seal['connectors'],
+    effects: card.effects,
+  });
+
+  const openArsenalItemEditor = (id: string) => {
+    const existing = items.find(item => item.id === id);
+    if (existing) {
+      setEditingCatalogItem(existing);
+      return;
+    }
+    const card = grimoire.find(entry => entry.id === id && entry.category === 'item');
+    if (card) setEditingCatalogItem(itemFromArsenalCard(card));
+  };
+
+  const openArsenalSealEditor = (id: string) => {
+    const existing = seals.find(seal => seal.id === id);
+    if (existing) {
+      setEditingSeal(existing);
+      return;
+    }
+    const card = grimoire.find(entry => entry.id === id && entry.category === 'selo');
+    if (card) setEditingSeal(sealFromArsenalCard(card));
+  };
+
   const deleteCard = async (id: string) => {
     setConfirmModal({
       message: "Deseja excluir esta habilidade permanentemente?",
@@ -3154,7 +3200,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col text-slate-100 overflow-x-hidden" style={{ background: 'var(--bg-base)', backgroundImage: 'radial-gradient(ellipse at 20% 10%, rgba(201,152,58,0.04) 0%, transparent 50%), radial-gradient(ellipse at 80% 90%, rgba(100,130,200,0.03) 0%, transparent 50%)', height: '100vh', overflow: 'hidden' }} onMouseMove={handleMouseMove}>
+    <div className="flex flex-col text-slate-100 overflow-x-hidden" style={{ background: 'var(--bg-base)', backgroundImage: 'radial-gradient(ellipse at 20% 10%, rgba(201,152,58,0.04) 0%, transparent 50%), radial-gradient(ellipse at 80% 90%, rgba(100,130,200,0.03) 0%, transparent 50%)', height: '100vh', overflow: 'hidden' }}>
       {/* Indicador de Autosave */}
       {autoSaveStatus !== 'idle' && (
         <div style={{
@@ -3174,53 +3220,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de confirmação de Import */}
-      {importConfirmData && (
-        <div style={{ position:'fixed', inset:0, zIndex:99998, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(8px)' }}>
-          <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border-gold)', borderRadius:20, padding:32, maxWidth:460, width:'90%', display:'flex', flexDirection:'column', gap:18 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <div style={{ width:40, height:40, borderRadius:12, background:'rgba(234,179,8,0.15)', border:'1px solid rgba(234,179,8,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <Upload style={{ width:20, height:20, color:'#eab308' }} />
-              </div>
-              <div>
-                <div style={{ fontSize:15, fontWeight:800, color:'var(--text-primary)', letterSpacing:'0.03em' }}>Importar Backup</div>
-                <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:2 }}>Isso vai sobrescrever TODOS os dados atuais</div>
-              </div>
-            </div>
-
-            <div style={{ background:'rgba(0,0,0,0.3)', borderRadius:12, padding:16, display:'flex', flexDirection:'column', gap:8 }}>
-              {[
-                ['Personagens', (importConfirmData.characters?.length ?? 0)],
-                ['Habilidades', (importConfirmData.cards?.length ?? 0)],
-                ['Selos', (importConfirmData.seals?.length ?? 0)],
-                ['Versão do arquivo', importConfirmData.version ?? '(legado)'],
-                ['Salvo em', importConfirmData.savedAt ? new Date(importConfirmData.savedAt).toLocaleString('pt-BR') : '—'],
-              ].map(([label, value]) => (
-                <div key={String(label)} style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}>
-                  <span style={{ color:'var(--text-muted)' }}>{label}</span>
-                  <span style={{ color:'var(--text-primary)', fontWeight:700 }}>{String(value)}</span>
-                </div>
-              ))}
-            </div>
-
-            {importError && (
-              <div style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:10, padding:'10px 14px', fontSize:12, color:'#fca5a5' }}>
-                ⚠ {importError}
-              </div>
-            )}
-
-            <div style={{ display:'flex', gap:10 }}>
-              <button onClick={() => { setImportConfirmData(null); setImportError(null); }} style={{ flex:1, padding:'11px', borderRadius:10, fontSize:13, fontWeight:700, background:'rgba(255,255,255,0.05)', border:'1px solid var(--border-faint)', color:'var(--text-muted)', cursor:'pointer' }}>
-                Cancelar
-              </button>
-              <button onClick={confirmImport} style={{ flex:2, padding:'11px', borderRadius:10, fontSize:13, fontWeight:700, background:'linear-gradient(135deg, rgba(234,179,8,0.25), rgba(201,152,58,0.15))', border:'1px solid rgba(234,179,8,0.4)', color:'#fde68a', cursor:'pointer' }}>
-                ✓ Confirmar Import
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div aria-hidden className="mp-page-bg">
         <span className="mp-glaze" />
         <span className="mp-vignette" />
@@ -3228,34 +3227,16 @@ const App: React.FC = () => {
       <React.Fragment key={activeTab}><TabSweep tabKey={activeTab as string} label={TAB_META[activeTab].label as string} /></React.Fragment>
       {/* Barra superior removida — navegação no Anel do Mestre; utilitários discretos no canto */}
       <div className="mp-utils" aria-label="Utilidades do Mestre">
-        {/* Toggle movimento reduzido */}
-        <button
-          onClick={() => { const v = !reducedMotion; setUserReducedMotion(v); setReducedMotion(v); }}
-          className="mp-utils__btn"
-          title={reducedMotion ? 'Movimento reduzido — clique para animar' : 'Reduzir movimento'}
-          aria-pressed={reducedMotion}
-        >
-          <span style={{ fontSize: 13 }}>{reducedMotion ? '○' : '⚡'}</span>
-        </button>
         {/* Salvar agora */}
         <button
           onClick={handleManualSave}
           disabled={isLoading || autoSaveStatus === 'saving'}
           className="mp-utils__btn"
           style={{ opacity: isLoading ? 0.5 : 1 }}
-          title="Salvar agora (Ctrl+S)"
+          title="Exportar arsenal + elenco (JSON, Ctrl+S)"
         >
           <Save className="w-4 h-4" />
         </button>
-        {/* Exportar backup */}
-        <button onClick={handleDownloadBackup} className="mp-utils__btn" title="Exportar backup completo (inclui selos, notas, histórico)">
-          <Download className="w-4 h-4" />
-        </button>
-        {/* Importar backup */}
-        <button onClick={() => backupFileRef.current?.click()} className="mp-utils__btn" title="Importar backup (.json)">
-          <Upload className="w-4 h-4" />
-        </button>
-        <input type="file" ref={backupFileRef} onChange={handleUploadBackup} className="hidden" accept=".json" />
       </div>
 
       <main className={activeTab === 'cena' ? 'flex-1 p-0 w-full max-w-none' : 'flex-1 p-5 md:p-8 max-w-[1920px] mx-auto w-full'} style={{ overflow: activeTab === 'cena' ? 'hidden' : 'auto', minHeight: 0, height: 0 }}>
@@ -3270,79 +3251,11 @@ const App: React.FC = () => {
             items={items}
             weapons={weapons}
             arsenal={grimoire}
+            abilityGraphs={abilityGraphs}
             updateCena={updateCena}
             updateCharacterStats={updateCharacterStats}
             onDiceRoll={showDiceAnimation}
           />
-        )}
-
-        {/* Aba Personagens */}
-        {activeTab === 'characters' && (
-          <div className="anim-fade-up mp-darktab" style={{ height:'100%', overflowY:'auto', display:'flex', flexDirection:'column', gap:0 }}>
-
-            {/* Barra de ações — compacta, sem duplicar o título que já está no header */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 10,
-              padding: '16px 0 20px',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
-              marginBottom: 24,
-            }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <span className="mp-section-kicker" style={{ fontSize:9 }}>Receptáculos &amp; Vínculos</span>
-                <span style={{ color:'rgba(255,255,255,0.12)', fontSize:10 }}>—</span>
-                <span style={{ fontSize:11, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.12em' }}>
-                  {filteredCharacters.length} {filteredCharacters.length === 1 ? 'personagem' : 'personagens'}
-                </span>
-              </div>
-              <div style={{ display:'flex', gap:8 }}>
-                <button
-                  onClick={() => setEditingCharacter({} as any)}
-                  className="mp-cta"
-                  style={{ padding:'8px 22px', fontSize:11 }}
-                >
-                  <Plus style={{ width:14, height:14 }} /> Novo
-                </button>
-              </div>
-            </div>
-
-            {/* Grid de personagens */}
-            <div className="mp-character-grid" style={{ paddingBottom: 48 }}>
-              {filteredCharacters.length > 0 && (
-                <>
-                  <div className="mp-section-divider col-span-full"
-                    style={{ '--divider-color': 'rgba(127,224,255,0.8)', '--divider-bg': 'rgba(20,54,110,0.3)' } as React.CSSProperties}>
-                    <div className="mp-section-divider__label">
-                      <Users style={{ width:9, height:9 }} /> Personagens
-                    </div>
-                    <div className="mp-section-divider__line" />
-                    <span className="mp-section-divider__count">
-                      {filteredCharacters.length}
-                    </span>
-                  </div>
-                  {filteredCharacters.map((char, idx) => (
-                    <CharacterCard key={char.id} char={char} idx={idx} isCharInCombat={isCharInCombat} setEditingCharacter={setEditingCharacter} deleteCharacter={deleteCharacter} onExport={character=>exportCharacterFile(character,grimoire)} />
-                  ))}
-                </>
-              )}
-
-              {/* Empty state */}
-              {filteredCharacters.length === 0 && (
-                <div className="mp-empty col-span-full anim-fade" style={{ minHeight: 280 }}>
-                  <Users style={{ width:52, height:52, opacity:0.25 }} />
-                  <strong>Nenhum personagem registrado</strong>
-                  <span>Clique em <em style={{ fontStyle:'italic', color:'var(--gold-mid)' }}>Novo</em> para criar o primeiro receptáculo</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Aba Arsenal */}
-        {activeTab === 'arsenal' && (
-          <ArsenalWorkspace characters={characters} onUpdateCharacter={updateCharacterStats} />
         )}
 
         {/* Catálogo legado preservado temporariamente apenas como adaptador de dados; não é mais renderizado. */}
@@ -3794,6 +3707,8 @@ const App: React.FC = () => {
         key={diceAnim?.id ?? 'dice-idle'}
         isVisible={!!diceAnim?.isVisible} 
         result={diceAnim?.result || 0} 
+        finalTotal={diceAnim?.finalTotal}
+        adjustments={diceAnim?.adjustments}
         defenderResult={diceAnim?.defenderResult} 
         defenderRoll={diceAnim?.defenderRoll}
         defenderBase={diceAnim?.defenderBase}
@@ -3829,10 +3744,14 @@ const App: React.FC = () => {
             initialData={editingCatalogItem.id ? editingCatalogItem : undefined}
             onSubmit={(item) => {
               const toSave: Item = item.id ? item : { ...item, id: Math.random().toString(36).substr(2, 9) };
+              setItems(prev => {
+                const exists = prev.some(entry => entry.id === toSave.id);
+                return exists ? prev.map(entry => entry.id === toSave.id ? toSave : entry) : [...prev, toSave];
+              });
               DatabaseService.saveItem(toSave);
               setEditingCatalogItem(null);
             }}
-            onDelete={(id) => { DatabaseService.deleteItem(id); setEditingCatalogItem(null); }}
+            onDelete={(id) => { setItems(prev => prev.filter(item => item.id !== id)); DatabaseService.deleteItem(id); setEditingCatalogItem(null); }}
           />
         </Modal>
       )}
@@ -4003,20 +3922,6 @@ const App: React.FC = () => {
         </Modal>
       )}
 
-      {/* MODAL QUICK EDIT (HP/AURA) */}
-      {quickEditChar && (
-         <Modal title="Edição Rápida" onClose={() => setQuickEditChar(null)}>
-             <QuickEditCharacter 
-                 character={quickEditChar} 
-                 onSave={(hp, aura, ammo) => {
-                     const updates: any = { currentHp: hp, currentAura: aura };
-                     if (ammo !== undefined) updates.currentAmmo = ammo;
-                     updateCharacterStats(quickEditChar.id, updates);
-                     setQuickEditChar(null);
-                 }}
-             />
-         </Modal>
-      )}
 
       {/* MODAL RESULTADO DE CRAFTING */}
       {craftResult && (() => {
@@ -4080,11 +3985,6 @@ const App: React.FC = () => {
       })()}
 
       {/* MODAIS E PROMPTS */}
-      {editingCharacter && (
-        <Modal title={editingCharacter.id ? "Editar Receptáculo" : "Criar Receptáculo"} onClose={() => setEditingCharacter(null)}>
-           <CharacterEditor cards={cards} weapons={weapons} seals={seals} arsenalCards={grimoire} initialData={editingCharacter} onSubmit={(char) => { saveCharacter(char); setEditingCharacter(null); }} onDelete={deleteCharacter} />
-        </Modal>
-      )}
 
       {editingCard && (
         <Modal title={editingCard.id ? "Editar Registro" : "Novo Registro"} onClose={() => setEditingCard(null)}>

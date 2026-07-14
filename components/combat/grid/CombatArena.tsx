@@ -11,6 +11,7 @@ import FogRevealOverlay from './FogRevealOverlay';
 import ArenaToolbar from './ArenaToolbar';
 import EmberField from './EmberField';
 import { correctedDist } from './aoeHelpers';
+import { ConditionEffectStyles } from '../ConditionEffects';
 
 // ── Helper ───────────────────────────────────────────────────
 function clampPos(p: { x: number; y: number }): { x: number; y: number } {
@@ -67,7 +68,6 @@ const CombatArena: React.FC<CombatArenaProps> = ({
     combatId: string;
     startPos: { x: number; y: number };
     currentDelta: { x: number; y: number };
-    deslocamento: number;
   } | null>(null);
 
   // ── Toolbar & tools ──────────────────────────────────────────
@@ -158,7 +158,6 @@ const CombatArena: React.FC<CombatArenaProps> = ({
       combatId,
       startPos: { ...combatant.pos },
       currentDelta: { x: 0, y: 0 },
-      deslocamento: combatant.deslocamento ?? 6,
     });
   }, [mode, interactionMode, combat.combatants]);
 
@@ -321,6 +320,7 @@ const CombatArena: React.FC<CombatArenaProps> = ({
       onPointerMove={handleArenaPointerMove}
       onPointerUp={handleArenaPointerUp}
     >
+      <ConditionEffectStyles />
       {/* Atmospheric overlays — registro ardente */}
       <div className="mp-battle-forge-glow" />
       <div className="mp-battle-canvas" />

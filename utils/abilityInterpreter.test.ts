@@ -3,6 +3,8 @@ import { interpretAbility } from './abilityInterpreter';
 import { _resetRegistry } from './nodeRegistry';
 import { registerCoreNodes } from './nodes/coreNodes';
 import { registerConditionNodes } from './nodes/conditionNodes';
+import { registerControlNodes } from './nodes/controlNodes';
+import { registerDefenseNodes } from './nodes/defenseNodes';
 import { createAbilityGraph, type AbilityGraph } from './abilityGraph';
 import type { ArsenalActorState } from './arsenalPipeline';
 
@@ -110,6 +112,52 @@ describe('interpretAbility', () => {
     const res = interpretAbility(g, 1, { actor: actor(), primaryTargets: [enemy()], allTargets: [actor(), enemy()], roller: () => 0 }, { entryNodeIds: ['enquanto'] });
     expect(res.targets.find(t => t.id === 'e')!.currentHp).toBe(30); // dano NÃO aplicado ainda
     expect(res.pendingReactions).toEqual([{ eventType: 'ao_ser_alvejado', nodeIds: ['d'] }]);
+  });
+
+  it('propaga movementIntents registrados pelo nó mover até o retorno', () => {
+    _resetRegistry(); registerCoreNodes(); registerConditionNodes(); registerControlNodes();
+    const g: AbilityGraph = {
+      ...createAbilityGraph({ id: 'g7', name: 'Empurrão' }),
+      nodes: [
+        { id: 'gt', type: 'ao_ativar', family: 'gatilho', props: {} },
+        { id: 'm', type: 'mover', family: 'efeito', props: { kind: 'empurrar', distance: 2 } },
+      ],
+      edges: [{ id: 'e1', from: 'gt', to: 'm' }],
+    };
+    const res = interpretAbility(g, 1, { actor: actor(), primaryTargets: [enemy()], allTargets: [actor(), enemy()], roller: () => 0 });
+    expect(res.movementIntents).toEqual([{ targetId: 'e', kind: 'empurrar', distance: 2 }]);
+  });
+
+  it('propaga defenseRollOverride registrado pelo nó esquiva até o retorno', () => {
+    _resetRegistry(); registerCoreNodes(); registerConditionNodes(); registerDefenseNodes();
+    const g: AbilityGraph = {
+      ...createAbilityGraph({ id: 'g8', name: 'Esquiva' }),
+      nodes: [
+        { id: 'gt', type: 'ao_ser_alvejado', family: 'gatilho', props: {} },
+        { id: 'e', type: 'esquiva', family: 'efeito', props: { dice: undefined, flat: 5 } },
+      ],
+      edges: [{ id: 'e1', from: 'gt', to: 'e' }],
+    };
+    const res = interpretAbility(g, 1, { actor: actor(), primaryTargets: [actor()], allTargets: [actor()], roller: () => 0 });
+    expect(res.defenseRollOverride).toBe(5);
+  });
+
+  it('propaga input.areaTargets para o nó alvo geométrico e aplica efeitos corretamente', () => {
+    _resetRegistry(); registerCoreNodes(); registerConditionNodes(); registerControlNodes();
+    const g: AbilityGraph = {
+      ...createAbilityGraph({ id: 'g9', name: 'Explosão' }),
+      nodes: [
+        { id: 'gt', type: 'ao_ativar', family: 'gatilho', props: {} },
+        { id: 'a', type: 'alvo', family: 'alvo', props: { scope: 'raio' } },
+        { id: 'd', type: 'dano', family: 'efeito', props: { dice: undefined, flat: 5, element: 'fisico' } },
+      ],
+      edges: [{ id: 'e1', from: 'gt', to: 'a' }, { id: 'e2', from: 'a', to: 'd' }],
+    };
+    const hit = enemy({ id: 'hit', currentHp: 30 });
+    const res = interpretAbility(g, 1, {
+      actor: actor(), primaryTargets: [], allTargets: [actor()], areaTargets: [hit], roller: () => 0,
+    });
+    expect(res.targets.find(t => t.id === 'hit')!.currentHp).toBe(25);
   });
 
   it('o mesmo trigger, quando é o próprio ponto de entrada, executa normalmente', () => {

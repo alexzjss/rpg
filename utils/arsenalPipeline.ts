@@ -1,17 +1,19 @@
 import { rollDice } from './dice';
-import { applyDamageConditionInteractions, rollElementalConditionChance } from './arsenalElements';
+import { rollElementalConditionChance } from './arsenalElements';
 import { getPredefinedEffect } from './arsenalEffects';
+import { normalizeDefenseStats, resolveDefenseHit } from './defense';
+import { resolveAttackAdjustments, resolveModifiedValue, type ModifierResolutionContext } from './effectModifiers';
 import {
   hasAllTags,
   type ArsenalCard,
   type ArsenalEffect,
   type ArsenalHolding,
   type AmountFormula,
-  type ClassicEffectKind,
   type DiceBonus,
   type DiceBonusTarget,
   type EffectFilter,
   type EffectModifier,
+  type ModifierContext,
   type TriggerEvent,
   type UsageCondition,
 } from './arsenal';
@@ -41,8 +43,6 @@ export interface ActiveEffectState {
   effect: ArsenalEffect;
   stacks: number;
   remaining?: number;
-  turnSkipsRemaining?: number;
-  principalBlocksRemaining?: number;
   sourceId?: string;
   appliedAtRound?: number;
   metadata?: Record<string, unknown>;
@@ -56,7 +56,22 @@ export interface ArsenalActorState {
   maxHp: number;
   currentAura: number;
   maxAura: number;
+  currentAmmo: number;
+  maxAmmo: number;
   defense: number;
+  defenseCurrent?: number;
+  defenseMax?: number;
+  defenseReduction?: number;
+  defenseRegeneration?: number;
+  defenseActivationThreshold?: number;
+  staggerCurrent?: number;
+  staggerMax?: number;
+  staggerRecovery?: number;
+  staggerDamageMultiplier?: number;
+  staggerDuration?: number;
+  isDefenseBroken?: boolean;
+  isStaggered?: boolean;
+  staggerTurnsRemaining?: number;
   speed: number;
   tags: string[];
   equippedWeaponIds: string[];
@@ -65,6 +80,15 @@ export interface ArsenalActorState {
   holdings: ArsenalHolding[];
   isCurrentTurn: boolean;
   inCombat: boolean;
+}
+
+export function hasDynamicDefense(target: ArsenalActorState): boolean {
+  return target.defenseMax !== undefined
+    || target.defenseCurrent !== undefined
+    || target.staggerMax !== undefined
+    || target.staggerCurrent !== undefined
+    || target.isDefenseBroken !== undefined
+    || target.isStaggered !== undefined;
 }
 
 export type ReactionOwnerKind = 'alvo' | 'aliado_alvo' | 'inimigo' | 'automatico';
@@ -147,8 +171,22 @@ export function sortReactions(reactions: readonly ReactionCandidate[]): Reaction
 }
 
 function cloneActor(actor: ArsenalActorState): ArsenalActorState {
+  const defense = normalizeDefenseStats(actor);
   return {
     ...actor,
+    defenseMax: defense.defenseMax,
+    defenseCurrent: defense.defenseCurrent,
+    defenseReduction: defense.defenseReduction,
+    defenseRegeneration: defense.defenseRegeneration,
+    defenseActivationThreshold: defense.defenseActivationThreshold,
+    staggerMax: defense.staggerMax,
+    staggerCurrent: defense.staggerCurrent,
+    staggerRecovery: defense.staggerRecovery,
+    staggerDamageMultiplier: defense.staggerDamageMultiplier,
+    staggerDuration: defense.staggerDuration,
+    isDefenseBroken: defense.isDefenseBroken,
+    isStaggered: defense.isStaggered,
+    staggerTurnsRemaining: defense.staggerTurnsRemaining,
     tags: [...actor.tags],
     equippedWeaponIds: [...actor.equippedWeaponIds],
     activeFormIds: [...actor.activeFormIds],
@@ -349,19 +387,46 @@ function rollAmountWithBonuses(
   return value.flat + diceResult + extra;
 }
 
-/** Primeira afinidade elemental ativa do ator para o elemento informado. */
-function activeAffinity(actor: ArsenalActorState, element: ArsenalCard['element']) {
+/** Primeiro estado ativo do ator cuja afinidade elemental casa com o elemento informado. */
+function activeAffinityState(actor: ArsenalActorState, element: ArsenalCard['element']) {
   if (!element) return undefined;
   for (const active of actor.effects) {
     const match = (active.effect.elementalAffinities ?? []).find(affinity => affinity.element === element);
-    if (match) return match;
+    if (match) return { active, affinity: match };
   }
   return undefined;
 }
 
-function isImmuneTo(actor: ArsenalActorState, kind: ClassicEffectKind | undefined): boolean {
-  if (!kind) return false;
-  return actor.effects.some(active => (active.effect.immunities ?? []).includes(kind));
+/** Primeira afinidade elemental ativa do ator para o elemento informado. */
+function activeAffinity(actor: ArsenalActorState, element: ArsenalCard['element']) {
+  return activeAffinityState(actor, element)?.affinity;
+}
+
+function isImmuneTo(actor: ArsenalActorState, effect: ArsenalEffect | undefined): boolean {
+  if (!effect) return false;
+  const nameKey = effect.name.toLocaleLowerCase('pt-BR');
+  return actor.effects.some(active => (active.effect.immunities ?? []).some(im => im === effect.id || im.toLocaleLowerCase('pt-BR') === nameKey));
+}
+
+/** Rola a chance de aplicação e o teste de resistência de uma condição configurada. Sem `condition`, sempre aplica. */
+function rollsConditionApplication(effect: ArsenalEffect, roller: (notation: string) => number): boolean {
+  const condition = effect.condition;
+  if (!condition) return true;
+  if (condition.applicationChance != null && roller('1d100') > condition.applicationChance) return false;
+  if (condition.savingThrow && roller(condition.savingThrow.dice) >= condition.savingThrow.minimum) return false;
+  return true;
+}
+
+/** Efeitos colaterais de condições que não se expressam como um campo genérico único (ex.: Molhado remove Queimando). */
+function applyConditionSideEffects(target: ArsenalActorState, effect: ArsenalEffect, roller: (notation: string) => number): void {
+  const condition = effect.condition;
+  if (!condition) return;
+  if (condition.kind === 'molhado' && condition.removesBurning) {
+    target.effects = target.effects.filter(active => active.effect.condition?.kind !== 'queimando');
+  }
+  if (condition.kind === 'eletrizado' && condition.paralysisChance && roller('1d100') <= condition.paralysisChance) {
+    target.effects = stackEffect(target.effects, { ...effect, id: `${effect.id}-atordoado`, name: 'Atordoado (choque)', incapacitate: true, blocksReaction: true, condition: null, duration: { type: 'rodadas', amount: 1 } });
+  }
 }
 
 function totalLifeSteal(actor: ArsenalActorState): number {
@@ -375,26 +440,23 @@ function thornsDamage(target: ArsenalActorState, roller: (notation: string) => n
   }, 0);
 }
 
-function stackEffect(states: ActiveEffectState[], effect: ArsenalEffect): ActiveEffectState[] {
+function stackEffect(states: ActiveEffectState[], effect: ArsenalEffect, sourceId?: string): ActiveEffectState[] {
   const index = states.findIndex(active => active.effect.id === effect.id);
   const duration = effect.duration.amount;
-  const skipTurns=effect.classic?.kind==='congelamento'?Math.max(0,Math.floor(effect.classic.value)):undefined;
-  const principalBlocks=effect.classic?.kind==='desnorteado'?Math.max(1,Math.floor(effect.classic.value)):undefined;
-  if (index < 0) return [...states, { effect: structuredClone(effect), stacks: 1, remaining: duration, turnSkipsRemaining:skipTurns, principalBlocksRemaining:principalBlocks }];
+  if (index < 0) return [...states, { effect: structuredClone(effect), stacks: 1, remaining: duration, sourceId }];
   const next = states.map(active => ({ ...active }));
   const current = next[index];
-  current.effect=structuredClone(effect);
+  current.effect = structuredClone(effect);
+  if (sourceId) current.sourceId = sourceId;
   if (effect.stackBehavior === 'nao_acumula') return next;
   if (effect.stackBehavior === 'renova_duracao') current.remaining = duration;
   if (effect.stackBehavior === 'acumula_intensidade' || effect.stackBehavior === 'acumula_ambos') current.stacks = Math.min(effect.maxStacks, current.stacks + 1);
   if (effect.stackBehavior === 'acumula_duracao' || effect.stackBehavior === 'acumula_ambos') current.remaining = (current.remaining ?? 0) + (duration ?? 0);
-  if(skipTurns!==undefined) current.turnSkipsRemaining=effect.stackBehavior==='acumula_intensidade'||effect.stackBehavior==='acumula_ambos'?(current.turnSkipsRemaining??0)+skipTurns:Math.max(current.turnSkipsRemaining??0,skipTurns);
-  if(principalBlocks!==undefined) current.principalBlocksRemaining=effect.stackBehavior==='acumula_intensidade'||effect.stackBehavior==='acumula_ambos'?(current.principalBlocksRemaining??0)+principalBlocks:Math.max(current.principalBlocksRemaining??0,principalBlocks);
   return next;
 }
 
-export function applyActiveEffect(states: readonly ActiveEffectState[], effect: ArsenalEffect): ActiveEffectState[] {
-  return stackEffect([...states], effect);
+export function applyActiveEffect(states: readonly ActiveEffectState[], effect: ArsenalEffect, sourceId?: string): ActiveEffectState[] {
+  return stackEffect([...states], effect, sourceId);
 }
 
 export function getActiveEffects(actor: Pick<ArsenalActorState, 'effects'>): ActiveEffectState[] {
@@ -413,43 +475,49 @@ export function cleanseByTag(effects: readonly ActiveEffectState[], tag: string)
   return effects.filter(active => !active.effect.tags.includes(tag));
 }
 
+/** Ajuste de velocidade/iniciativa. Só considera modificadores 'velocidade' SEM filtro (não teria sentido
+ *  um bônus condicionado a "cartas de fogo" valer pra ordem de turno, que não está atrelada a uma carta). */
 export function activeOrderAdjustment(effects: readonly ActiveEffectState[]): { speed: number; positions: number } {
-  let speed=0;let positions=0;
+  let speed=0;
   for(const active of effects){
     speed+=(active.effect.speedModifier??0)*active.stacks;
-    if(active.effect.classic?.kind==='lentidao')positions+=Math.max(0,Math.floor(active.effect.classic.value))*active.stacks;
-    if(active.effect.classic?.kind==='acelerado')positions-=Math.max(0,Math.floor(active.effect.classic.value))*active.stacks;
+    for (const modifier of active.effect.valueModifiers ?? []) {
+      if (modifier.target !== 'velocidade' || modifier.filter) continue;
+      if (modifier.operation === 'somar') speed += (modifier.value ?? 0) * active.stacks;
+      if (modifier.operation === 'subtrair') speed -= (modifier.value ?? 0) * active.stacks;
+    }
   }
-  return {speed,positions};
+  return {speed,positions:0};
 }
 
-export function consumeTurnSkip(effects: readonly ActiveEffectState[]): { effects: ActiveEffectState[]; skipped: boolean; source?: string } {
-  const index=effects.findIndex(active=>active.effect.classic?.kind==='congelamento'&&(active.turnSkipsRemaining??active.effect.classic.value)>0);
-  if(index<0)return{effects:[...effects],skipped:false};
-  const next=effects.map(active=>({...active}));const active=next[index];
-  active.turnSkipsRemaining=Math.max(0,(active.turnSkipsRemaining??active.effect.classic!.value)-1);
-  if(active.remaining!==undefined)active.remaining=Math.max(0,active.remaining-1);
-  return{effects:next.filter(item=>item.remaining===undefined||item.remaining>0),skipped:true,source:active.effect.name};
-}
-
+/** Bloqueia a ação principal enquanto qualquer efeito ativo tiver `incapacitate` (ex.: Atordoado). Não consome nada: dura até a condição expirar pela própria duração. */
 export function consumePrincipalBlock(effects: readonly ActiveEffectState[]): { effects: ActiveEffectState[]; blocked: boolean; source?: string } {
-  const index=effects.findIndex(active=>active.effect.classic?.kind==='desnorteado'&&(active.principalBlocksRemaining??active.effect.classic.value)>0);
-  if(index<0)return{effects:[...effects],blocked:false};
-  const next=effects.map(active=>({...active}));const active=next[index];
-  active.principalBlocksRemaining=Math.max(0,(active.principalBlocksRemaining??active.effect.classic!.value)-1);
-  return{effects:next,blocked:true,source:active.effect.name};
+  const active = effects.find(item => item.effect.incapacitate);
+  return { effects: [...effects], blocked: !!active, source: active?.effect.name };
 }
 
 export function advanceTurnEndEffects(effects: readonly ActiveEffectState[]): {effects:ActiveEffectState[];expiredNames:string[]} {
   const next:ActiveEffectState[]=[];const expiredNames:string[]=[];
   for(const active of effects){
-    const classic=active.effect.classic;
-    const periodic=!!active.effect.periodicDamage||!!active.effect.periodicHealing||!!active.effect.auraConsumed||!!active.effect.auraRestored||classic?.kind==='queimadura'||classic?.kind==='eletrocutado'||classic?.kind==='sangramento';
+    const periodic=!!active.effect.periodicDamage||!!active.effect.periodicHealing||!!active.effect.auraConsumed||!!active.effect.auraRestored;
     const temporal=active.effect.duration.type==='rodadas'||active.effect.duration.type==='turnos';
     if(!periodic&&temporal&&active.remaining!==undefined){const remaining=active.remaining-1;if(remaining<=0)expiredNames.push(active.effect.name);else next.push({...active,remaining});}
     else next.push({...active});
   }
   return{effects:next,expiredNames};
+}
+
+/** Multiplicador da afinidade elemental própria do portador para o elemento informado (usado no dano periódico). */
+function selfAffinityMultiplier(effects: readonly ActiveEffectState[], element: ArsenalEffect['periodicDamageElement']): number {
+  if (!element) return 1;
+  for (const active of effects) {
+    const match = (active.effect.elementalAffinities ?? []).find(affinity => affinity.element === element);
+    if (!match) continue;
+    if (match.kind === 'imunidade' || match.kind === 'absorcao') return 0;
+    if (match.kind === 'resistencia') return Math.max(0, 1 - match.percent / 100);
+    if (match.kind === 'vulnerabilidade') return 1 + match.percent / 100;
+  }
+  return 1;
 }
 
 export interface ActiveEffectTickResult {
@@ -462,7 +530,10 @@ export interface ActiveEffectTickResult {
   expiredNames: string[];
 }
 
-/** Executa efeitos periódicos no início do turno do portador e avança durações temporais. */
+/** Executa efeitos periódicos no início do turno do portador e avança durações temporais.
+ *  `resources` normalmente é o próprio ArsenalActorState (ou um Character estruturalmente compatível) —
+ *  quando carrega tags/equippedWeaponIds/activeFormIds, esses campos entram no contexto dos modificadores
+ *  de valor (buff/debuff v2) aplicados ao próprio portador (dano/cura/regen periódicos). */
 export function tickActiveEffects(
   effects: readonly ActiveEffectState[],
   resources: { currentHp: number; maxHp: number; currentAura: number; maxAura: number },
@@ -473,18 +544,37 @@ export function tickActiveEffects(
   const events: ActiveEffectTickResult['events'] = [];
   const expiredNames: string[] = [];
   const next: ActiveEffectState[] = [];
-  const wetMultiplier=effects.filter(active=>active.effect.classic?.kind==='molhado').reduce((multiplier,active)=>multiplier*Math.max(1,active.effect.classic!.value),1);
-  let wetConsumed=false;
   const amount = (formula: AmountFormula | null, stacks: number) => formula ? Math.max(0, (formula.flat + (formula.dice ? roller(formula.dice) : 0)) * stacks) : 0;
+  const wide = resources as Partial<ArsenalActorState>;
+  const holder: ArsenalActorState = {
+    id: wide.id ?? 'self', teamId: wide.teamId ?? 'self', name: wide.name ?? '',
+    currentHp: resources.currentHp, maxHp: resources.maxHp, currentAura: resources.currentAura, maxAura: resources.maxAura,
+    currentAmmo: wide.currentAmmo ?? 0, maxAmmo: wide.maxAmmo ?? 0, defense: wide.defense ?? 0, speed: wide.speed ?? 0,
+    tags: wide.tags ?? [], equippedWeaponIds: wide.equippedWeaponIds ?? [], activeFormIds: wide.activeFormIds ?? [],
+    effects: [...effects], holdings: wide.holdings ?? [], isCurrentTurn: wide.isCurrentTurn ?? false, inCombat: wide.inCombat ?? true,
+  };
 
   for (const active of effects) {
-    const classic=active.effect.classic;
-    let classicDamage=classic?.kind==='queimadura'||classic?.kind==='eletrocutado'?Math.max(0,classic.value*active.stacks):classic?.kind==='sangramento'?Math.max(0,(classic.mode==='percentual_vida_maxima'?Math.floor(resources.maxHp*classic.value/100):classic.value)*active.stacks):0;
-    if(classic?.kind==='eletrocutado'&&classicDamage>0&&wetMultiplier>1){classicDamage=Math.floor(classicDamage*wetMultiplier);wetConsumed=true;}
-    const damage = amount(active.effect.periodicDamage, active.stacks)+classicDamage;
-    const healing = amount(active.effect.periodicHealing, active.stacks);
+    const elementMultiplier = selfAffinityMultiplier(effects, active.effect.periodicDamageElement);
+    const baseDamage = amount(active.effect.periodicDamage, active.stacks) * elementMultiplier;
+    const damage = active.effect.periodicDamage ? Math.max(0, Math.floor(resolveModifiedValue({
+      target: 'dano', baseFlat: baseDamage, holder,
+      ctx: { actor: holder, element: active.effect.periodicDamageElement, periodic: true, direction: 'recebido' },
+      roller, label: active.effect.name,
+    }).total)) : 0;
+    const baseHealing = amount(active.effect.periodicHealing, active.stacks);
+    const healing = active.effect.periodicHealing ? Math.max(0, Math.floor(resolveModifiedValue({
+      target: 'cura', baseFlat: baseHealing, holder,
+      ctx: { actor: holder, periodic: true, direction: 'recebido', resource: 'vida' },
+      roller, label: active.effect.name,
+    }).total)) : 0;
     const auraDrain = amount(active.effect.auraConsumed, active.stacks);
-    const auraHealing = amount(active.effect.auraRestored, active.stacks);
+    const baseAuraHealing = amount(active.effect.auraRestored, active.stacks);
+    const auraHealing = active.effect.auraRestored ? Math.max(0, Math.floor(resolveModifiedValue({
+      target: 'recuperacao_aura', baseFlat: baseAuraHealing, holder,
+      ctx: { actor: holder, periodic: true, resource: 'aura' },
+      roller, label: active.effect.name,
+    }).total)) : 0;
     if (damage > 0) {
       const applied = Math.min(currentHp, damage);
       currentHp -= applied;
@@ -516,7 +606,7 @@ export function tickActiveEffects(
   }
 
   return {
-    effects: wetConsumed?next.filter(active=>active.effect.classic?.kind!=='molhado'):next,
+    effects: next,
     currentHp,
     currentAura,
     hpDelta: currentHp - resources.currentHp,
@@ -547,22 +637,25 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
     const failure = conditionFailure(condition, request.card, actor, targets, !!request.isReaction);
     if (failure) return block({ ...base, trace: [...trace, { step: 'verificar_condicoes', detail: failure }] }, failure);
   }
-  const paralysis = actor.effects.find(active => active.effect.classic?.kind === 'paralisado');
-  if (paralysis) {
-    const dc = paralysis.effect.classic!.value;
-    const rollResult = roller('1d20');
-    if (rollResult < dc) {
-      const reason = `Paralisado: falhou no teste (${rollResult} < ${dc})`;
+  if (actor.effects.some(active => active.effect.incapacitate)) {
+    return block({ ...base, trace: [...trace, { step: 'verificar_condicoes', detail: 'Incapacitado: perde a ação' }] }, 'Incapacitado: perde a ação');
+  }
+  if (request.isReaction && actor.effects.some(active => active.effect.blocksReaction)) {
+    return block({ ...base, trace: [...trace, { step: 'verificar_condicoes', detail: 'Reação bloqueada' }] }, 'Reação bloqueada');
+  }
+  const actionTest = actor.effects.find(active => active.effect.actsRequireTest);
+  if (actionTest) {
+    const requirement = actionTest.effect.actsRequireTest!;
+    const rollResult = roller(requirement.dice);
+    if (rollResult < requirement.minimum) {
+      const reason = `${actionTest.effect.name}: falhou no teste (${rollResult} < ${requirement.minimum})`;
       return block({ ...base, trace: [...trace, { step: 'verificar_condicoes', detail: reason }] }, reason);
     }
   }
-  const confusion = actor.effects.find(active => active.effect.classic?.kind === 'confuso');
-  if (confusion) {
-    const chance = confusion.effect.classic!.value;
-    const roll = roller('1d100') / 100;
-    if (roll < chance) {
-      return { ...base, status: 'cancelada', trace: [...trace, { step: 'verificar_condicoes', detail: 'Confuso: ação perdida' }], reason: 'Confuso: ação perdida' };
-    }
+  const silenced = actor.effects.find(active => active.effect.silence);
+  if (silenced && (request.card.category !== 'arma' || silenced.effect.silence!.blocksBasicAttack)) {
+    const reason = `${silenced.effect.name}: não pode usar essa carta`;
+    return block({ ...base, trace: [...trace, { step: 'verificar_condicoes', detail: reason }] }, reason);
   }
   if (!request.resumePreparation && request.card.category === 'selo' && request.card.seal?.kind === 'ritual') {
     for (const requirement of request.card.seal.requiredItems) {
@@ -578,12 +671,30 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
   if (targetFailure) return block({ ...base, trace: [...trace, { step: 'selecionar_alvo', detail: targetFailure }] }, targetFailure);
   trace.push({ step: 'selecionar_alvo', detail: targets.map(target => target.id).join(',') });
 
-  const auraCost = rollAmount(request.card.auraConsumed, roller);
+  // Contexto compartilhado pelos modificadores de valor v2 (buff/debuff novo) — só os campos NOVOS
+  // (effect.valueModifiers) entram aqui; os campos antigos (attackModifier/modifiers/diceBonuses/etc.)
+  // já são lidos diretamente pelas funções abaixo (modifierTotal/rollAmountWithBonuses/receivedMultiplier),
+  // então includeLegacy:false evita que o mesmo bônus antigo conte duas vezes.
+  const modifierCtx: Omit<ModifierResolutionContext, 'actor' | 'other'> = {
+    element: request.card.element, cardId: request.card.id, cardTags: request.card.tags,
+    context: (request.isReaction ? 'reacao' : 'normal') as ModifierContext,
+  };
+
+  const auraCostBase = rollAmount(request.card.auraConsumed, roller);
+  const auraCost = Math.max(0, resolveModifiedValue({
+    target: 'custo_aura', baseFlat: auraCostBase, holder: actor, ctx: { ...modifierCtx, actor }, roller, includeLegacy: false,
+  }).total);
   if (!request.resumePreparation && auraCost > actor.currentAura) return block({ ...base, trace }, 'Aura insuficiente');
+  const ammoCostBase = rollAmount(request.card.ammoConsumed, roller);
+  const ammoCost = Math.max(0, resolveModifiedValue({
+    target: 'custo_municao', baseFlat: ammoCostBase, holder: actor, ctx: { ...modifierCtx, actor }, roller, includeLegacy: false,
+  }).total);
+  if (!request.resumePreparation && ammoCost > actor.currentAmmo) return block({ ...base, trace }, 'Munição insuficiente');
   if (!request.resumePreparation && request.card.category === 'item' && request.card.item?.consumable) {
     if (!holding || holding.quantity < Math.max(1, request.card.item.usesPerActivation ?? 1)) return block({ ...base, trace }, 'Item indisponível');
   }
   if (!request.resumePreparation) actor.currentAura -= auraCost;
+  if (!request.resumePreparation) actor.currentAmmo -= ammoCost;
   if (!request.resumePreparation && request.card.category === 'selo' && request.card.seal?.kind === 'ritual') {
     for (const requirement of request.card.seal.requiredItems) {
       const item = actor.holdings.find(holding => holding.cardId === requirement.itemId);
@@ -594,7 +705,7 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
     holding.quantity = Math.max(0, holding.quantity - Math.max(1, request.card.item.usesPerActivation ?? 1));
     if (request.card.item.disappearsOnUse && holding.quantity === 0) holding.active = false;
   }
-  trace.push({ step: 'consumir_custos', detail: request.resumePreparation ? 'já pagos na preparação' : auraCost ? `${auraCost} aura` : undefined });
+  trace.push({ step: 'consumir_custos', detail: request.resumePreparation ? 'já pagos na preparação' : [auraCost ? `${auraCost} aura` : '', ammoCost ? `${ammoCost} munição` : ''].filter(Boolean).join(', ') || undefined });
 
   if (!request.resumePreparation && request.card.preparation.timing.type !== 'instantaneo') {
     const preparation: PendingPreparation = {
@@ -615,7 +726,10 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
   const test = request.card.testDice ? rollNotationWithBonuses(request.card.testDice, 'teste', actor, request.card, roller) : undefined;
   const extraDamage = request.card.extraDamageDice ? rollNotationWithBonuses(request.card.extraDamageDice, 'dano_extra', actor, request.card, roller) : 0;
   const rolledDamage = rollAmountWithBonuses(request.card.damage, 'dano', actor, request.card, roller);
-  const rolledHealing = rollAmountWithBonuses(request.card.healing, 'cura', actor, request.card, roller);
+  const rolledHealingBase = rollAmountWithBonuses(request.card.healing, 'cura', actor, request.card, roller);
+  const rolledHealing = Math.max(0, resolveModifiedValue({
+    target: 'cura', baseFlat: rolledHealingBase, holder: actor, ctx: { ...modifierCtx, actor, direction: 'causado', resource: 'vida' }, roller, includeLegacy: false,
+  }).total);
   base.rolls = { test, extraDamage, damage: rolledDamage, healing: rolledHealing };
   trace.push({ step: 'rolar_dados' });
 
@@ -629,46 +743,83 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
 
   const reactionAttack = reactions.reduce((sum, reaction) => sum + (reaction.attackModifier ?? 0), 0);
   const reactionDamage = reactions.reduce((sum, reaction) => sum + (reaction.damageModifier ?? 0), 0);
-  let weakenedTest=test??0;
-  if(request.card.damage&&test!==undefined){for(const active of actor.effects){const classic=active.effect.classic;if(classic?.kind!=='fraqueza')continue;if(classic.mode==='subtrair')weakenedTest-=classic.value*active.stacks;else weakenedTest=Math.floor(weakenedTest/Math.max(1,classic.value*active.stacks));}}
-  const attackTotal = resolveStatTotal(weakenedTest + modifierTotal(actor, 'ataque', request.card) + reactionAttack, actor, 'ataque', request.card);
-  const damageTotal = Math.max(0, resolveStatTotal(rolledDamage + extraDamage + modifierTotal(actor, 'dano', request.card) + reactionDamage, actor, 'dano', request.card));
-  trace.push({ step: 'calcular_modificadores' });
+  const attackBase = resolveStatTotal((test ?? 0) + modifierTotal(actor, 'ataque', request.card) + reactionAttack, actor, 'ataque', request.card);
+  const attackResolved = resolveModifiedValue({ target: 'teste', baseFlat: attackBase, holder: actor, ctx: { ...modifierCtx, actor, testKind: 'ataque' }, roller, includeLegacy: false });
+  const attackTotal = attackResolved.total;
+  const damageBase = Math.max(0, resolveStatTotal(rolledDamage + extraDamage + modifierTotal(actor, 'dano', request.card) + reactionDamage, actor, 'dano', request.card));
+  const damageResolved = resolveModifiedValue({ target: 'dano', baseFlat: damageBase, holder: actor, ctx: { ...modifierCtx, actor, direction: 'causado' }, roller, includeLegacy: false });
+  const damageTotal = Math.max(0, damageResolved.total);
+  if (attackResolved.steps.length > 2 || damageResolved.steps.length > 2) {
+    trace.push({ step: 'calcular_modificadores', detail: [...attackResolved.steps, ...damageResolved.steps].join(' · ') });
+  } else {
+    trace.push({ step: 'calcular_modificadores' });
+  }
 
   const hitIds: string[] = [];
   for (const target of targets) {
     const reactionDefense = reactions.filter(reaction => reaction.ownerId === target.id).reduce((sum, reaction) => sum + (reaction.defenseModifier ?? 0), 0);
-    const defense = resolveStatTotal(target.defense + modifierTotal(target, 'defesa', request.card) + reactionDefense, target, 'defesa', request.card);
-    if (test == null || attackTotal >= defense) hitIds.push(target.id);
+    const defenseBase = resolveStatTotal(target.defense + modifierTotal(target, 'defesa', request.card) + reactionDefense, target, 'defesa', request.card);
+    const defenseResolved = resolveModifiedValue({ target: 'defesa', baseFlat: defenseBase, holder: target, ctx: { ...modifierCtx, actor: target, other: actor }, roller, includeLegacy: false });
+    const defense = defenseResolved.total;
+    const { attackerBonus, defensePierce, fearPenalty, steps } = resolveAttackAdjustments(actor, target);
+    const allSteps = defenseResolved.steps.length > 2 ? [...defenseResolved.steps, ...steps] : steps;
+    if (allSteps.length) trace.push({ step: 'calcular_defesa', detail: allSteps.join(' · ') });
+    if (test == null || (attackTotal + attackerBonus - fearPenalty) >= (defense - defensePierce)) hitIds.push(target.id);
   }
   base.hitTargetIds = hitIds;
   trace.push({ step: 'calcular_defesa' });
 
   const auraRestored = rollAmount(request.card.auraRestored, roller);
+  const ammoRestored = rollAmount(request.card.ammoRestored, roller);
   let totalAppliedDamage = 0;
   for (const target of targets) {
     if (!hitIds.includes(target.id)) continue;
     let targetDamage=damageTotal;
-    if (request.card.element && targetDamage > 0) {
-      const interaction = applyDamageConditionInteractions(target.effects, request.card.element, targetDamage);
-      targetDamage = interaction.damage;
-      target.effects = interaction.effects;
-    }
+    targetDamage += target.effects.reduce((sum, active) => {
+      const bonus = active.effect.grantsAttackerDamageBonus;
+      if (!bonus || (bonus.onlySource && active.sourceId !== actor.id)) return sum;
+      return sum + bonus.value * active.stacks;
+    }, 0);
     let absorbedHealing = 0;
-    const affinity = activeAffinity(target, request.card.element);
-    if (affinity && targetDamage > 0) {
+    const bonusOnElement = target.effects.find(active => active.effect.bonusDamageOnElement && active.effect.bonusDamageOnElement.element === request.card.element);
+    if (bonusOnElement) {
+      targetDamage += bonusOnElement.effect.bonusDamageOnElement!.flat;
+      if (bonusOnElement.effect.bonusDamageOnElement!.consumeOnUse) target.effects = target.effects.filter(active => active !== bonusOnElement);
+    }
+    const affinityMatch = activeAffinityState(target, request.card.element);
+    if (affinityMatch && targetDamage > 0) {
+      const { affinity } = affinityMatch;
       if (affinity.kind === 'imunidade') targetDamage = 0;
       else if (affinity.kind === 'resistencia') targetDamage = Math.max(0, Math.floor(targetDamage * (1 - affinity.percent / 100)));
       else if (affinity.kind === 'vulnerabilidade') targetDamage = Math.ceil(targetDamage * (1 + affinity.percent / 100));
       else if (affinity.kind === 'absorcao') { absorbedHealing = Math.floor(targetDamage * affinity.percent / 100); targetDamage = 0; }
+      if (affinity.consumeOnUse) target.effects = target.effects.filter(active => active !== affinityMatch.active);
+    }
+    if (targetDamage > 0) {
+      targetDamage = Math.max(0, resolveModifiedValue({
+        target: 'dano', baseFlat: targetDamage, holder: target, ctx: { ...modifierCtx, actor: target, other: actor, direction: 'recebido' }, roller, includeLegacy: false,
+      }).total);
+    }
+    if (hasDynamicDefense(target)) {
+      const defenseResult = resolveDefenseHit(normalizeDefenseStats(target), targetDamage, (request.card as any).impact?.flat ?? targetDamage);
+      targetDamage = defenseResult.healthDamage;
+      target.defenseCurrent = defenseResult.currentDefense;
+      target.staggerCurrent = defenseResult.currentStagger;
+      target.isDefenseBroken = defenseResult.target.isDefenseBroken;
+      target.isStaggered = defenseResult.target.isStaggered;
+      target.staggerTurnsRemaining = defenseResult.target.staggerTurnsRemaining;
     }
     const appliedDamage = Math.min(target.currentHp, Math.max(0, targetDamage));
     totalAppliedDamage += appliedDamage;
     if (appliedDamage > 0) actor.currentHp = Math.max(0, actor.currentHp - thornsDamage(target, roller));
-    const receivedHealing = Math.floor((rolledHealing + absorbedHealing) * receivedMultiplier(target, 'cura_recebida'));
+    const receivedHealingBase = Math.floor((rolledHealing + absorbedHealing) * receivedMultiplier(target, 'cura_recebida'));
+    const receivedHealing = receivedHealingBase > 0 ? Math.max(0, resolveModifiedValue({
+      target: 'cura', baseFlat: receivedHealingBase, holder: target, ctx: { ...modifierCtx, actor: target, other: actor, direction: 'recebido', resource: 'vida' }, roller, includeLegacy: false,
+    }).total) : receivedHealingBase;
     const receivedAura = Math.floor(auraRestored * receivedMultiplier(target, 'aura_recebida'));
     target.currentHp = Math.max(0, Math.min(target.maxHp, target.currentHp - targetDamage + receivedHealing));
     target.currentAura = Math.max(0, Math.min(target.maxAura, target.currentAura + receivedAura));
+    target.currentAmmo = Math.max(0, Math.min(target.maxAmmo, target.currentAmmo + ammoRestored));
   }
   const lifeStealPercent = totalLifeSteal(actor);
   if (lifeStealPercent > 0 && totalAppliedDamage > 0) {
@@ -679,16 +830,21 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
   for (const target of targets) {
     if (!hitIds.includes(target.id)) continue;
     for (const effect of request.card.effects) {
-      if (isImmuneTo(target, effect.classic?.kind)) continue;
-      target.effects = stackEffect(target.effects, effect);
+      if (isImmuneTo(target, effect)) continue;
+      if (!rollsConditionApplication(effect, roller)) continue;
+      target.effects = stackEffect(target.effects, effect, actor.id);
+      applyConditionSideEffects(target, effect, roller);
     }
   }
   for (const target of targets) {
     if (!hitIds.includes(target.id)) continue;
-    const procKind = rollElementalConditionChance(request.card, roller);
-    if (procKind) {
-      const procEffect = getPredefinedEffect(procKind);
-      if (procEffect && !isImmuneTo(target, procKind)) target.effects = stackEffect(target.effects, procEffect);
+    const procEffectId = rollElementalConditionChance(request.card, roller);
+    if (procEffectId) {
+      const procEffect = getPredefinedEffect(procEffectId);
+      if (procEffect && !isImmuneTo(target, procEffect) && rollsConditionApplication(procEffect, roller)) {
+        target.effects = stackEffect(target.effects, procEffect, actor.id);
+        applyConditionSideEffects(target, procEffect, roller);
+      }
     }
   }
   if (request.card.target.type === 'campo_de_batalha' && request.card.effects.length) {
@@ -704,8 +860,10 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
   trace.push({ step: 'disparar_gatilhos', detail: emittedEvents.join(',') });
 
   if (holding && request.card.cooldown.type !== 'sem_cooldown') {
-    if (request.card.cooldown.type === 'turnos' || request.card.cooldown.type === 'rodadas' || request.card.cooldown.type === 'usos') holding.cooldownRemaining = request.card.cooldown.amount;
-    else holding.cooldownRemaining = 1;
+    const baseCooldown = request.card.cooldown.type === 'turnos' || request.card.cooldown.type === 'rodadas' || request.card.cooldown.type === 'usos' ? request.card.cooldown.amount : 1;
+    holding.cooldownRemaining = Math.max(0, resolveModifiedValue({
+      target: 'cooldown', baseFlat: baseCooldown, holder: actor, ctx: { ...modifierCtx, actor }, roller, includeLegacy: false,
+    }).total);
   }
   trace.push({ step: 'atualizar_cooldown' });
 
@@ -717,4 +875,69 @@ export function resolveArsenalAction(request: ActionResolutionRequest): ActionRe
   trace.push({ step: 'verificar_mortes', detail: base.defeatedIds.join(',') });
   trace.push({ step: 'encerrar_acao' });
   return { ...base, actor, targets, trace };
+}
+
+export interface ComboResolutionRequest {
+  /** Carta inicial primeiro, companheiras de stack em seguida. */
+  cards: ArsenalCard[];
+  actor: ArsenalActorState;
+  targets: ArsenalActorState[];
+  reactions?: ReactionCandidate[];
+  roller?: (notation: string) => number;
+  isReaction?: boolean;
+}
+
+/** Soma flat+dado já rolado de uma AmountFormula; null se a carta não define nada. */
+function preRollAmount(value: AmountFormula | null, roller: (notation: string) => number): number {
+  if (!value) return 0;
+  return value.flat + (value.dice ? roller(value.dice) : 0);
+}
+
+/** Funde as cartas de um combo simultâneo numa única carta sintética: as rolagens de dano/cura/aura de
+ *  cada companheira são resolvidas já aqui (o motor só vê um flat somado) e os efeitos são concatenados.
+ *  O teste de acerto, elemento e alvo permanecem os da carta inicial — é um único golpe combinado. */
+function mergeSimultaneousCombo(cards: ArsenalCard[], roller: (notation: string) => number): ArsenalCard {
+  const [primary, ...companions] = cards;
+  let damage = preRollAmount(primary.damage, roller);
+  let healing = preRollAmount(primary.healing, roller);
+  let auraConsumed = preRollAmount(primary.auraConsumed, roller);
+  const effects = [...primary.effects];
+  for (const companion of companions) {
+    damage += preRollAmount(companion.damage, roller);
+    healing += preRollAmount(companion.healing, roller);
+    auraConsumed += preRollAmount(companion.auraConsumed, roller);
+    effects.push(...companion.effects);
+  }
+  return {
+    ...primary,
+    damage: primary.damage || damage > 0 ? { flat: damage } : primary.damage,
+    healing: primary.healing || healing > 0 ? { flat: healing } : primary.healing,
+    auraConsumed: primary.auraConsumed || auraConsumed > 0 ? { flat: auraConsumed } : primary.auraConsumed,
+    effects,
+  };
+}
+
+/** Resolve um stack de combo de acordo com `ComboModule.resolution` da carta inicial:
+ *  'simultanea' funde tudo num único golpe (uma rolagem de acerto, dano somado);
+ *  'sequencial' resolve cada carta em sequência, encadeando o estado de ator/alvos entre elas. */
+export function resolveComboAction(request: ComboResolutionRequest): ActionResolutionResult[] {
+  const roller = request.roller ?? (notation => rollDice(notation).total);
+  const [primary] = request.cards;
+  const resolution = primary?.combo?.resolution ?? 'sequencial';
+  if (resolution === 'simultanea') {
+    const merged = mergeSimultaneousCombo(request.cards, roller);
+    return [resolveArsenalAction({ card: merged, actor: request.actor, targets: request.targets, reactions: request.reactions, roller, isReaction: request.isReaction })];
+  }
+  const results: ActionResolutionResult[] = [];
+  let currentActor = request.actor;
+  let currentTargets = request.targets;
+  for (const card of request.cards) {
+    const result = resolveArsenalAction({ card, actor: currentActor, targets: currentTargets, reactions: request.reactions, roller, isReaction: request.isReaction });
+    results.push(result);
+    if (result.status !== 'bloqueada' && result.status !== 'cancelada') {
+      currentActor = result.actor;
+      currentTargets = result.targets;
+    }
+  }
+  return results;
 }

@@ -20,6 +20,16 @@ const props = (cena: any, characters: Character[], over: any = {}) => ({
   onSaveCharacter: () => {}, onDeleteCharacter: () => {}, onExportCharacter: () => {}, ...over,
 });
 
+/** Seleciona um alvo em combate: a UI exige dois cliques no card do roster (o mesmo id 'pendura' o
+ *  alvo na primeira seleção e só resolve na segunda) — ver onParticipantClick em CenaTab.tsx. O título
+ *  do card é só o nome (sem sufixo), e o MapBoard também renderiza um token com o mesmo título, então
+ *  filtramos pelo card do roster (.cena-combatant) para evitar ambiguidade. */
+function selectTarget(name: string) {
+  const card = screen.getAllByTitle(name).find(el => el.className.includes('cena-combatant'))!;
+  fireEvent.click(card);
+  fireEvent.click(card);
+}
+
 describe('CenaTab — arsenal unificado', () => {
   const reactionScenario = (over: Record<string, unknown> = {}) => {
     const attack=createArsenalCard({id:'atk',name:'Golpe Solar',category:'habilidade',testDice:'1d20',damage:{flat:4}});
@@ -31,7 +41,7 @@ describe('CenaTab — arsenal unificado', () => {
     fireEvent.click(screen.getByText('ATAQUES'));
     fireEvent.click(screen.getByRole('button',{name:/golpe solar/i}));
     fireEvent.click(screen.getByRole('button',{name:'USAR CARTA'}));
-    fireEvent.click(screen.getByTitle(/mikhail.*duplo clique/i));
+    selectTarget('Mikhail');
   };
 
   it('abre janela de proteção quando o alvo possui reação disponível', () => {
@@ -74,10 +84,24 @@ describe('CenaTab — arsenal unificado', () => {
     fireEvent.click(screen.getByText('ATAQUES'));
     fireEvent.click(screen.getByRole('button',{name:/lâmina ígnea/i}));
     fireEvent.click(screen.getByRole('button',{name:'USAR CARTA'}));
-    fireEvent.click(screen.getByTitle(/mikhail.*duplo clique/i));
+    selectTarget('Mikhail');
     expect(updateCharacterStats).toHaveBeenCalledWith('p2',expect.objectContaining({currentHp:16,defenseCurrent:14}));
     const targetUpdate=updateCharacterStats.mock.calls.find(call=>call[0]==='p2')?.[1];
     expect(targetUpdate.activeEffects[0].effect.name).toBe('Queimadura');
+  });
+
+  it('permite usar uma carta de alvo único no próprio usuário', () => {
+    const heal = createArsenalCard({ id:'self-target', name:'Pulso Vital', category:'habilidade', target:{type:'um_alvo'}, healing:{flat:5} });
+    const cena={...createDefaultCena(),encounter:{...createDefaultEncounter(),isActive:true,round:1,turnIndex:0,order:[{refId:'p1',side:'party' as const,initiative:20},{refId:'p2',side:'party' as const,initiative:10}]}};
+    const p1=cast('p1','Shinkai',{currentHp:10,arsenal:[createHolding(heal)]});
+    const p2=cast('p2','Mikhail');
+    const updateCharacterStats=vi.fn();
+    render(<CenaTab {...props(cena,[p1,p2],{arsenal:[heal],updateCharacterStats})}/>);
+    fireEvent.click(screen.getByText('HABILIDADES'));
+    fireEvent.click(screen.getByRole('button',{name:/pulso vital/i}));
+    fireEvent.click(screen.getByRole('button',{name:'USAR CARTA'}));
+    selectTarget('Shinkai');
+    expect(updateCharacterStats).toHaveBeenCalledWith('p1',expect.objectContaining({currentHp:15}));
   });
 
   it('contabiliza dano e persiste efeitos ao acertar um NPC', () => {
@@ -91,7 +115,7 @@ describe('CenaTab — arsenal unificado', () => {
     fireEvent.click(screen.getByText('ATAQUES'));
     fireEvent.click(screen.getByRole('button',{name:/flecha ígnea/i}));
     fireEvent.click(screen.getByRole('button',{name:'USAR CARTA'}));
-    fireEvent.click(screen.getByTitle(/bandido.*duplo clique/i));
+    selectTarget('Bandido');
     const saved=updateCena.mock.calls.at(-1)?.[0].npcRoster.find((npc:Character)=>npc.id==='n1');
     expect(saved.currentHp).toBe(14);
     expect(saved.defenseCurrent).toBe(15);
@@ -163,26 +187,13 @@ describe('CenaTab — iniciar/encerrar + resolução (3A/3B intactos)', () => {
 });
 
 describe('CenaTab — ciclo de condições e efeitos', () => {
-  it('Congelamento pula o turno afetado e consome o bloqueio', () => {
-    const frozen=applyActiveEffect([],getPredefinedEffect('Congelamento')!);
-    const cena={...createDefaultCena(),encounter:{...createDefaultEncounter(),isActive:true,round:1,turnIndex:0,order:[
-      {refId:'p1',side:'party' as const,initiative:30},{refId:'p2',side:'party' as const,initiative:20},{refId:'p3',side:'party' as const,initiative:10},
-    ]}};
-    const updateCharacterStats=vi.fn();const updateCena=vi.fn();
-    render(<CenaTab {...props(cena,[cast('p1','A'),cast('p2','B',{activeEffects:frozen}),cast('p3','C')],{updateCharacterStats,updateCena})}/>);
-    fireEvent.click(screen.getByRole('button',{name:/próximo turno/i}));
-    expect(updateCena.mock.calls[0][0].encounter.order[updateCena.mock.calls[0][0].encounter.turnIndex].refId).toBe('p3');
-    expect(updateCharacterStats).toHaveBeenCalledWith('p2',expect.objectContaining({activeEffects:expect.any(Array)}));
-    expect(updateCena.mock.calls[0][0].log.some((entry:any)=>/perde o turno por Congelamento/i.test(entry.text))).toBe(true);
-  });
-
-  it('Lentidão desloca a ordem enquanto o efeito está ativo', () => {
-    const slow={...getPredefinedEffect('Lentidão')!,classic:{kind:'lentidao' as const,value:1}};
+  it('Congelado reduz a velocidade de iniciativa do afetado', () => {
+    const frozen=applyActiveEffect([],getPredefinedEffect('Congelado')!);
     const cena={...createDefaultCena(),encounter:{...createDefaultEncounter(),isActive:true,round:1,turnIndex:0,order:[
       {refId:'p1',side:'party' as const,initiative:30},{refId:'p2',side:'party' as const,initiative:20},{refId:'p3',side:'party' as const,initiative:10},
     ]}};
     const updateCena=vi.fn();
-    render(<CenaTab {...props(cena,[cast('p1','A'),cast('p2','B',{activeEffects:applyActiveEffect([],slow)}),cast('p3','C')],{updateCena})}/>);
+    render(<CenaTab {...props(cena,[cast('p1','A'),cast('p2','B',{activeEffects:frozen}),cast('p3','C')],{updateCena})}/>);
     fireEvent.click(screen.getByRole('button',{name:/próximo turno/i}));
     expect(updateCena.mock.calls[0][0].encounter.order.map((entry:any)=>entry.refId)).toEqual(['p1','p3','p2']);
   });
@@ -334,7 +345,7 @@ describe('CenaTab — efeitos passivos de forma e arma', () => {
   });
 
   it('ativar uma forma concede seus efeitos passivos e reverter os remove', () => {
-    const fury = { ...getPredefinedEffect('Acelerado')!, id: 'fury', name: 'Fúria da Forma', classic: undefined };
+    const fury = { ...getPredefinedEffect('Frágil')!, id: 'fury', name: 'Fúria da Forma' };
     const ignea = createArsenalCard({
       id: 'ignea', name: 'Forma Ígnea', category: 'habilidade', abilityType: 'forma',
       form: { grantedAbilityIds: [], removedAbilityIds: [], hpBonus: 0, auraBonus: 0, effects: [fury] },
@@ -359,7 +370,7 @@ describe('CenaTab — efeitos passivos de forma e arma', () => {
   });
 
   it('equipar uma arma concede seus efeitos passivos e trocar de arma os remove', () => {
-    const sharp = { ...getPredefinedEffect('Acelerado')!, id: 'sharp', name: 'Fio da Lâmina', classic: undefined };
+    const sharp = { ...getPredefinedEffect('Frágil')!, id: 'sharp', name: 'Fio da Lâmina' };
     const sword = createArsenalCard({ id: 'sword', name: 'Espada', category: 'arma', weapon: { freelyEquippable: true, grantedAbilityIds: [], effects: [sharp] } });
     const dagger = createArsenalCard({ id: 'dagger', name: 'Adaga', category: 'arma', weapon: { freelyEquippable: true, grantedAbilityIds: [] } });
     const p1 = cast('p1', 'Shinkai', { arsenal: [createHolding(sword), createHolding(dagger)] });
@@ -385,6 +396,150 @@ describe('CenaTab — habilidades do novo sistema de grafo', () => {
     ] },
   });
 
+  it('reação com nó esquiva substitui o 1d20 fixo pelo valor do nó como defenseBonus', async () => {
+    const { ensureNodesRegistered } = await import('../utils/nodes');
+    const { createAbilityGraph } = await import('../utils/abilityGraph');
+    ensureNodesRegistered();
+    const attackGraph = {
+      ...createAbilityGraph({ id: 'graph-atk2', name: 'Ataque Preciso' }),
+      nodes: [
+        { id: 'g', type: 'ao_ativar', family: 'gatilho' as const, props: {} },
+        { id: 'teste', type: 'teste', family: 'ramo' as const, props: { dice: '1d20', comparador: 'defesa_alvo', valorFixo: 0, modificador: 0 } },
+        { id: 'd', type: 'dano', family: 'efeito' as const, props: { dice: undefined, flat: 6, element: 'fisico' } },
+      ],
+      edges: [{ id: 'e1', from: 'g', to: 'teste' }, { id: 'e2', from: 'teste', to: 'd', branch: 'entao' as const }],
+    };
+    // flat=25 é impossível de alcançar pelo 1d20 fixo antigo (máximo 5+20=25 exigiria rolar 20 exato;
+    // 25 sozinho já bate isso, então uso um valor ainda maior pra não depender de sorte no roll real).
+    const reactionGraph = {
+      ...createAbilityGraph({ id: 'graph-esquiva', name: 'Esquiva Ágil' }),
+      nodes: [
+        { id: 'gt', type: 'ao_ser_alvejado', family: 'gatilho' as const, props: {} },
+        { id: 'e', type: 'esquiva', family: 'efeito' as const, props: { dice: undefined, flat: 25 } },
+      ],
+      edges: [{ id: 'e1', from: 'gt', to: 'e' }],
+    };
+    const p1 = cast('p1', 'Shinkai', { arsenal: [{ cardId: 'graph-atk2', quantity: 1, equipped: false, active: false }] });
+    const p2 = cast('p2', 'Mikhail', { defense: 5, arsenal: [{ cardId: 'graph-esquiva', quantity: 1, equipped: false, active: false }] });
+    const onDiceRoll = vi.fn();
+    render(<CenaTab {...props(combatCena(), [p1, p2], { abilityGraphs: [attackGraph, reactionGraph], onDiceRoll })} />);
+    fireEvent.click(screen.getByText('ATAQUES'));
+    fireEvent.click(screen.getByRole('button', { name: /ataque preciso/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'USAR CARTA' }));
+    selectTarget('Mikhail');
+    fireEvent.click(screen.getByRole('button', { name: /esquiva ágil/i }));
+    const testRollCall = onDiceRoll.mock.calls.find(call => call[1]?.defenderResult !== undefined);
+    expect(testRollCall![1].defenderResult).toBe(30); // 5 (defesa base) + 25 (esquiva), nunca alcançável pelo 1d20 antigo
+  });
+
+  it('efeito continuo aplicado por grafo reage ao alvo ser alvejado e soma esquiva', async () => {
+    const { ensureNodesRegistered } = await import('../utils/nodes');
+    const { createAbilityGraph } = await import('../utils/abilityGraph');
+    ensureNodesRegistered();
+    const buffGraph = {
+      ...createAbilityGraph({ id: 'graph-evasion-buff', name: 'Passos Entre Linhas' }),
+      nodes: [
+        { id: 'g', type: 'ao_ativar', family: 'gatilho' as const, props: {} },
+        { id: 'apply', type: 'aplicar_como_efeito', family: 'efeito' as const, props: { alvo: 'proprio', rounds: 3 } },
+        { id: 'targeted', type: 'ao_ser_alvejado', family: 'gatilho' as const, props: {} },
+        { id: 'evasion', type: 'esquiva', family: 'efeito' as const, props: { dice: undefined, flat: 25 } },
+      ],
+      edges: [
+        { id: 'e1', from: 'g', to: 'apply' },
+        { id: 'e2', from: 'apply', to: 'targeted' },
+        { id: 'e3', from: 'targeted', to: 'evasion' },
+      ],
+    };
+    const attackGraph = {
+      ...createAbilityGraph({ id: 'graph-atk-ongoing', name: 'Disparo Marcado' }),
+      nodes: [
+        { id: 'g', type: 'ao_ativar', family: 'gatilho' as const, props: {} },
+        { id: 'teste', type: 'teste', family: 'ramo' as const, props: { dice: '1d20', comparador: 'defesa_alvo', valorFixo: 0, modificador: 0 } },
+        { id: 'd', type: 'dano', family: 'efeito' as const, props: { dice: undefined, flat: 6, element: 'fisico' } },
+      ],
+      edges: [{ id: 'e1', from: 'g', to: 'teste' }, { id: 'e2', from: 'teste', to: 'd', branch: 'entao' as const }],
+    };
+    const p1 = cast('p1', 'Shinkai', { arsenal: [{ cardId: 'graph-atk-ongoing', quantity: 1, equipped: false, active: false }] });
+    const p2 = cast('p2', 'Mikhail', { defense: 5 });
+    const baseCena = combatCena();
+    const cena = {
+      ...baseCena,
+      encounter: {
+        ...baseCena.encounter,
+        activeOngoingEffects: [{
+          id: 'ongoing-evasion', ownerId: 'p2', casterId: 'p2', graphId: 'graph-evasion-buff', roundsRemaining: 3,
+          pendingReactions: [{ eventType: 'ao_ser_alvejado', nodeIds: ['evasion'] }],
+        }],
+      },
+    };
+    const onDiceRoll = vi.fn();
+    render(<CenaTab {...props(cena, [p1, p2], { abilityGraphs: [attackGraph, buffGraph], onDiceRoll })} />);
+    fireEvent.click(screen.getByText('ATAQUES'));
+    fireEvent.click(screen.getByRole('button', { name: /disparo marcado/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'USAR CARTA' }));
+    selectTarget('Mikhail');
+    const testRollCall = onDiceRoll.mock.calls.find(call => call[1]?.defenderResult !== undefined);
+    expect(testRollCall![1].defenderResult).toBe(30);
+  });
+
+  it('efeito continuo de esquiva acumula com esquiva usada como reacao manual', async () => {
+    const { ensureNodesRegistered } = await import('../utils/nodes');
+    const { createAbilityGraph } = await import('../utils/abilityGraph');
+    ensureNodesRegistered();
+    const passiveGraph = {
+      ...createAbilityGraph({ id: 'graph-passive-evasion', name: 'Postura Fluida' }),
+      nodes: [
+        { id: 'g', type: 'ao_ativar', family: 'gatilho' as const, props: {} },
+        { id: 'apply', type: 'aplicar_como_efeito', family: 'efeito' as const, props: { alvo: 'proprio', rounds: 3 } },
+        { id: 'targeted', type: 'ao_ser_alvejado', family: 'gatilho' as const, props: {} },
+        { id: 'passive', type: 'esquiva', family: 'efeito' as const, props: { dice: undefined, flat: 2 } },
+      ],
+      edges: [
+        { id: 'e1', from: 'g', to: 'apply' },
+        { id: 'e2', from: 'apply', to: 'targeted' },
+        { id: 'e3', from: 'targeted', to: 'passive' },
+      ],
+    };
+    const manualGraph = {
+      ...createAbilityGraph({ id: 'graph-manual-evasion', name: 'Esquiva Rápida' }),
+      nodes: [
+        { id: 'gt', type: 'ao_ser_alvejado', family: 'gatilho' as const, props: {} },
+        { id: 'manual', type: 'esquiva', family: 'efeito' as const, props: { dice: undefined, flat: 4 } },
+      ],
+      edges: [{ id: 'e1', from: 'gt', to: 'manual' }],
+    };
+    const attackGraph = {
+      ...createAbilityGraph({ id: 'graph-atk-stacking', name: 'Ataque de Teste' }),
+      nodes: [
+        { id: 'g', type: 'ao_ativar', family: 'gatilho' as const, props: {} },
+        { id: 'teste', type: 'teste', family: 'ramo' as const, props: { dice: '1d20', comparador: 'defesa_alvo', valorFixo: 0, modificador: 0 } },
+      ],
+      edges: [{ id: 'e1', from: 'g', to: 'teste' }],
+    };
+    const p1 = cast('p1', 'Shinkai', { arsenal: [{ cardId: 'graph-atk-stacking', quantity: 1, equipped: false, active: false }] });
+    const p2 = cast('p2', 'Mikhail', { defense: 2, arsenal: [{ cardId: 'graph-manual-evasion', quantity: 1, equipped: false, active: false }] });
+    const baseCena = combatCena();
+    const cena = {
+      ...baseCena,
+      encounter: {
+        ...baseCena.encounter,
+        activeOngoingEffects: [{
+          id: 'ongoing-passive-evasion', ownerId: 'p2', casterId: 'p2', graphId: 'graph-passive-evasion', roundsRemaining: 3,
+          pendingReactions: [{ eventType: 'ao_ser_alvejado', nodeIds: ['passive'] }],
+        }],
+      },
+    };
+    const onDiceRoll = vi.fn();
+    render(<CenaTab {...props(cena, [p1, p2], { abilityGraphs: [attackGraph, passiveGraph, manualGraph], onDiceRoll })} />);
+    fireEvent.click(screen.getByText('HABILIDADES'));
+    fireEvent.click(screen.getByRole('button', { name: /ataque de teste/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'USAR CARTA' }));
+    selectTarget('Mikhail');
+    fireEvent.click(screen.getByRole('button', { name: /esquiva rápida/i }));
+    const testRollCall = onDiceRoll.mock.calls.find(call => call[1]?.defenderResult !== undefined);
+    expect(testRollCall![1].defenderResult).toBe(8);
+  });
+
   it('usar uma habilidade-grafo em outro alvo aplica dano, gera log e ativa o cooldown', async () => {
     const { ensureNodesRegistered } = await import('../utils/nodes');
     const { createAbilityGraph } = await import('../utils/abilityGraph');
@@ -405,10 +560,92 @@ describe('CenaTab — habilidades do novo sistema de grafo', () => {
     fireEvent.click(screen.getByText('ATAQUES'));
     fireEvent.click(screen.getByRole('button', { name: /golpe do grafo/i }));
     fireEvent.click(screen.getByRole('button', { name: 'USAR CARTA' }));
-    fireEvent.click(screen.getByTitle(/mikhail.*duplo clique/i));
+    selectTarget('Mikhail');
     expect(updateCharacterStats).toHaveBeenCalledWith('p2', expect.objectContaining({ currentHp: 16, defenseCurrent: 14 }));
     const actorUpdate = updateCharacterStats.mock.calls.find(call => call[0] === 'p1')?.[1];
     expect(actorUpdate.arsenal.find((h: any) => h.cardId === 'graph-atk').cooldownRemaining).toBe(2);
+  });
+
+  it('habilidade-grafo com nó alvo "raio" atinge quem está no raio ao redor do ator, sem precisar clicar em ninguém', async () => {
+    const { ensureNodesRegistered } = await import('../utils/nodes');
+    const { createAbilityGraph } = await import('../utils/abilityGraph');
+    ensureNodesRegistered();
+    const graph = {
+      ...createAbilityGraph({ id: 'graph-raio', name: 'Explosão' }),
+      nodes: [
+        { id: 'g', type: 'ao_ativar', family: 'gatilho' as const, props: {} },
+        { id: 'a', type: 'alvo', family: 'alvo' as const, props: { scope: 'raio', radius: 1 } },
+        { id: 'd', type: 'dano', family: 'efeito' as const, props: { dice: undefined, flat: 5, element: 'fisico' } },
+      ],
+      edges: [{ id: 'e1', from: 'g', to: 'a' }, { id: 'e2', from: 'a', to: 'd' }],
+    };
+    const p1 = cast('p1', 'Shinkai', { arsenal: [{ cardId: 'graph-raio', quantity: 1, equipped: false, active: false }] });
+    const p2 = cast('p2', 'Mikhail', { currentHp: 20 });
+    const p3 = cast('p3', 'Longe', { currentHp: 20 });
+    const updateCharacterStats = vi.fn();
+    const cenaComTokens = { ...combatCena(), tokens: { p1: { x: 50, y: 50 }, p2: { x: 55, y: 50 }, p3: { x: 90, y: 50 } } };
+    render(<CenaTab {...props(cenaComTokens, [p1, p2, p3], { abilityGraphs: [graph], updateCharacterStats })} />);
+    fireEvent.click(screen.getByText('ATAQUES'));
+    fireEvent.click(screen.getByRole('button', { name: /explosão/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'USAR CARTA' }));
+    fireEvent.click(screen.getByRole('button', { name: 'confirmar' }));
+    expect(updateCharacterStats).toHaveBeenCalledWith('p2', expect.objectContaining({ currentHp: 16, defenseCurrent: 15 }));
+    expect(updateCharacterStats).not.toHaveBeenCalledWith('p3', expect.anything());
+    const p1Update = updateCharacterStats.mock.calls.find(call => call[0] === 'p1')?.[1];
+    expect(p1Update.currentHp).toBe(20); // ator não é afetado pelo próprio raio (só quem está em areaTargets)
+  });
+
+  it('habilidade-grafo com nó alvo "raio" ainda atinge personagens sem posição gravada em cena.tokens (usa o mesmo fallback visual do MapBoard)', async () => {
+    const { ensureNodesRegistered } = await import('../utils/nodes');
+    const { createAbilityGraph } = await import('../utils/abilityGraph');
+    ensureNodesRegistered();
+    const graph = {
+      ...createAbilityGraph({ id: 'graph-raio2', name: 'Onda de Choque' }),
+      nodes: [
+        { id: 'g', type: 'ao_ativar', family: 'gatilho' as const, props: {} },
+        { id: 'a', type: 'alvo', family: 'alvo' as const, props: { scope: 'raio', radius: 2 } },
+        { id: 'd', type: 'dano', family: 'efeito' as const, props: { dice: undefined, flat: 5, element: 'fisico' } },
+      ],
+      edges: [{ id: 'e1', from: 'g', to: 'a' }, { id: 'e2', from: 'a', to: 'd' }],
+    };
+    const p1 = cast('p1', 'Shinkai', { arsenal: [{ cardId: 'graph-raio2', quantity: 1, equipped: false, active: false }] });
+    const p2 = cast('p2', 'Mikhail', { currentHp: 20 });
+    const p3 = cast('p3', 'Longe', { currentHp: 20 });
+    const updateCharacterStats = vi.fn();
+    // Nenhum personagem tem posição em cena.tokens — nunca foram arrastados no mapa.
+    render(<CenaTab {...props(combatCena(), [p1, p2, p3], { abilityGraphs: [graph], updateCharacterStats })} />);
+    fireEvent.click(screen.getByText('ATAQUES'));
+    fireEvent.click(screen.getByRole('button', { name: /onda de choque/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'USAR CARTA' }));
+    fireEvent.click(screen.getByRole('button', { name: 'confirmar' }));
+    expect(updateCharacterStats).toHaveBeenCalledWith('p2', expect.objectContaining({ currentHp: expect.any(Number) }));
+    const p2Update = updateCharacterStats.mock.calls.find(call => call[0] === 'p2')?.[1];
+    expect(p2Update.currentHp).toBeLessThan(20);
+  });
+
+  it('usar uma habilidade-grafo com nó mover (empurrar) desloca o token do alvo em cena.tokens', async () => {
+    const { ensureNodesRegistered } = await import('../utils/nodes');
+    const { createAbilityGraph } = await import('../utils/abilityGraph');
+    ensureNodesRegistered();
+    const graph = {
+      ...createAbilityGraph({ id: 'graph-push', name: 'Rajada' }),
+      nodes: [
+        { id: 'g', type: 'ao_ativar', family: 'gatilho' as const, props: {} },
+        { id: 'm', type: 'mover', family: 'efeito' as const, props: { kind: 'empurrar', distance: 1 } },
+      ],
+      edges: [{ id: 'e1', from: 'g', to: 'm' }],
+    };
+    const p1 = cast('p1', 'Shinkai', { arsenal: [{ cardId: 'graph-push', quantity: 1, equipped: false, active: false }] });
+    const p2 = cast('p2', 'Mikhail', { currentHp: 20 });
+    const updateCena = vi.fn();
+    const cenaComTokens = { ...combatCena(), tokens: { p1: { x: 50, y: 50 }, p2: { x: 60, y: 50 } } };
+    render(<CenaTab {...props(cenaComTokens, [p1, p2], { abilityGraphs: [graph], updateCena })} />);
+    fireEvent.click(screen.getByText('HABILIDADES'));
+    fireEvent.click(screen.getByRole('button', { name: /rajada/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'USAR CARTA' }));
+    selectTarget('Mikhail');
+    const finalState = updateCena.mock.calls.at(-1)?.[0];
+    expect(finalState.tokens.p2.x).toBeGreaterThan(60);
   });
 
   it('habilidade-grafo com preparação entra em espera e só resolve na segunda seleção', async () => {
@@ -431,7 +668,7 @@ describe('CenaTab — habilidades do novo sistema de grafo', () => {
     fireEvent.click(screen.getByText('ATAQUES'));
     fireEvent.click(screen.getByRole('button', { name: /golpe carregado/i }));
     fireEvent.click(screen.getByRole('button', { name: 'USAR CARTA' }));
-    fireEvent.click(screen.getByTitle(/mikhail.*duplo clique/i));
+    selectTarget('Mikhail');
     const preparedState = updateCena.mock.calls.at(-1)?.[0];
     expect(preparedState.encounter.preparations).toContainEqual(expect.objectContaining({ ownerId: 'p1', entryId: 'graph-prep', targetIds: ['p2'] }));
   });
@@ -464,7 +701,7 @@ describe('CenaTab — habilidades do novo sistema de grafo', () => {
     fireEvent.click(screen.getByRole('button', { name: 'USAR CARTA' }));
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(screen.getByText(/Fazer a jogada/));
-    fireEvent.click(screen.getByTitle(/mikhail.*duplo clique/i));
+    selectTarget('Mikhail');
     const finalState = updateCena.mock.calls.at(-1)?.[0];
     expect(finalState.log.some((entry: any) => /Mikhail sofre 7 de dano/.test(entry.text))).toBe(true);
   });

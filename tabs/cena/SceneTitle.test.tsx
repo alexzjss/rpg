@@ -12,10 +12,13 @@ describe('SceneTitle', () => {
     expect(screen.getByDisplayValue('A FORTALEZA')).toBeTruthy();
     expect(screen.getByDisplayValue('Soterrada')).toBeTruthy();
   });
-  it('edita o clima', () => {
-    const onSceneChange = vi.fn();
-    render(<SceneTitle scene={createDefaultCena().scene} onSceneChange={onSceneChange} />);
-    fireEvent.click(screen.getByTitle('storm'));
-    expect(onSceneChange).toHaveBeenCalledWith({ weather: 'storm' });
+  it('não exibe mais controles de clima', () => {
+    render(<SceneTitle scene={createDefaultCena().scene} onSceneChange={vi.fn()} />);
+    expect(screen.queryByLabelText(/clima/i)).toBeNull();
+  });
+  it('usa uma única imagem para cenário e mapa', () => {
+    render(<SceneTitle scene={createDefaultCena().scene} onSceneChange={() => {}} />);
+    expect(screen.getByTitle('Cenário e mapa')).toBeTruthy();
+    expect(screen.queryByTitle('Fundo separado (opcional)')).toBeNull();
   });
 });

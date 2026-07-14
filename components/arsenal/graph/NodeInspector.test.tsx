@@ -24,12 +24,25 @@ describe('NodeInspector', () => {
     expect(onChange).toHaveBeenCalledWith('d1', { flat: 9 });
   });
 
-  it('botão remover chama onRemove para nó não-gatilho', () => {
+  it('botão remover pede confirmação e chama onRemove quando confirmado', () => {
     const onRemove = vi.fn();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const node: GraphNode = { id: 'd1', type: 'dano', family: 'efeito', props: { dice: '1d6', flat: 2, element: 'fogo' } };
     render(<NodeInspector node={node} edges={[]} onChange={vi.fn()} onRemove={onRemove} />);
     fireEvent.click(screen.getByRole('button', { name: 'Remover nó' }));
+    expect(confirmSpy).toHaveBeenCalled();
     expect(onRemove).toHaveBeenCalledWith('d1');
+    confirmSpy.mockRestore();
+  });
+
+  it('botão remover não chama onRemove quando a confirmação é cancelada', () => {
+    const onRemove = vi.fn();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const node: GraphNode = { id: 'd1', type: 'dano', family: 'efeito', props: { dice: '1d6', flat: 2, element: 'fogo' } };
+    render(<NodeInspector node={node} edges={[]} onChange={vi.fn()} onRemove={onRemove} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Remover nó' }));
+    expect(onRemove).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
   });
 
   it('nó de família gatilho sem pais (raiz estrutural) não mostra o botão remover', () => {
@@ -49,35 +62,67 @@ describe('NodeInspector', () => {
     expect(screen.getByText(/Selecione um nó/)).toBeTruthy();
   });
 
-  it('nó "aplicar_condicao" mostra a descrição da condição selecionada e permite editar duração/valor/chance', () => {
+  it('nó "aplicar_condicao" mostra a descrição da condição selecionada e permite editar duração/chance', () => {
     const onChange = vi.fn();
-    const node: GraphNode = { id: 'c1', type: 'aplicar_condicao', family: 'efeito', props: { classicKind: 'queimadura', rounds: 2, value: 2, chance: 100 } };
+    const node: GraphNode = { id: 'c1', type: 'aplicar_condicao', family: 'efeito', props: { conditionName: 'Queimando', rounds: 2, chance: 100 } };
     render(<NodeInspector node={node} edges={[]} onChange={onChange} onRemove={vi.fn()} />);
-    expect(screen.getByText(/dano de fogo no início de cada turno/)).toBeTruthy();
+    expect(screen.getByText(/dano de fogo por rodada/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Duração (rodadas)'), { target: { value: '4' } });
     expect(onChange).toHaveBeenCalledWith('c1', { rounds: 4 });
     fireEvent.change(screen.getByLabelText('Chance de aplicar (%)'), { target: { value: '50' } });
     expect(onChange).toHaveBeenCalledWith('c1', { chance: 50 });
   });
 
-  it('rótulo do campo "valor" é específico da condição selecionada (queimadura = dano de fogo)', () => {
-    const node: GraphNode = { id: 'c1', type: 'aplicar_condicao', family: 'efeito', props: { classicKind: 'queimadura', rounds: 2, value: 2, chance: 100 } };
-    render(<NodeInspector node={node} edges={[]} onChange={vi.fn()} onRemove={vi.fn()} />);
-    expect(screen.getByLabelText('Dano de fogo por rodada')).toBeTruthy();
-    expect(screen.queryByLabelText('Valor do efeito')).toBeFalsy();
+  it('mostra e permite editar os campos específicos da condição selecionada', () => {
+    const onChange = vi.fn();
+    const node: GraphNode = { id: 'c1', type: 'aplicar_condicao', family: 'efeito', props: { conditionName: 'Vulnerável', intensity: 'normal', rounds: 2, chance: 100, element: 'fogo', extraDamagePercent: 25 } };
+    render(<NodeInspector node={node} edges={[]} onChange={onChange} onRemove={vi.fn()} />);
+    expect(screen.getByLabelText('Elemento')).toBeTruthy();
+    expect(screen.getByLabelText('Dano extra (%)')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Dano extra (%)'), { target: { value: '60' } });
+    expect(onChange).toHaveBeenCalledWith('c1', { extraDamagePercent: 60 });
+    expect(screen.getByText(/\+25% de dano de fogo/)).toBeTruthy();
   });
 
-  it('condição sem magnitude própria (congelamento) oculta o campo de valor, mantendo duração/chance', () => {
-    const node: GraphNode = { id: 'c1', type: 'aplicar_condicao', family: 'efeito', props: { classicKind: 'congelamento', rounds: 1, value: 1, chance: 100 } };
-    render(<NodeInspector node={node} edges={[]} onChange={vi.fn()} onRemove={vi.fn()} />);
-    expect(screen.queryByLabelText('Valor do efeito')).toBeFalsy();
-    expect(screen.getByLabelText('Duração (rodadas)')).toBeTruthy();
-    expect(screen.getByLabelText('Chance de aplicar (%)')).toBeTruthy();
+  it('trocar a condição reinicia os campos específicos para o padrão da nova seleção', () => {
+    const onChange = vi.fn();
+    const node: GraphNode = { id: 'c1', type: 'aplicar_condicao', family: 'efeito', props: { conditionName: 'Vulnerável', intensity: 'normal', rounds: 2, chance: 100, element: 'fogo', extraDamagePercent: 90 } };
+    render(<NodeInspector node={node} edges={[]} onChange={onChange} onRemove={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('Condição'), { target: { value: 'Sangrando' } });
+    expect(onChange).toHaveBeenCalledWith('c1', expect.objectContaining({ conditionName: 'Sangrando', damagePerRound: 2, ignoresDefense: false }));
   });
 
-  it('rótulo do campo "valor" para molhado descreve o multiplicador de dano elétrico', () => {
-    const node: GraphNode = { id: 'c1', type: 'aplicar_condicao', family: 'efeito', props: { classicKind: 'molhado', rounds: 2, value: 2, chance: 100 } };
+  it('trocar a intensidade recalcula os valores padrão dos campos específicos', () => {
+    const onChange = vi.fn();
+    const node: GraphNode = { id: 'c1', type: 'aplicar_condicao', family: 'efeito', props: { conditionName: 'Queimando', intensity: 'normal', rounds: 2, chance: 100, damagePerRound: 2 } };
+    render(<NodeInspector node={node} edges={[]} onChange={onChange} onRemove={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('Intensidade'), { target: { value: 'forte' } });
+    expect(onChange).toHaveBeenCalledWith('c1', expect.objectContaining({ intensity: 'forte', damagePerRound: 3 }));
+  });
+
+  it('nó "modificar_valor" mostra só os campos relevantes pra operação/alvo escolhidos', () => {
+    const node: GraphNode = { id: 'm1', type: 'modificar_valor', family: 'efeito', props: { name: '', target: 'dano', operation: 'somar', value: 2, rounds: 2, chance: 100, stackRule: 'renovar' } };
     render(<NodeInspector node={node} edges={[]} onChange={vi.fn()} onRemove={vi.fn()} />);
-    expect(screen.getByLabelText('Vezes que o próximo dano elétrico é multiplicado')).toBeTruthy();
+    expect(screen.getByLabelText('Valor')).toBeTruthy();
+    expect(screen.queryByLabelText('Dado')).toBeFalsy(); // 'somar' não usa dado
+    expect(screen.getByLabelText('Filtro: elemento')).toBeTruthy(); // 'dano' aceita filtro de elemento
+    expect(screen.queryByLabelText('Filtro: tipo de teste')).toBeFalsy(); // só relevante pra target 'teste'
+    expect(screen.getByLabelText('Filtro: direção')).toBeTruthy(); // 'dano' aceita causado/recebido
+  });
+
+  it('nó "modificar_valor" troca os campos ao mudar para "adicionar dado" em "teste"', () => {
+    const node: GraphNode = { id: 'm1', type: 'modificar_valor', family: 'efeito', props: { name: '', target: 'teste', operation: 'adicionar_dado', dice: '1d6', rounds: 2, chance: 100, stackRule: 'renovar' } };
+    render(<NodeInspector node={node} edges={[]} onChange={vi.fn()} onRemove={vi.fn()} />);
+    expect(screen.getByLabelText('Dado')).toBeTruthy();
+    expect(screen.queryByLabelText('Valor')).toBeFalsy(); // 'adicionar_dado' usa dado, não valor
+    expect(screen.getByLabelText('Filtro: tipo de teste')).toBeTruthy(); // target 'teste'
+    expect(screen.queryByLabelText('Filtro: direção')).toBeFalsy(); // só relevante pra dano/cura
+  });
+
+  it('nó "modificar_valor" gera a descrição automática a partir dos campos', () => {
+    const node: GraphNode = { id: 'm1', type: 'modificar_valor', family: 'efeito', props: { name: '', target: 'teste', operation: 'somar', value: 2, rounds: 2, chance: 100, stackRule: 'renovar', filterTestKind: 'reacao' } };
+    render(<NodeInspector node={node} edges={[]} onChange={vi.fn()} onRemove={vi.fn()} />);
+    expect(screen.getByText(/Somar 2 em Teste/)).toBeTruthy();
+    expect(screen.getByText(/teste de reacao/)).toBeTruthy();
   });
 });

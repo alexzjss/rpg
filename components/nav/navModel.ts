@@ -11,12 +11,14 @@ export interface NavDest {
 }
 
 export const MODES: TabId[] = ['cena'];
-export const SATELLITES: TabId[] = ['characters', 'arsenal'];
-// Ordem das teclas 1..3
-export const NAV_ORDER: TabId[] = ['cena', 'characters', 'arsenal'];
+export const SATELLITES: TabId[] = [];
+// Ordem das teclas 1..
+export const NAV_ORDER: TabId[] = ['cena'];
 
-// NAV_DESTS mantém combat/journey (ainda são TabId até a Fase 4), mas eles
-// não aparecem em NAV_ORDER/MODES, portanto ficam inacessíveis pela navegação.
+// NAV_DESTS mantém combat/journey/characters/arsenal (ainda são TabId até a
+// limpeza de legado), mas eles não aparecem em NAV_ORDER/MODES/SATELLITES,
+// portanto ficam inacessíveis pela navegação — characters/arsenal agora vivem
+// como modais abertos a partir da Cena (RosterPanel), não como destinos de aba.
 export const NAV_DESTS: Record<TabId, NavDest> = {
   cena:       { id: 'cena',       label: 'Cena',        kind: 'mode',      icon: Compass },
   combat:     { id: 'combat',     label: 'Combate',     kind: 'mode',      icon: Swords },

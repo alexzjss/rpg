@@ -43,7 +43,6 @@ const ActionIconRail: React.FC<ActionIconRailProps> = ({
   selectedCategory,
   onSelectAction,
 }) => {
-  if (combatant.role === 'npc') return null;
 
   const isDefeated = combatant.currentHp <= 0;
   if (isDefeated) return null;

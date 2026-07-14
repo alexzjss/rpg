@@ -33,6 +33,10 @@ describe('listAbilityTemplates', () => {
       'forma_tecnica',
       'forma_especial',
       'estado_alvo',
+      'area_burst',
+      'golpe_carregado',
+      'combo_elemental',
+      'fase_chefe',
     ]);
     for (const template of templates) {
       const graph = template.build();
@@ -53,10 +57,10 @@ describe('listAbilityTemplates', () => {
   });
 
   it('ataque com aura e condicao inclui custo, dano e aplicacao de condicao configuravel', () => {
-    const graph = listAbilityTemplates().find(t => t.id === 'ataque_aura_condicao')!.build({ auraCost: 3, conditionKind: 'sangramento', conditionRounds: 4, conditionValue: 5 });
+    const graph = listAbilityTemplates().find(t => t.id === 'ataque_aura_condicao')!.build({ auraCost: 3, conditionKind: 'Sangrando', conditionRounds: 4, conditionValue: 5 });
     expect(graph.nodes.some(n => n.type === 'custo' && n.props.amount === 3)).toBe(true);
     expect(graph.nodes.some(n => n.type === 'dano')).toBe(true);
-    expect(graph.nodes.some(n => n.type === 'aplicar_condicao' && n.props.classicKind === 'sangramento' && n.props.rounds === 4)).toBe(true);
+    expect(graph.nodes.some(n => n.type === 'aplicar_condicao' && n.props.conditionName === 'Sangrando' && n.props.rounds === 4)).toBe(true);
   });
 
   it('reacao usa gatilho de alvejado e pode retaliar com dano', () => {
@@ -74,5 +78,35 @@ describe('listAbilityTemplates', () => {
     expect(graph.nodes.some(n => n.type === 'aplicar_como_efeito' && n.props.rounds === 6)).toBe(true);
     expect(graph.nodes.some(n => n.type === 'buff' && n.props.stat === 'aura_maxima' && n.props.value === 8)).toBe(true);
     expect(graph.nodes.some(n => n.type === 'cor_token' && n.props.color === '#22d3ee')).toBe(true);
+  });
+
+  it('explosao em area mira todos os inimigos e marca area no cabecalho', () => {
+    const graph = listAbilityTemplates().find(t => t.id === 'area_burst')!.build({ auraCost: 4, damageDice: '2d8' });
+    expect(graph.header.target).toEqual({ type: 'todos_inimigos' });
+    expect(graph.header.area).toMatchObject({ shape: 'circulo', size: 3 });
+    expect(graph.nodes.some(n => n.type === 'alvo' && n.props.scope === 'todos_inimigos')).toBe(true);
+    expect(graph.nodes.some(n => n.type === 'custo' && n.props.amount === 4)).toBe(true);
+  });
+
+  it('golpe carregado cria preparacao, dano e cooldown', () => {
+    const graph = listAbilityTemplates().find(t => t.id === 'golpe_carregado')!.build({ formRounds: 2, damageDice: '4d6' });
+    expect(graph.nodes.some(n => n.type === 'preparacao' && n.props.amount === 2)).toBe(true);
+    expect(graph.nodes.some(n => n.type === 'dano' && n.props.dice === '4d6')).toBe(true);
+    expect(graph.nodes.some(n => n.type === 'cooldown')).toBe(true);
+  });
+
+  it('combo elemental ramifica por condicao ativa e expoe raiz de combo', () => {
+    const graph = listAbilityTemplates().find(t => t.id === 'combo_elemental')!.build({ conditionKind: 'Molhado', stateDamageDice: '3d8' });
+    expect(graph.nodes.some(n => n.type === 'se_condicao_ativa' && n.props.conditionName === 'Molhado')).toBe(true);
+    expect(graph.nodes.some(n => n.type === 'dano' && n.props.dice === '3d8')).toBe(true);
+    expect(graph.nodes.some(n => n.type === 'em_combo')).toBe(true);
+  });
+
+  it('fase de chefe usa limiar de vida e composicao de forma', () => {
+    const graph = listAbilityTemplates().find(t => t.id === 'fase_chefe')!.build({ statePercent: 40, formBuffValue: 6, formColor: '#ff0000' });
+    expect(graph.nodes.some(n => n.type === 'se_vida_alvo' && n.props.percent === 40)).toBe(true);
+    expect(graph.nodes.some(n => n.type === 'aplicar_como_efeito')).toBe(true);
+    expect(graph.nodes.some(n => n.type === 'buff' && n.props.value === 6)).toBe(true);
+    expect(graph.nodes.some(n => n.type === 'cor_token' && n.props.color === '#ff0000')).toBe(true);
   });
 });

@@ -3,6 +3,7 @@ import type {
   TargetConfig, AreaConfig, ChargeConfig,
   ArsenalVisibility, ArsenalTag,
 } from './arsenal';
+import { getNodeType, type FieldSchema } from './nodeRegistry';
 
 export type NodeFamily = 'gatilho' | 'ramo' | 'alvo' | 'efeito';
 
@@ -36,6 +37,10 @@ export interface AbilityHeader {
   target: TargetConfig;
   area: AreaConfig | null;
   charges: ChargeConfig | null;
+  /** Só fica disponível enquanto uma das armas/formas listadas estiver equipada/ativa (mesma semântica de
+   *  ArsenalCard.weaponLinks/formLinks). Ausente/vazio = sempre disponível, independente de equipamento. */
+  weaponLinks?: string[];
+  formLinks?: string[];
 }
 
 export interface NodeFieldOverride { nodeId: string; field: string; value: unknown }
@@ -78,7 +83,23 @@ export function createAbilityGraph(
   };
 }
 
-/** Grafo efetivo no nível pedido: filtra nós por enabledFromLevel e aplica overrides acumulados até o nível. */
+/** Um override de nível é aplicado quando: o nó existe no grafo mesclado, e — se o tipo do nó declara
+ *  esse campo no seu FieldSchema — o valor bate com o tipo esperado pelo `kind` do campo. Campos que não
+ *  aparecem em `fields` (ex.: os específicos de cada condição em 'aplicar_condicao', dinâmicos por
+ *  seleção) passam sem checagem de tipo, só a existência do nó é exigida. */
+function overrideMatchesSchema(schema: FieldSchema | undefined, value: unknown): boolean {
+  if (!schema) return true;
+  switch (schema.kind) {
+    case 'numero': return typeof value === 'number';
+    case 'toggle': return typeof value === 'boolean';
+    case 'texto': case 'select': case 'elemento': case 'dado': return value === null || typeof value === 'string';
+    default: return true;
+  }
+}
+
+/** Grafo efetivo no nível pedido: filtra nós por enabledFromLevel e aplica overrides acumulados até o
+ *  nível — ignorando (sem quebrar) overrides que referenciam um nó inexistente ou um valor cujo tipo não
+ *  bate com o campo declarado, em vez de gravar um prop inválido que só quebraria depois, na interpretação. */
 export function mergeLevel(graph: AbilityGraph, level: number): AbilityGraph {
   const nodes = graph.nodes
     .filter(node => (node.enabledFromLevel ?? 1) <= level)
@@ -88,7 +109,10 @@ export function mergeLevel(graph: AbilityGraph, level: number): AbilityGraph {
     if (profile.level > level) break;
     for (const override of profile.overrides) {
       const node = byId.get(override.nodeId);
-      if (node) node.props[override.field] = override.value;
+      if (!node) continue;
+      const schema = getNodeType(node.type)?.fields.find(field => field.key === override.field);
+      if (!overrideMatchesSchema(schema, override.value)) continue;
+      node.props[override.field] = override.value;
     }
   }
   return { ...graph, nodes };

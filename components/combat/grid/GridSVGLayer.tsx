@@ -6,7 +6,6 @@ interface DragState {
   combatId: string;
   startPos: { x: number; y: number };
   currentDelta: { x: number; y: number };
-  deslocamento: number;
 }
 
 interface RulerLine {
@@ -61,53 +60,6 @@ const GridSVGLayer: React.FC<GridSVGLayerProps> = ({
   const ar = arenaDims.h > 0 ? arenaDims.w / arenaDims.h : 1; // aspect ratio w/h
 
   // ── Movement range ──────────────────────────────────────────
-  const rangeEl = (() => {
-    if (!dragState) return null;
-    const rangeR = dragState.deslocamento * (combat.escala ?? 10);
-    const dist = correctedDist(
-      { x: 0, y: 0 },
-      dragState.currentDelta,
-      ar,
-    );
-    const frac = rangeR > 0 ? dist / rangeR : 0;
-    const stroke = frac > 1 ? '#ef4444' : frac > 0.8 ? '#f59e0b' : '#22c55e';
-    const origin = dragState.startPos;
-    return (
-      <g>
-        {/* Range ellipse (visually circular on non-square arenas) */}
-        <ellipse
-          cx={origin.x} cy={origin.y}
-          rx={rangeR} ry={rangeR * ar}
-          fill={`${stroke}11`}
-          stroke={stroke}
-          strokeWidth={0.5}
-          strokeDasharray="2 1"
-          opacity={0.9}
-        />
-        {/* Line from origin to current drag position */}
-        <line
-          x1={origin.x} y1={origin.y}
-          x2={origin.x + dragState.currentDelta.x}
-          y2={origin.y + dragState.currentDelta.y}
-          stroke={stroke} strokeWidth={0.4}
-          strokeDasharray="1.5 1"
-          opacity={0.8}
-        />
-        {/* Distance badge */}
-        <text
-          x={origin.x + dragState.currentDelta.x / 2}
-          y={origin.y + dragState.currentDelta.y / 2 - 2}
-          textAnchor="middle"
-          fontSize={2.5}
-          fill={stroke}
-          fontWeight="bold"
-          style={{ fontFamily: 'monospace', filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.8))' }}
-        >
-          {dist.toFixed(1)}u
-        </text>
-      </g>
-    );
-  })();
 
   // ── Grid lines ───────────────────────────────────────────────
   const gridEl = (() => {
@@ -287,7 +239,6 @@ const GridSVGLayer: React.FC<GridSVGLayerProps> = ({
       {gridEl}
       {aoeEl}
       {fogEl}
-      {rangeEl}
       {rulersEl}
     </svg>
   );

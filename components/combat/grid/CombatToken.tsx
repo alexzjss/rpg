@@ -6,8 +6,8 @@ import {
 } from '../../../types';
 import TokenBase from './TokenBase';
 import TokenRing from './TokenRing';
-import ConditionBadges from './ConditionBadges';
 import StatPopups from './StatPopups';
+import { ConditionEffectOverlay, ConditionBadgeRow } from '../ConditionEffects';
 
 interface CombatTokenProps {
   combatant: Combatant;
@@ -36,7 +36,7 @@ const CombatToken: React.FC<CombatTokenProps> = ({
   displayPos, onPointerDown, onClick,
 }) => {
   const isDefeated = c.currentHp <= 0;
-  const teamColor = c.role === 'npc' ? '#d11f3f' : '#2fd4c4';
+  const teamColor = '#2fd4c4';
   const formaColor = activeForma?.color ?? null;
   const hpPct = c.maxHp > 0 ? (c.currentHp / c.maxHp) * 100 : 0;
 
@@ -100,6 +100,7 @@ const CombatToken: React.FC<CombatTokenProps> = ({
         transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
       }}>
         <TokenBase teamColor={teamColor} />
+        <ConditionEffectOverlay conditions={c.conditions} maxLayers={3} />
         <TokenRing
           isCurrent={isCurrent}
           isSelected={isSelected}
@@ -156,6 +157,8 @@ const CombatToken: React.FC<CombatTokenProps> = ({
           }} />
         </div>
 
+        <ConditionBadgeRow conditions={c.conditions} maxVisible={3} className="mp-token-conditions" />
+
         {/* Nome — fita-banner iluminada */}
         <div
           className={`mp-token-nameplate${isCurrent ? ' mp-token-nameplate--current' : ''}`}
@@ -180,7 +183,6 @@ const CombatToken: React.FC<CombatTokenProps> = ({
           {isDefeated ? '☠ DERROTADO' : c.name.split(' ')[0]}
         </div>
 
-        <ConditionBadges conditions={c.conditions} />
         <StatPopups popups={statPopups} />
 
         {isImpacted && (

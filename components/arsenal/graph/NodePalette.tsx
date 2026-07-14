@@ -1,12 +1,12 @@
 import React from 'react';
-import { Plus, Search, Wand2, Zap } from 'lucide-react';
+import { Search, Sparkles, Wand2, Zap } from 'lucide-react';
 import { listNodeTypes, type NodeTypeDef } from '../../../utils/nodeRegistry';
 import { listAbilityTemplates, type AbilityTemplate, type AbilityTemplateOptions } from '../../../utils/abilityTemplates';
 import type { AbilityGraph, NodeFamily } from '../../../utils/abilityGraph';
 import DiceFormulaInput from './DiceFormulaInput';
 import AbilityWizard from './AbilityWizard';
 
-const CATEGORY_ORDER = ['Combate', 'Defesa', 'Controle', 'Forma', 'Configuracao'];
+const CATEGORY_ORDER = ['Combate', 'Defesa', 'Controle', 'Forma', 'Configuração'];
 
 function groupByCategory(items: NodeTypeDef[]): [string, NodeTypeDef[]][] {
   const byCategory = new Map<string, NodeTypeDef[]>();
@@ -43,7 +43,7 @@ const FAMILY_ACCENT: Record<NodeFamily, { border: string; background: string }> 
   efeito: { border: 'rgba(45,212,191,.35)', background: 'rgba(45,212,191,.08)' },
 };
 const ELEMENTS = ['fisico', 'fogo', 'raio', 'agua', 'terra', 'vento', 'escuridao', 'luminoso', 'sangue', 'aura'];
-const CONDITIONS = ['queimadura','congelamento','lentidao','molhado','eletrocutado','sangramento','fraqueza','acelerado','desnorteado','enraizado','desequilibrado','fraturado','iluminado','amaldicoado','paralisado','confuso'];
+const CONDITIONS = ['Vulnerável','Exposto','Marcado','Sangrando','Queimando','Congelado','Eletrizado','Molhado','Enraizado','Frágil','Silenciado','Atordoado','Derrubado','Cego','Amedrontado'];
 
 const field: React.CSSProperties = { width: '100%', padding: '8px 10px', background: 'rgba(7,9,14,.78)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 8, color: '#f1f1f4', outline: 'none', fontSize: 12 };
 const sectionTitle: React.CSSProperties = { color: '#92929c', fontSize: 10, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', margin: '10px 0 6px' };
@@ -90,8 +90,60 @@ const TemplateCreatorModal: React.FC<{
   </div>
 );
 
+const AbilityCreatorSelector: React.FC<{
+  templates: AbilityTemplate[];
+  onClose: () => void;
+  onPickTemplate: (template: AbilityTemplate) => void;
+  onPickGuided: () => void;
+}> = ({ templates, onClose, onPickTemplate, onPickGuided }) => {
+  const [query, setQuery] = React.useState('');
+  const q = query.trim().toLocaleLowerCase('pt-BR');
+  const filtered = templates.filter(template => !q || template.label.toLocaleLowerCase('pt-BR').includes(q));
+  return (
+    <div role="dialog" aria-label="Criar habilidade" style={{ position: 'fixed', inset: 0, zIndex: 260, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,.62)' }}>
+      <div style={{ width: 'min(620px, calc(100vw - 32px))', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', border: '1px solid rgba(255,255,255,.14)', borderRadius: 8, background: '#101218', boxShadow: '0 24px 80px rgba(0,0,0,.45)', padding: 16 }}>
+        <strong style={{ display: 'block', color: '#f4f7fb', fontSize: 16, marginBottom: 4 }}>Criar habilidade</strong>
+        <p style={{ margin: '0 0 12px', color: '#8c95a3', fontSize: 12 }}>Escolha um modelo pronto pra ajustar, ou monte do zero com perguntas guiadas passo a passo.</p>
+        <label style={{ position: 'relative', display: 'block', marginBottom: 12 }}>
+          <Search size={14} style={{ position: 'absolute', left: 9, top: 9, color: '#697383' }} />
+          <input style={{ ...field, paddingLeft: 30 }} placeholder="Buscar modelo..." value={query} onChange={ev => setQuery(ev.target.value)} />
+        </label>
+        <button
+          type="button"
+          onClick={onPickGuided}
+          style={{ ...nodeButton, width: '100%', marginBottom: 10, borderColor: 'rgba(125,230,255,.4)', background: 'rgba(23,64,84,.28)', padding: '10px 12px' }}
+        >
+          <Wand2 size={14} />
+          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <strong style={{ fontSize: 12 }}>Personalizado (perguntas guiadas)</strong>
+            <span style={{ fontSize: 10, color: '#9fb4c2' }}>Wizard passo a passo pra montar do zero</span>
+          </span>
+        </button>
+        <div style={sectionTitle}>Modelos prontos · {filtered.length}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+          {filtered.map(template => (
+            <button
+              key={template.id} type="button" title={template.description}
+              onClick={() => onPickTemplate(template)}
+              style={{ ...nodeButton, width: '100%', flexDirection: 'column', alignItems: 'flex-start', gap: 4, padding: '10px 12px' }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Sparkles size={12} /> {template.label}</span>
+              <span style={{ fontSize: 10, color: '#7a7a86', fontWeight: 400 }}>{template.description}</span>
+            </button>
+          ))}
+          {!filtered.length && <p style={{ color: '#7a7a86', fontSize: 11 }}>Nenhum modelo encontrado.</p>}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+          <button type="button" style={{ ...nodeButton, width: 'auto' }} onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const NodePalette: React.FC<Props> = ({ pendingConnection, onPick, onLoadTemplate, onPickTrigger, onAddSecondaryTrigger, onWizardBuild }) => {
   const [query, setQuery] = React.useState('');
+  const [selectorOpen, setSelectorOpen] = React.useState(false);
   const [creator, setCreator] = React.useState<{ template: AbilityTemplate; draft: AbilityTemplateOptions } | null>(null);
   const [wizardOpen, setWizardOpen] = React.useState(false);
   const q = query.trim().toLocaleLowerCase('pt-BR');
@@ -104,7 +156,7 @@ const NodePalette: React.FC<Props> = ({ pendingConnection, onPick, onLoadTemplat
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 12, overflowY: 'auto' }}>
       <label style={{ position: 'relative' }}>
         <Search size={14} style={{ position: 'absolute', left: 9, top: 9, color: '#697383' }} />
-        <input style={{ ...field, paddingLeft: 30 }} placeholder="Buscar no" value={query} onChange={ev => setQuery(ev.target.value)} />
+        <input style={{ ...field, paddingLeft: 30 }} placeholder="Buscar nó ou tipo..." value={query} onChange={ev => setQuery(ev.target.value)} />
       </label>
 
       {!!triggers.length && <>
@@ -136,17 +188,10 @@ const NodePalette: React.FC<Props> = ({ pendingConnection, onPick, onLoadTemplat
 
       {!pendingConnection && <p style={{ color: '#7a7a86', fontSize: 11, marginTop: 8 }}>Selecione um "+" no canvas para conectar um novo no.</p>}
 
-      <div style={sectionTitle}>Modo simples</div>
-      <button type="button" style={familyButtonStyle('gatilho')} onClick={() => setWizardOpen(true)}>
-        <Wand2 size={12} /> Perguntas guiadas
+      <div style={sectionTitle}>Criar habilidade</div>
+      <button type="button" style={familyButtonStyle('gatilho')} onClick={() => setSelectorOpen(true)}>
+        <Wand2 size={12} /> Criar habilidade · {templates.length} modelos
       </button>
-
-      <div style={sectionTitle}>Criador rapido · {templates.length}</div>
-      {templates.filter(template => !q || template.label.toLocaleLowerCase('pt-BR').includes(q)).map(template => (
-        <button key={template.id} type="button" style={nodeButton} onClick={() => setCreator({ template, draft: { ...template.defaults } })} title={template.description}>
-          <Plus size={12} /> {template.label}
-        </button>
-      ))}
 
       {FAMILIES.map(family => {
         const items = listNodeTypes(family).filter(def => !q || def.label.toLocaleLowerCase('pt-BR').includes(q));
@@ -169,9 +214,19 @@ const NodePalette: React.FC<Props> = ({ pendingConnection, onPick, onLoadTemplat
         );
       })}
 
+      {selectorOpen && (
+        <AbilityCreatorSelector
+          templates={templates}
+          onClose={() => setSelectorOpen(false)}
+          onPickTemplate={template => { setSelectorOpen(false); setCreator({ template, draft: { ...template.defaults } }); }}
+          onPickGuided={() => { setSelectorOpen(false); setWizardOpen(true); }}
+        />
+      )}
+
       {wizardOpen && (
         <AbilityWizard
           onClose={() => setWizardOpen(false)}
+          onBack={() => { setWizardOpen(false); setSelectorOpen(true); }}
           onCreate={graph => { onWizardBuild(graph); setWizardOpen(false); }}
         />
       )}
@@ -181,7 +236,7 @@ const NodePalette: React.FC<Props> = ({ pendingConnection, onPick, onLoadTemplat
           template={creator.template}
           draft={creator.draft}
           onChange={patch => setCreator(cur => cur ? { ...cur, draft: { ...cur.draft, ...patch } } : cur)}
-          onClose={() => setCreator(null)}
+          onClose={() => { setCreator(null); setSelectorOpen(true); }}
           onCreate={() => {
             onLoadTemplate(creator.template.id, creator.draft);
             setCreator(null);

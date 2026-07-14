@@ -1,4 +1,6 @@
 import { registerNodeType } from '../nodeRegistry';
+import { resolveAttackAdjustments, resolveModifiedValue } from '../effectModifiers';
+import type { ModifierTestKind } from '../arsenal';
 
 export type TesteComparador = 'defesa_alvo' | 'valor_fixo' | 'aura_alvo' | 'porcentagem';
 
@@ -39,11 +41,30 @@ export function registerTestNodes(): void {
         ctx.hitTest = result;
         return result;
       }
-      const roll = ctx.roller(p.dice, 'Teste') + (p.modificador ?? 0);
-      const threshold = p.comparador === 'defesa_alvo' ? (ctx.scope[0]?.defense ?? 0) + (ctx.defenseBonus ?? 0)
-        : p.comparador === 'aura_alvo' ? ctx.actor.currentAura
-        : (p.valorFixo ?? 0);
-      const result = roll >= threshold;
+      const target = ctx.scope[0];
+      const testKind: ModifierTestKind | undefined = p.comparador === 'defesa_alvo' ? 'ataque' : p.comparador === 'aura_alvo' ? 'magico' : undefined;
+      const rollResult = resolveModifiedValue({
+        target: 'teste', baseDice: p.dice, baseFlat: p.modificador ?? 0, holder: ctx.actor,
+        ctx: { actor: ctx.actor, other: target, element: ctx.element, cardId: ctx.cardId, cardTags: ctx.cardTags, context: ctx.context, testKind },
+        roller: ctx.roller, label: 'Teste',
+      });
+      let threshold = p.valorFixo ?? 0;
+      let attackAdjustment = { attackerBonus: 0, defensePierce: 0, fearPenalty: 0, steps: [] as string[] };
+      if (p.comparador === 'defesa_alvo' && target) {
+        threshold = resolveModifiedValue({
+          target: 'defesa', baseFlat: target.defense, holder: target,
+          ctx: { actor: target, other: ctx.actor, element: ctx.element, cardId: ctx.cardId, cardTags: ctx.cardTags, context: ctx.context },
+          roller: ctx.roller, label: 'Defesa',
+        }).total + (ctx.defenseBonus ?? 0);
+        attackAdjustment = resolveAttackAdjustments(ctx.actor, target);
+        threshold -= attackAdjustment.defensePierce;
+      } else if (p.comparador === 'aura_alvo') {
+        threshold = ctx.actor.currentAura;
+      }
+      const effectiveRoll = rollResult.total + attackAdjustment.attackerBonus - attackAdjustment.fearPenalty;
+      const result = effectiveRoll >= threshold;
+      const breakdown = [...rollResult.steps, ...attackAdjustment.steps].join(' · ');
+      ctx.trace.push({ node: 'teste', detail: `${breakdown} vs. ${COMPARADOR_LABEL[p.comparador]} (${threshold})` });
       ctx.hitTest = result;
       return result;
     },

@@ -97,7 +97,7 @@ export function rollAttack(
   if (!needsTest) {
     return {
       attempted: false, crit: false, fumble: false, hit: true,
-      log: [logEntry('roll', `${actor.name} usa ${action.name}.`)],
+      log: [logEntry('roll', `${actor.name} usa ${action.name}.`, undefined, { actionLabel: action.name, actorLabel: actor.name, targetLabel: target.name, outcome: 'success' })],
     };
   }
 
@@ -127,7 +127,13 @@ export function rollAttack(
   const verdict = fumble ? 'ERRO CRÍTICO (nat 1)' : crit ? 'CRÍTICO!' : hit ? 'ACERTO' : 'ERRO';
   const defLabel = reactionRoll ? `reação ${defenseValue}` : `defesa ${defenseValue}`;
   const log = [logEntry('roll',
-    `${actor.name} usa ${action.name}: rola ${attackTotal}${mods ? ` (${mods})` : ''} vs ${defLabel} — ${verdict}.`)];
+    `${actor.name} usa ${action.name}: rola ${attackTotal}${mods ? ` (${mods})` : ''} vs ${defLabel} — ${verdict}.`, {
+      notation: r.notation, total: attackTotal, individualRolls: r.individualRolls,
+      numSides: r.numSides, bonus: r.bonus + (opts.attackBonus ?? 0) - penalty,
+      actorLabel: actor.name, targetLabel: target.name, targetValue: defenseValue, success: hit,
+    }, { actionLabel: action.name, actorLabel: actor.name, targetLabel: target.name,
+      outcome: fumble ? 'fumble' : crit ? 'critical' : hit ? 'success' : 'failure',
+      notes: reactionRoll ? [`Reação: ${reactionRoll.notation} = ${reactionRoll.total}`] : undefined })];
 
   return { attempted: true, roll: r, natural, attackTotal, defenseValue, reactionRoll, crit, fumble, hit, log };
 }
@@ -220,20 +226,30 @@ export function applyEffects(
       const affNote = affinity === 'fraco' ? ' — FRAQUEZA!' : affinity === 'resistente' ? ' — resistiu' : affinity === 'imune' ? ' — IMUNE' : '';
       const protNote = protApplied ? ` (Protegido −${PROTECT_VALUE})` : '';
       log.push(logEntry('damage',
-        `${target.name} sofre ${dmg} de dano de ${ef.element} [${rolled.notation}: ${rolled.individualRolls.join('+')}]${affNote}${protNote}.`));
+        `${target.name} sofre ${dmg} de dano de ${ef.element} [${rolled.notation}: ${rolled.individualRolls.join('+')}]${affNote}${protNote}.`, {
+          notation: rolled.notation, total: rolled.total, individualRolls: rolled.individualRolls,
+          numSides: rolled.numSides, bonus: rolled.bonus, actorLabel: actorName, targetLabel: target.name, success: dmg > 0,
+        }, { actorLabel: actorName, targetLabel: target.name, amount: dmg, resource: 'HP', damageType: ef.element,
+          outcome: affinity === 'imune' ? 'immune' : undefined,
+          notes: [...interaction.notes, ...(protApplied ? [`Protegido reduziu ${PROTECT_VALUE}`] : [])] }));
       for (const n of interaction.notes) log.push(logEntry('condition', `${n}.`));
     } else if (ef.kind === 'heal') {
-      const { value } = rollAmount(ef.dice, roll);
+      const { value, rolled } = rollAmount(ef.dice, roll);
       delta[ef.stat] = (delta[ef.stat] ?? 0) + value;
       const label = ef.stat === 'hp' ? 'HP' : ef.stat === 'aura' ? 'Aura' : 'Munição';
-      log.push(logEntry('damage', `${target.name} recupera ${value} de ${label}.`));
+      log.push(logEntry('damage', `${target.name} recupera ${value} de ${label}.`, rolled ? {
+        notation: rolled.notation, total: rolled.total, individualRolls: rolled.individualRolls,
+        numSides: rolled.numSides, bonus: rolled.bonus, actorLabel: actorName, targetLabel: target.name, success: true,
+      } : undefined, { actorLabel: actorName, targetLabel: target.name, amount: value, resource: label as 'HP' | 'Aura' | 'Munição' }));
     } else if (ef.kind === 'condition') {
       // ef.value é ignorado de propósito na v1: o tick usa os defaults dos presets.
       conditions = upsertCondition(conditions, ef.name, ef.duration);
-      log.push(logEntry('condition', `${target.name} recebe ${ef.name} (${ef.duration} rodada(s)).`));
+      log.push(logEntry('condition', `${target.name} recebe ${ef.name} (${ef.duration} rodada(s)).`, undefined,
+        { actorLabel: actorName, targetLabel: target.name, sourceLabel: ef.name, durationLabel: `${ef.duration} rodada${ef.duration === 1 ? '' : 's'}`, outcome: 'applied' }));
     } else if (ef.kind === 'buff') {
       buffs.push({ stat: ef.stat, value: ef.value, duration: ef.duration });
-      log.push(logEntry('condition', `${target.name} ganha ${ef.value >= 0 ? '+' : ''}${ef.value} de ${ef.stat} por ${ef.duration} rodada(s).`));
+      log.push(logEntry('condition', `${target.name} ganha ${ef.value >= 0 ? '+' : ''}${ef.value} de ${ef.stat} por ${ef.duration} rodada(s).`, undefined,
+        { actorLabel: actorName, targetLabel: target.name, sourceLabel: ef.stat, durationLabel: `${ef.duration} rodada${ef.duration === 1 ? '' : 's'}`, outcome: 'applied' }));
     }
   }
 

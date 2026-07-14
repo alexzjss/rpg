@@ -43,7 +43,7 @@ export const WIZARD_DEFAULTS: WizardAnswers = {
   element: 'fisico',
   healDice: '2d6',
   healFlat: 0,
-  conditionKind: 'queimadura',
+  conditionKind: 'Queimando',
   conditionRounds: 2,
   conditionValue: 2,
   conditionChance: 100,
@@ -112,8 +112,8 @@ export function buildGraphFromWizard(answers: WizardAnswers): AbilityGraph {
   if (answers.effectKinds.includes('condicao')) {
     const r = addNode(graph, parentId, 'aplicar_condicao', pendingBranch);
     graph = updateNodeProps(r.graph, r.nodeId, {
-      classicKind: answers.conditionKind, rounds: answers.conditionRounds,
-      value: answers.conditionValue, chance: answers.conditionChance,
+      conditionName: answers.conditionKind, rounds: answers.conditionRounds,
+      chance: answers.conditionChance,
     });
     parentId = r.nodeId; pendingBranch = undefined;
   }

@@ -13,26 +13,26 @@ function setup(activeTab = 'cena') {
 
 describe('useKeyboardNav', () => {
   it('"1" vai direto para cena', () => {
-    const { result, onSelect } = setup('arsenal');
+    const { result, onSelect } = setup('cena');
     act(() => result.current.handleKey({ key: '1', preventDefault() {} } as any));
     expect(onSelect).toHaveBeenCalledWith('cena');
   });
 
-  it('"2" seleciona o 2º destino (characters)', () => {
+  it('"2" não corresponde a nenhum destino (não chama onSelect)', () => {
     const { result, onSelect } = setup('cena');
     act(() => result.current.handleKey({ key: '2', preventDefault() {} } as any));
-    expect(onSelect).toHaveBeenCalledWith('characters');
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('ArrowRight cicla para a próxima aba', () => {
-    const { result, onSelect } = setup('cena'); // índice 0
+  it('ArrowRight com um único destino permanece em cena', () => {
+    const { result, onSelect } = setup('cena');
     act(() => result.current.handleKey({ key: 'ArrowRight', preventDefault() {} } as any));
-    expect(onSelect).toHaveBeenCalledWith('characters'); // índice 1
+    expect(onSelect).toHaveBeenCalledWith('cena');
   });
 
-  it('ArrowLeft de cena dá a volta para o último (arsenal)', () => {
+  it('ArrowLeft com um único destino permanece em cena', () => {
     const { result, onSelect } = setup('cena');
     act(() => result.current.handleKey({ key: 'ArrowLeft', preventDefault() {} } as any));
-    expect(onSelect).toHaveBeenCalledWith('arsenal');
+    expect(onSelect).toHaveBeenCalledWith('cena');
   });
 });

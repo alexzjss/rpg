@@ -2,6 +2,7 @@ import React from 'react';
 import { CombatState, Card, Item } from '../../types';
 import TurnOrderRow from './TurnOrderRow';
 import { ActionCategory } from './ActionIconRail';
+import { ConditionEffectStyles } from './ConditionEffects';
 
 interface TurnOrderPanelProps {
   combat: CombatState;
@@ -38,6 +39,7 @@ const TurnOrderPanel: React.FC<TurnOrderPanelProps> = ({
         backdropFilter: undefined,
       }}
     >
+      <ConditionEffectStyles />
       {/* Header */}
       {floating ? (
         <div className="mp-battle-panel-header" style={{ flexShrink: 0 }}>

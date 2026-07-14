@@ -29,4 +29,10 @@ describe('InitiativeTracker — turnos e caídos', () => {
     expect(onNext).toHaveBeenCalled();
     expect(onPrev).toHaveBeenCalled();
   });
+  it('abre a edição rápida com duplo clique no participante', () => {
+    const onEditParticipant = vi.fn();
+    render(<InitiativeTracker round={1} participants={[ch('p1', 'Shinkai')]} activeId="p1" onEditParticipant={onEditParticipant} />);
+    fireEvent.doubleClick(screen.getByTitle(/shinkai.*duplo clique/i));
+    expect(onEditParticipant).toHaveBeenCalledWith('p1');
+  });
 });

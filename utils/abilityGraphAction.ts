@@ -1,8 +1,9 @@
 import { rollDice } from './dice';
 import { mergeLevel, type AbilityGraph } from './abilityGraph';
-import type { ArsenalHolding, CooldownConfig, PreparationConfig } from './arsenal';
+import type { ArsenalHolding, CooldownConfig, ModifierContext, PreparationConfig } from './arsenal';
 import { INSTANT_PREPARATION } from './arsenal';
-import { interpretAbility, type TraceStep, type OngoingEffectIntent } from './abilityInterpreter';
+import { interpretAbility, type TraceStep, type OngoingEffectIntent, type MovementIntent } from './abilityInterpreter';
+import { resolveModifiedValue } from './effectModifiers';
 import type { ArsenalActorState } from './arsenalPipeline';
 
 export interface AbilityGraphActionRequest {
@@ -20,6 +21,14 @@ export interface AbilityGraphActionRequest {
   /** Alvos extras disponíveis para seletores 'todos_*' (ex.: o atacante original, numa reação de 'ao_ser_alvejado'),
    * mas que não entram no escopo padrão dos efeitos (só via um nó 'alvo' explícito). */
   additionalTargets?: ArsenalActorState[];
+  /** Marca esta resolução como uma reação (janela de "ao ser alvejado") — usado por ModifierFilter.contexts
+   *  dos modificadores de valor (buff/debuff v2), ex.: "+3 em testes de reação". */
+  isReaction?: boolean;
+  /** Nós iniciais opcionais para executar apenas um ramo salvo do grafo (ex.: efeito contínuo reagindo ao ser alvejado). */
+  entryNodeIds?: string[];
+  /** Alvos resolvidos geometricamente pela Cena (linha/raio/cone/quadrado, via utils/abilityArea.ts) — usados
+   *  pelo nó 'alvo' quando o escopo é uma forma de área; não entram no escopo padrão dos efeitos (só via o nó). */
+  areaTargets?: ArsenalActorState[];
 }
 
 export interface AbilityGraphActionResult {
@@ -36,16 +45,31 @@ export interface AbilityGraphActionResult {
   ongoingEffectIntents: OngoingEffectIntent[];
   /** Estado atualizado dos additionalTargets (ex.: o atacante, se um nó 'alvo' o incluiu no escopo e o afetou). */
   additionalTargets: ArsenalActorState[];
+  movementIntents: MovementIntent[];
+  /** Valor do nó 'esquiva', se presente — substitui o 1d20 fixo de resolveGraphProtection como defenseBonus externo. */
+  defenseRollOverride?: number;
+  /** Estado final dos areaTargets do request (ex.: dano aplicado pelo nó 'alvo' com escopo geométrico). */
+  areaTargets: ArsenalActorState[];
+  /** Pausa por escolha manual de alvo (nó 'alvo' com scope 'escolha') — a Cena deve pedir ao jogador que
+   *  escolha um alvo e retomar via entryNodeIds = pendingTargetChoice.nodeIds. */
+  pendingTargetChoice?: { nodeId: string; nodeIds: string[] };
 }
 
 function block(actor: ArsenalActorState, targets: ArsenalActorState[], reason: string): AbilityGraphActionResult {
-  return { status: 'bloqueada', reason, actor, targets, rolls: {}, hitTargetIds: [], defeatedIds: [], trace: [], fieldEffects: [], ongoingEffectIntents: [], additionalTargets: [] };
+  return { status: 'bloqueada', reason, actor, targets, rolls: {}, hitTargetIds: [], defeatedIds: [], trace: [], fieldEffects: [], ongoingEffectIntents: [], additionalTargets: [], movementIntents: [], areaTargets: [] };
 }
 
-/** Ids de todos os nós alcançáveis a partir de algum trigger (família 'gatilho') do grafo mesclado —
- * um nó solto sem trigger algum como ancestral não conta, mesmo que não tenha arestas de entrada. */
-function reachableNodeIds(graph: AbilityGraph): Set<string> {
-  const roots = graph.nodes.filter(n => n.family === 'gatilho');
+/** Ids de todos os nós alcançáveis a partir da(s) raiz(es) principal(is) (trigger de família 'gatilho' que não
+ * seja 'em_combo'/'enquanto_ativa') do grafo mesclado. Nós pendurados só numa raiz secundária (ex. um nó 'custo'
+ * debaixo de 'em_combo') não contam para custo/cooldown/preparação da habilidade base — esse ramo só roda como
+ * passe extra quando a habilidade é de fato usada em combo (ver resolveAbilityGraphAction), então contá-lo sempre
+ * cobraria/aplicaria configuração que não se aplicou no uso solo. Se o grafo não tiver raiz principal alguma
+ * (ex. um grafo de combo cujo único trigger é 'em_combo'), cai de volta para todas as raízes — senão nada seria
+ * alcançável nesse grafo. Um nó solto sem trigger algum como ancestral não conta, mesmo sem arestas de entrada. */
+export function reachableNodeIds(graph: AbilityGraph): Set<string> {
+  const allTriggers = graph.nodes.filter(n => n.family === 'gatilho');
+  const primaryTriggers = allTriggers.filter(n => n.type !== 'enquanto_ativa' && n.type !== 'em_combo');
+  const roots = primaryTriggers.length ? primaryTriggers : allTriggers;
   const reachable = new Set<string>(roots.map(r => r.id));
   const queue = [...reachable];
   while (queue.length) {
@@ -71,11 +95,12 @@ export function graphCosts(graph: AbilityGraph, level: number): GraphCosts {
 
 export interface GraphComboConfig { stackKey: string; maxStacks: number }
 
-/** Configuração de combo do grafo: presente se houver uma raiz secundária 'em_combo'. */
+/** Configuração de combo do grafo: presente se houver uma raiz secundária 'em_combo'. Não filtra por
+ * `reachableNodeIds` — 'em_combo' é sempre uma raiz estrutural válida por si só (ver reachableNodeIds), mesmo
+ * quando o grafo também tem um trigger principal. */
 export function graphComboConfig(graph: AbilityGraph, level: number): GraphComboConfig | null {
   const merged = mergeLevel(graph, level);
-  const reachable = reachableNodeIds(merged);
-  const node = merged.nodes.find(n => reachable.has(n.id) && n.type === 'em_combo');
+  const node = merged.nodes.find(n => n.type === 'em_combo');
   if (!node) return null;
   const props = node.props as { stackKey?: string; maxStacks?: number };
   return { stackKey: props.stackKey ?? '', maxStacks: props.maxStacks ?? 2 };
@@ -139,14 +164,24 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
   const actor: ArsenalActorState = { ...request.actor, holdings: request.actor.holdings.map(h => ({ ...h })) };
   const targets = request.targets.map(t => ({ ...t }));
   const additionalTargets = (request.additionalTargets ?? []).map(t => ({ ...t }));
+  const areaTargets = (request.areaTargets ?? []).map(t => ({ ...t }));
   const holding = actor.holdings.find(h => h.cardId === request.graph.id);
 
   if (!request.resumePreparation) {
     if (holding?.cooldownRemaining && holding.cooldownRemaining > 0) return block(actor, targets, 'Habilidade em cooldown');
     if (header.charges && (holding?.currentCharges ?? header.charges.current) <= 0) return block(actor, targets, 'Habilidade sem cargas');
   }
-  const costs = [graphCosts(request.graph, request.level), ...combos.map(c => graphCosts(c.graph, c.level))]
+  const baseCosts = [graphCosts(request.graph, request.level), ...combos.map(c => graphCosts(c.graph, c.level))]
     .reduce((total, c) => ({ aura: total.aura + c.aura, municao: total.municao + c.municao, vida: total.vida + c.vida }), { aura: 0, municao: 0, vida: 0 });
+  const modifierCtx = {
+    actor, cardId: request.graph.id, cardTags: header.tags, element: header.element,
+    context: (request.isReaction ? 'reacao' : request.resumePreparation ? 'preparacao' : combos.length > 0 ? 'combo' : 'normal') as ModifierContext,
+  };
+  const costs = {
+    ...baseCosts,
+    aura: Math.max(0, resolveModifiedValue({ target: 'custo_aura', baseFlat: baseCosts.aura, holder: actor, ctx: modifierCtx, roller }).total),
+    municao: Math.max(0, resolveModifiedValue({ target: 'custo_municao', baseFlat: baseCosts.municao, holder: actor, ctx: modifierCtx, roller }).total),
+  };
   if (!request.resumePreparation) {
     if (costs.aura > actor.currentAura) return block(actor, targets, 'Aura insuficiente');
     if (costs.municao > actor.currentAmmo) return block(actor, targets, 'Munição insuficiente');
@@ -160,7 +195,7 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
   if (!request.resumePreparation && preparation.timing.type !== 'instantaneo') {
     return {
       status: 'preparando', actor, targets, preparation,
-      rolls: {}, hitTargetIds: [], defeatedIds: [], trace: [], fieldEffects: [], ongoingEffectIntents: [], additionalTargets,
+      rolls: {}, hitTargetIds: [], defeatedIds: [], trace: [], fieldEffects: [], ongoingEffectIntents: [], additionalTargets, movementIntents: [], areaTargets: [],
     };
   }
 
@@ -170,10 +205,14 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
   let passActor = actor;
   const trace: TraceStep[] = [];
   const ongoingEffectIntents: OngoingEffectIntent[] = [];
+  const movementIntents: MovementIntent[] = [];
+  let defenseRollOverride: number | undefined;
+  let pendingTargetChoice: { nodeId: string; nodeIds: string[] } | undefined;
   const isCombo = combos.length > 0;
   const hitTargetIds: string[] = [];
   const resultTargetById = new Map<string, ArsenalActorState>();
   let currentAdditionalTargets = additionalTargets;
+  let currentAreaTargets = areaTargets;
 
   for (const originalTarget of targets) {
     let currentTarget = originalTarget;
@@ -181,35 +220,46 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
     for (const pass of passesFor()) {
       const passResult = interpretAbility(pass.graph, pass.level, {
         actor: passActor, primaryTargets: [currentTarget], allTargets: [passActor, ...targets, ...currentAdditionalTargets], roller, defenseBonus,
-      });
+        areaTargets: currentAreaTargets,
+        context: request.isReaction ? 'reacao' : request.resumePreparation ? 'preparacao' : 'normal',
+      }, request.entryNodeIds?.length ? { entryNodeIds: request.entryNodeIds } : undefined);
       hit = hit && (passResult.hitTest ?? true);
       passActor = passResult.actor;
       currentTarget = passResult.targets.find(rt => rt.id === currentTarget.id) ?? currentTarget;
       currentAdditionalTargets = currentAdditionalTargets.map(t => passResult.targets.find(rt => rt.id === t.id) ?? t);
+      currentAreaTargets = currentAreaTargets.map(t => passResult.targets.find(rt => rt.id === t.id) ?? t);
       trace.push(...passResult.trace);
       ongoingEffectIntents.push(...passResult.ongoingEffectIntents);
+      movementIntents.push(...passResult.movementIntents);
+      if (passResult.defenseRollOverride !== undefined) defenseRollOverride = passResult.defenseRollOverride;
+      if (passResult.pendingTargetChoice) pendingTargetChoice = passResult.pendingTargetChoice;
 
       if (isCombo) {
         const comboResult = interpretAbility(pass.graph, pass.level, {
           actor: passActor, primaryTargets: [currentTarget], allTargets: [passActor, ...targets, ...currentAdditionalTargets], roller, defenseBonus,
+          areaTargets: currentAreaTargets,
+          context: 'combo',
         }, { entryNodeIds: findEntryNodeIds(pass.graph, pass.level, 'em_combo') });
         passActor = comboResult.actor;
         currentTarget = comboResult.targets.find(rt => rt.id === currentTarget.id) ?? currentTarget;
         currentAdditionalTargets = currentAdditionalTargets.map(t => comboResult.targets.find(rt => rt.id === t.id) ?? t);
+        currentAreaTargets = currentAreaTargets.map(t => comboResult.targets.find(rt => rt.id === t.id) ?? t);
         trace.push(...comboResult.trace);
         ongoingEffectIntents.push(...comboResult.ongoingEffectIntents);
+        movementIntents.push(...comboResult.movementIntents);
       }
     }
     if (hit) hitTargetIds.push(originalTarget.id);
     resultTargetById.set(originalTarget.id, currentTarget);
   }
   additionalTargets.splice(0, additionalTargets.length, ...currentAdditionalTargets);
+  areaTargets.splice(0, areaTargets.length, ...currentAreaTargets);
 
   if (holding) {
     const cooldown = graphCooldown(request.graph, request.level);
     if (cooldown.type !== 'sem_cooldown') {
-      holding.cooldownRemaining = cooldown.type === 'turnos' || cooldown.type === 'rodadas' || cooldown.type === 'usos'
-        ? cooldown.amount : 1;
+      const baseAmount = cooldown.type === 'turnos' || cooldown.type === 'rodadas' || cooldown.type === 'usos' ? cooldown.amount : 1;
+      holding.cooldownRemaining = Math.max(0, resolveModifiedValue({ target: 'cooldown', baseFlat: baseAmount, holder: passActor, ctx: { ...modifierCtx, actor: passActor }, roller }).total);
     }
     if (header.charges) holding.currentCharges = Math.max(0, (holding.currentCharges ?? header.charges.current) - 1);
   }
@@ -227,6 +277,10 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
     fieldEffects: [],
     ongoingEffectIntents,
     additionalTargets,
+    movementIntents,
+    defenseRollOverride,
+    areaTargets,
+    pendingTargetChoice,
   };
 }
 
@@ -264,6 +318,44 @@ export function graphFormaVisual(graph: AbilityGraph, level: number): GraphForma
     iconOverride: (iconNode?.props as { icon?: string })?.icon,
     hpBonus, auraBonus,
   };
+}
+
+/** Equivalente de `availableCardIds` (arsenalState.ts) para o catálogo de habilidades-grafo: uma habilidade
+ *  com `header.weaponLinks`/`header.formLinks` só fica disponível enquanto uma das armas/formas listadas
+ *  estiver equipada/ativa — permite que uma forma-grafo "conceda" outras habilidades-grafo enquanto ativa,
+ *  do mesmo jeito que `FormModule.grantedAbilityIds` faz para cartas clássicas. */
+export function availableAbilityGraphIds(
+  loadout: { holdings: readonly { cardId: string; quantity: number }[]; equippedWeaponIds: readonly string[]; activeFormIds: readonly string[] },
+  catalog: readonly AbilityGraph[],
+): string[] {
+  const owned = new Set(loadout.holdings.filter(h => h.quantity > 0).map(h => h.cardId));
+  for (const graph of catalog) {
+    const hasLinks = (graph.header.weaponLinks?.length ?? 0) > 0 || (graph.header.formLinks?.length ?? 0) > 0;
+    if (!hasLinks || !owned.has(graph.id)) continue;
+    const unlocked = (graph.header.weaponLinks ?? []).some(id => loadout.equippedWeaponIds.includes(id))
+      || (graph.header.formLinks ?? []).some(id => loadout.activeFormIds.includes(id));
+    if (!unlocked) owned.delete(graph.id);
+  }
+  return [...owned];
+}
+
+/** Equivalente de `unlockedCardIds` (arsenalState.ts) para o catálogo de habilidades-grafo: casa os
+ *  critérios de um nó 'liberar_cartas' (id explícito, tag ou elemento) contra `header.tags`/`header.element`. */
+export function unlockedAbilityGraphIds(
+  criteria: readonly { cardIds: string[]; tags: string[]; element: string | null; cardType: string | null }[],
+  catalog: readonly AbilityGraph[],
+): string[] {
+  const ids = new Set<string>();
+  for (const c of criteria) {
+    for (const id of c.cardIds) ids.add(id);
+    if (!c.tags.length && !c.element) continue;
+    for (const graph of catalog) {
+      const matchesTag = c.tags.length > 0 && c.tags.some(tag => (graph.header.tags as string[] | undefined)?.includes(tag));
+      const matchesElement = !!c.element && graph.header.element === c.element;
+      if (matchesTag || matchesElement) ids.add(graph.id);
+    }
+  }
+  return [...ids];
 }
 
 export interface GraphFormAvailability {
