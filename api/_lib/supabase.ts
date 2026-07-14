@@ -11,6 +11,7 @@ export async function dbRequest<T>(path: string, init: RequestInit = {}): Promis
     headers: { apikey: key, 'content-type': 'application/json', ...(init.headers ?? {}) },
   });
   if (!response.ok) throw new Error(`Database request failed (${response.status})`);
-  if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
+  const body = await response.text();
+  if (!body.trim()) return undefined as T;
+  return JSON.parse(body) as T;
 }
