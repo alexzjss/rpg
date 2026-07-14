@@ -2892,20 +2892,17 @@ const App: React.FC = () => {
   
   const selectedInventoryChar = useMemo(() => characters.find(c => c.id === selectedInventoryCharId), [characters, selectedInventoryCharId]);
 
-  // ── Salvar manualmente agora (Ctrl+S ou botão): exporta arsenal + elenco
-  // como JSON de dados puros (sem imagens) para um arquivo escolhido pelo usuário.
+  // Salvar manualmente agora (Ctrl+S ou botão): exporta o snapshot completo e
+  // versionado. Esse mesmo arquivo pode restaurar o app local ou migrar a
+  // campanha para a persistência online.
   const handleManualSave = async () => {
     if (isLoading) return;
     try {
-      const strippedGrimoire = grimoire.map(({ icon, iconPosition, ...rest }) => rest);
-      const strippedCharacters = latestCharactersRef.current.map(
-        ({ icon, iconPosition, bannerImage, bannerImagePosition, ...rest }) => rest
-      );
+      const current = await DatabaseService.initialize();
       const payload = {
-        exportedAt: new Date().toISOString(),
         version: SNAPSHOT_VERSION,
-        grimoire: strippedGrimoire,
-        characters: strippedCharacters,
+        savedAt: new Date().toISOString(),
+        ...current,
       };
       const json = JSON.stringify(payload, null, 2);
       const filename = `rpg-codex-backup-${new Date().toISOString().slice(0, 10)}.json`;
