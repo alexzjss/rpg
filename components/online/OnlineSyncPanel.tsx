@@ -3,6 +3,7 @@ import { DatabaseService, SNAPSHOT_VERSION, type AppSnapshot } from '../../utils
 import { OnlineCampaign } from '../../online/campaignClient';
 import { OnlineAccounts, type CampaignAccount } from '../../online/accountClient';
 import { compactSnapshotForUpload } from '../../online/compactSnapshot';
+import { OnlineActionRequests, type PendingActionRequest } from '../../online/actionRequestClient';
 
 export default function OnlineSyncPanel() {
   const [revision, setRevision] = React.useState(0);
@@ -13,6 +14,7 @@ export default function OnlineSyncPanel() {
   const [characters, setCharacters] = React.useState<{ id: string; name: string }[]>([]);
   const [accessForm, setAccessForm] = React.useState({ characterId: '', username: '', password: '' });
   const [accessStatus, setAccessStatus] = React.useState('');
+  const [requests, setRequests] = React.useState<PendingActionRequest[]>([]);
   const refresh = React.useCallback(async () => {
     try {
       const stored = await OnlineCampaign.load();
@@ -28,7 +30,9 @@ export default function OnlineSyncPanel() {
       setAccounts(found);
     } catch (error) { setAccessStatus(error instanceof Error ? error.message : 'Falha ao carregar acessos.'); }
   }, []);
-  React.useEffect(() => { void refresh(); void refreshAccounts(); }, [refresh, refreshAccounts]);
+  const refreshRequests = React.useCallback(async () => { try { setRequests(await OnlineActionRequests.list()); } catch { /* o status principal já cobre falhas de conexão */ } }, []);
+  React.useEffect(() => { void refresh(); void refreshAccounts(); void refreshRequests(); const timer = window.setInterval(refreshRequests, 3000); return () => window.clearInterval(timer); }, [refresh, refreshAccounts, refreshRequests]);
+  const decideRequest = async (id: string, decision: 'approved' | 'rejected') => { setBusy(true); try { await OnlineActionRequests.decide(id, decision); await refreshRequests(); setStatus(decision === 'approved' ? 'Ação aprovada. A execução automática será conectada ao motor de combate na próxima etapa.' : 'Ação rejeitada.'); } catch (error) { setStatus(error instanceof Error ? error.message : 'Falha ao decidir solicitação.'); } finally { setBusy(false); } };
   const uploadLocal = async () => {
     if (!window.confirm('Enviar o estado local atual para o Supabase? O cache local será preservado.')) return;
     setBusy(true); setStatus('Preparando dados locais…');
@@ -72,6 +76,7 @@ export default function OnlineSyncPanel() {
     <p style={{ color: '#9ca3af', lineHeight: 1.6 }}>O Supabase recebe uma cópia versionada da campanha e o armazenamento local continua intacto.</p>
     <p><strong>Revisão:</strong> {revision || 'Nenhuma'} · <strong>Atualização:</strong> {onlineDate ? new Date(onlineDate).toLocaleString('pt-BR') : '—'}</p>
     <p role="status" style={{ color: '#cbd5e1', minHeight: 20 }}>{status}</p>
+    <section style={{ margin: '18px 0 24px', padding: 16, border: requests.length ? '1px solid #b7791f' : '1px solid rgba(255,255,255,.08)', borderRadius: 12, background: 'rgba(0,0,0,.2)' }}><h3 style={{ margin: '0 0 10px', color: '#e8d19b' }}>Solicitações de ação {requests.length ? `(${requests.length})` : ''}</h3>{requests.length ? <div style={{ display: 'grid', gap: 9 }}>{requests.map(request => <div key={request.id} style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', padding: 11, borderRadius: 9, background: '#111827' }}><span><strong>{request.actorName}</strong> quer usar <strong>{request.actionName}</strong><small style={{ display: 'block', color: '#9ca3af' }}>{new Date(request.created_at).toLocaleTimeString('pt-BR')}</small></span><span style={{ display: 'flex', gap: 6 }}><button disabled={busy} onClick={() => decideRequest(request.id, 'rejected')} style={{ padding: '8px 10px', borderRadius: 7, border: '1px solid #ef4444', background: 'transparent', color: '#fca5a5' }}>REJEITAR</button><button disabled={busy} onClick={() => decideRequest(request.id, 'approved')} style={{ padding: '8px 10px', borderRadius: 7, border: 0, background: '#15803d', color: '#fff' }}>APROVAR</button></span></div>)}</div> : <p style={{ margin: 0, color: '#9ca3af' }}>Nenhum pedido pendente.</p>}</section>
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
       <label style={{ padding: '12px 18px', borderRadius: 10, background: busy ? '#4b5563' : '#2563eb', color: '#fff', fontWeight: 900, cursor: busy ? 'wait' : 'pointer' }}>IMPORTAR ARQUIVO DE BACKUP<input type="file" accept="application/json,.json" onChange={importBackup} disabled={busy} style={{ display: 'none' }} /></label>
       <button onClick={uploadLocal} disabled={busy} style={{ padding: '12px 18px', borderRadius: 10, border: '1px solid #d9b76e', background: 'transparent', color: '#d9b76e', fontWeight: 900 }}>{busy ? 'ENVIANDO…' : 'ENVIAR CACHE DESTE NAVEGADOR'}</button>
