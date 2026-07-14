@@ -374,7 +374,7 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
   const actorState = (character:Character):ArsenalActorState => {
     const defense = migrateCharacterDefense(character);
     return {
-      id:character.id, teamId:party.some(p=>p.id===character.id)?'party':'npc', name:character.name,
+      id:character.id, teamId:character.teamOverride??(party.some(p=>p.id===character.id)?'party':'npc'), name:character.name,
       currentHp:character.currentHp,maxHp:character.maxHp,currentAura:character.currentAura,maxAura:character.maxAura,
       currentAmmo:character.currentAmmo,maxAmmo:character.maxAmmo,
       defense:character.defense??10,
@@ -1556,6 +1556,19 @@ const CenaTab: React.FC<CenaTabProps> = ({ cena, characters, cards, seals, items
     for (const [id, characterUpdates] of updates) {
       if (party.some(character => character.id === id)) updateCharacterStats(id, characterUpdates);
       else next = updateNpcStats(next, id, characterUpdates);
+    }
+
+    if (encNext.round !== cena.encounter.round) {
+      const expiredSummons = next.npcRoster.filter(npc => (npc.summonedRoundsRemaining ?? 0) === 1);
+      const expiredIds = new Set(expiredSummons.map(npc => npc.id));
+      const npcRoster = next.npcRoster
+        .filter(npc => !expiredIds.has(npc.id))
+        .map(npc => (npc.summonedRoundsRemaining ?? 0) > 1 ? { ...npc, summonedRoundsRemaining: npc.summonedRoundsRemaining! - 1 } : npc);
+      if (expiredIds.size) {
+        const tokens = { ...next.tokens }; expiredIds.forEach(id => delete tokens[id]);
+        next = { ...next, npcRoster, tokens, encounter: { ...next.encounter, order: next.encounter.order.filter(entry => !expiredIds.has(entry.refId)) } };
+        next = appendLog(next, expiredSummons.map(npc => logEntry('system', `${npc.name} desaparece ao fim da invocação.`)));
+      } else next = { ...next, npcRoster };
     }
 
     if (encNext.round !== cena.encounter.round && next.encounter.activeFormas.length) {

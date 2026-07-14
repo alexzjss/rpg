@@ -2,7 +2,7 @@ import { rollDice } from './dice';
 import { mergeLevel, type AbilityGraph } from './abilityGraph';
 import type { ArsenalHolding, CooldownConfig, ModifierContext, PreparationConfig } from './arsenal';
 import { INSTANT_PREPARATION } from './arsenal';
-import { interpretAbility, type TraceStep, type OngoingEffectIntent, type MovementIntent } from './abilityInterpreter';
+import { interpretAbility, type TraceStep, type OngoingEffectIntent, type MovementIntent, type SummonIntent, type TransformIntent } from './abilityInterpreter';
 import { resolveModifiedValue } from './effectModifiers';
 import type { ArsenalActorState } from './arsenalPipeline';
 
@@ -46,6 +46,8 @@ export interface AbilityGraphActionResult {
   /** Estado atualizado dos additionalTargets (ex.: o atacante, se um nó 'alvo' o incluiu no escopo e o afetou). */
   additionalTargets: ArsenalActorState[];
   movementIntents: MovementIntent[];
+  summonIntents: SummonIntent[];
+  transformIntents: TransformIntent[];
   /** Valor do nó 'esquiva', se presente — substitui o 1d20 fixo de resolveGraphProtection como defenseBonus externo. */
   defenseRollOverride?: number;
   /** Estado final dos areaTargets do request (ex.: dano aplicado pelo nó 'alvo' com escopo geométrico). */
@@ -56,7 +58,7 @@ export interface AbilityGraphActionResult {
 }
 
 function block(actor: ArsenalActorState, targets: ArsenalActorState[], reason: string): AbilityGraphActionResult {
-  return { status: 'bloqueada', reason, actor, targets, rolls: {}, hitTargetIds: [], defeatedIds: [], trace: [], fieldEffects: [], ongoingEffectIntents: [], additionalTargets: [], movementIntents: [], areaTargets: [] };
+  return { status: 'bloqueada', reason, actor, targets, rolls: {}, hitTargetIds: [], defeatedIds: [], trace: [], fieldEffects: [], ongoingEffectIntents: [], additionalTargets: [], movementIntents: [], summonIntents: [], transformIntents: [], areaTargets: [] };
 }
 
 /** Ids de todos os nós alcançáveis a partir da(s) raiz(es) principal(is) (trigger de família 'gatilho' que não
@@ -195,7 +197,7 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
   if (!request.resumePreparation && preparation.timing.type !== 'instantaneo') {
     return {
       status: 'preparando', actor, targets, preparation,
-      rolls: {}, hitTargetIds: [], defeatedIds: [], trace: [], fieldEffects: [], ongoingEffectIntents: [], additionalTargets, movementIntents: [], areaTargets: [],
+      rolls: {}, hitTargetIds: [], defeatedIds: [], trace: [], fieldEffects: [], ongoingEffectIntents: [], additionalTargets, movementIntents: [], summonIntents: [], transformIntents: [], areaTargets: [],
     };
   }
 
@@ -206,6 +208,8 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
   const trace: TraceStep[] = [];
   const ongoingEffectIntents: OngoingEffectIntent[] = [];
   const movementIntents: MovementIntent[] = [];
+  const summonIntents: SummonIntent[] = [];
+  const transformIntents: TransformIntent[] = [];
   let defenseRollOverride: number | undefined;
   let pendingTargetChoice: { nodeId: string; nodeIds: string[] } | undefined;
   const isCombo = combos.length > 0;
@@ -231,6 +235,8 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
       trace.push(...passResult.trace);
       ongoingEffectIntents.push(...passResult.ongoingEffectIntents);
       movementIntents.push(...passResult.movementIntents);
+      summonIntents.push(...passResult.summonIntents);
+      transformIntents.push(...passResult.transformIntents);
       if (passResult.defenseRollOverride !== undefined) defenseRollOverride = passResult.defenseRollOverride;
       if (passResult.pendingTargetChoice) pendingTargetChoice = passResult.pendingTargetChoice;
 
@@ -247,6 +253,8 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
         trace.push(...comboResult.trace);
         ongoingEffectIntents.push(...comboResult.ongoingEffectIntents);
         movementIntents.push(...comboResult.movementIntents);
+        summonIntents.push(...comboResult.summonIntents);
+        transformIntents.push(...comboResult.transformIntents);
       }
     }
     if (hit) hitTargetIds.push(originalTarget.id);
@@ -255,7 +263,7 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
   additionalTargets.splice(0, additionalTargets.length, ...currentAdditionalTargets);
   areaTargets.splice(0, areaTargets.length, ...currentAreaTargets);
 
-  if (holding) {
+  if (holding && !request.resumePreparation) {
     const cooldown = graphCooldown(request.graph, request.level);
     if (cooldown.type !== 'sem_cooldown') {
       const baseAmount = cooldown.type === 'turnos' || cooldown.type === 'rodadas' || cooldown.type === 'usos' ? cooldown.amount : 1;
@@ -278,6 +286,8 @@ export function resolveAbilityGraphAction(request: AbilityGraphActionRequest): A
     ongoingEffectIntents,
     additionalTargets,
     movementIntents,
+    summonIntents,
+    transformIntents,
     defenseRollOverride,
     areaTargets,
     pendingTargetChoice,

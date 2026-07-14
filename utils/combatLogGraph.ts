@@ -39,7 +39,8 @@ export function buildAbilityGraphCombatLog(input: {
       continue;
     }
     const after = result.targets.find(target => target.id === before.id)
-      ?? result.additionalTargets.find(target => target.id === before.id);
+      ?? result.additionalTargets.find(target => target.id === before.id)
+      ?? result.areaTargets.find(target => target.id === before.id);
     if (!after) continue;
     const hpDelta = after.currentHp - before.currentHp;
     const auraDelta = after.currentAura - before.currentAura;

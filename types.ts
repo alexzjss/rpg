@@ -25,6 +25,9 @@ export interface ArsenalBase {
   image: string;
   description: string;
   isHidden?: boolean;
+  /** Equipe explícita para participantes invocados que vivem no roster de NPCs. */
+  teamOverride?: 'party' | 'npc';
+  summonedRoundsRemaining?: number;
 }
 
 export interface CardLevel {

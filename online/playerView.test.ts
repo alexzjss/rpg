@@ -23,4 +23,11 @@ describe('buildPlayerCampaignView', () => {
     expect(view.permissions.canAct).toBe(false);
     expect(view.permissions.canMove).toBe(false);
   });
+
+  it('inclui habilidades em grafo que pertencem ao personagem', () => {
+    const hero: any = { id: 'hero', name: 'Heroína', icon: '', maxHp: 10, currentHp: 10, maxAura: 5, currentAura: 5, maxAmmo: 0, currentAmmo: 0, baseInitiative: 1, cardIds: [], conditions: [], items: [], arsenal: [{ cardId: 'graph-1', quantity: 1, equipped: true, active: true }] };
+    const graph: any = { id: 'graph-1', header: { name: 'Rajada', description: 'Ataque em grafo', icon: '', tags: [], target: { type: 'um_alvo' } } };
+    const snapshot: any = { characters: [hero], grimoire: [], abilityGraphs: [graph], cena: { npcRoster: [], tokens: {}, scene: { locationName: '', subtitle: '', image: '', isNight: false }, encounter: { isActive: false, isPaused: false, round: 1, turnIndex: 0, order: [], reactionsUsed: {} } } };
+    expect(buildPlayerCampaignView(snapshot, 'hero', 1, 'agora').actions).toMatchObject([{ id: 'graph-1', name: 'Rajada', category: 'habilidade', target: { type: 'um_alvo' } }]);
+  });
 });

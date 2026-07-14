@@ -74,6 +74,8 @@ export interface InterpretCtx {
 }
 
 export interface MovementIntent { targetId: string; kind: string; distance: number }
+export interface SummonIntent { entityName: string; teamId: 'party' | 'npc'; rounds: number; maxHp: number; maxAura: number; speed: number }
+export interface TransformIntent { targetId: string; intoFormId: string }
 
 export interface AbilityResult {
   actor: ArsenalActorState;
@@ -85,6 +87,8 @@ export interface AbilityResult {
   pendingTargetChoice?: { nodeId: string; nodeIds: string[] };
   unlockCardIntents?: UnlockCardIntent[];
   movementIntents: MovementIntent[];
+  summonIntents: SummonIntent[];
+  transformIntents: TransformIntent[];
   defenseRollOverride?: number;
 }
 
@@ -110,7 +114,9 @@ export function interpretAbility(graph: AbilityGraph, level: number, input: Inte
   // acumuladores de estado por id
   const byId = new Map<string, ArsenalActorState>();
   byId.set(input.actor.id, { ...input.actor });
-  for (const t of input.primaryTargets) byId.set(t.id, { ...t });
+  // Em ações no próprio usuário, o ator já contém custos/cargas pagos pelo pipeline.
+  // Não deixe a cópia pré-pagamento do alvo sobrescrever esse estado.
+  for (const t of input.primaryTargets) if (!byId.has(t.id)) byId.set(t.id, { ...t });
   for (const t of input.allTargets) if (!byId.has(t.id)) byId.set(t.id, { ...t });
   for (const t of input.areaTargets ?? []) if (!byId.has(t.id)) byId.set(t.id, { ...t });
 
@@ -164,7 +170,7 @@ export function interpretAbility(graph: AbilityGraph, level: number, input: Inte
         if (n.type === 'enquanto_ativa' || n.type === 'em_combo') return false;
         return hasAtivarRoot ? n.type === 'ao_ativar' : true;
       });
-  if (!entryPoints.length) return { actor: ctx.actor, targets: [...byId.values()].filter(a => a.id !== ctx.actor.id), trace: ctx.trace, ongoingEffectIntents: [], movementIntents: [] };
+  if (!entryPoints.length) return { actor: ctx.actor, targets: [...byId.values()].filter(a => a.id !== ctx.actor.id), trace: ctx.trace, ongoingEffectIntents: [], movementIntents: [], summonIntents: [], transformIntents: [] };
 
   const entryIds = new Set(entryPoints.map(n => n.id));
   const visited = new Set<string>();
@@ -217,6 +223,8 @@ export function interpretAbility(graph: AbilityGraph, level: number, input: Inte
     pendingTargetChoice: ctx.pendingTargetChoice,
     unlockCardIntents: ctx.unlockCardIntents,
     movementIntents: ctx.movementIntents ?? [],
+    summonIntents: ctx.summonIntents ?? [],
+    transformIntents: ctx.transformIntents ?? [],
     defenseRollOverride: ctx.defenseRollOverride,
   };
 }

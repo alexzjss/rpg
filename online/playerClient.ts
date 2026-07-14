@@ -15,8 +15,12 @@ export const PlayerOnline = {
     const response = await fetch('/api/player/move', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ x, y, expectedRevision }) });
     return body(response);
   },
-  async requestAction(actionId: string, targetIds: string[] = []) {
-    const response = await fetch('/api/player/actions', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ actionId, targetIds }) });
+  async requestAction(actionId: string, targetIds: string[] = [], choiceTargetId?: string, destination?: { x: number; y: number }) {
+    const response = await fetch('/api/player/actions', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ actionId, targetIds, choiceTargetId, destination }) });
     return body(response);
+  },
+  async actionRequests(): Promise<Array<{ id: string; action_id: string; status: string; created_at: string; decided_at: string | null; decision_note?: string | null }>> {
+    const response = await fetch('/api/player/actions', { credentials: 'same-origin', cache: 'no-store' });
+    return (await body(response)).requests;
   },
 };
