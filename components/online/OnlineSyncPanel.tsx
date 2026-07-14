@@ -2,6 +2,7 @@ import React from 'react';
 import { DatabaseService, SNAPSHOT_VERSION, type AppSnapshot } from '../../utils/database';
 import { OnlineCampaign } from '../../online/campaignClient';
 import { OnlineAccounts, type CampaignAccount } from '../../online/accountClient';
+import { compactSnapshotForUpload } from '../../online/compactSnapshot';
 
 export default function OnlineSyncPanel() {
   const [revision, setRevision] = React.useState(0);
@@ -57,10 +58,11 @@ export default function OnlineSyncPanel() {
     try {
       const snapshot = JSON.parse(await file.text()) as AppSnapshot;
       if (!snapshot || !Number.isInteger(snapshot.version) || !Array.isArray(snapshot.characters) || !snapshot.cena) throw new Error('O arquivo não é um backup válido do RPG Codex.');
-      const result = await OnlineCampaign.save(snapshot, revision);
+      const compacted = compactSnapshotForUpload(snapshot);
+      const result = await OnlineCampaign.save(compacted.snapshot, revision);
       setRevision(result.revision); setOnlineDate(result.updatedAt);
-      setCharacters(snapshot.characters.filter(character => (character.role ?? 'npc') === 'cast').map(character => ({ id: character.id, name: character.name })));
-      setStatus(`Backup importado: ${snapshot.characters.length} personagem(ns), ${snapshot.grimoire?.length ?? 0} entrada(s) de arsenal e ${snapshot.abilityGraphs?.length ?? 0} habilidade(s) em grafo.`);
+      setCharacters(compacted.snapshot.characters.filter(character => (character.role ?? 'npc') === 'cast').map(character => ({ id: character.id, name: character.name })));
+      setStatus(`Backup importado: ${snapshot.characters.length} personagem(ns), ${snapshot.grimoire?.length ?? 0} entrada(s) de arsenal e ${snapshot.abilityGraphs?.length ?? 0} habilidade(s) em grafo. ${compacted.removedImages} imagem(ns) embutida(s) ficaram no backup local e serão migradas ao Storage separadamente.`);
     } catch (error) { setStatus(error instanceof Error ? error.message : 'Falha ao importar backup.'); }
     finally { setBusy(false); }
   };
