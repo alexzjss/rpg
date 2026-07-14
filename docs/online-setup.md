@@ -20,3 +20,5 @@ O hash da senha é calculado somente no servidor; nenhuma senha em texto puro va
 ## Migração gradual
 
 `campaign_snapshots` recebe inicialmente o snapshot versionado que o aplicativo já usa. Isso coloca persistência e sincronização online em funcionamento antes de normalizar cada domínio. Contas, sessões e solicitações de ação já ficam normalizadas por segurança e concorrência.
+
+Antes de usar a seção Online da dashboard, execute também `supabase/migrations/002_snapshot_versioning.sql` no SQL Editor. Depois, use **Enviar dados locais** para criar a primeira cópia online sem apagar o IndexedDB.
