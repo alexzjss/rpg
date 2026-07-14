@@ -8,6 +8,7 @@ export default async function handler(req: any, res: any) {
     if (!session) return json(res, 401, { error: 'Sessão expirada.' });
     const account = session.campaign_accounts;
     if (req.method === 'GET') {
+      if (account.role !== 'gm') return json(res, 403, { error: 'A visão completa da campanha é exclusiva do mestre.' });
       const rows = await dbRequest<any[]>(`campaign_snapshots?campaign_id=eq.${account.campaign_id}&select=snapshot_version,data,revision,updated_at&limit=1`);
       return json(res, 200, { snapshot: rows[0] ?? null });
     }
