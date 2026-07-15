@@ -63,8 +63,10 @@ export interface PlayerActionView {
 }
 
 function publicParticipant(character: Character, position?: { x: number; y: number }): PublicParticipant {
-  return { id: character.id, name: character.name, icon: character.icon, iconPosition: character.iconPosition, conditions: character.conditions ?? [], position };
+  return { id: character.id, name: character.name || 'Sem nome', icon: character.icon || '', iconPosition: character.iconPosition, conditions: Array.isArray(character.conditions) ? character.conditions : [], position };
 }
+
+const safeTags = (tags: unknown): string[] => Array.isArray(tags) ? tags.filter((tag): tag is string => typeof tag === 'string') : typeof tags === 'string' ? tags.split(/[,;]+/).map(tag => tag.trim()).filter(Boolean) : [];
 
 function publicAlly(character: Character, position?: { x: number; y: number }): PublicAlly {
   return { ...publicParticipant(character, position), currentHp: character.currentHp, maxHp: character.maxHp, currentAura: character.currentAura, maxAura: character.maxAura, currentAmmo: character.currentAmmo, maxAmmo: character.maxAmmo };
@@ -87,8 +89,8 @@ export function buildPlayerCampaignView(snapshot: AppSnapshot, characterId: stri
     ...(owner.grimoire ?? []).map(item => item.entryId), ...(owner.arsenal ?? []).filter(item => item.active).map(item => item.cardId),
   ]);
   const actions: PlayerActionView[] = [
-    ...snapshot.grimoire.filter(action => ownedActionIds.has(action.id)).map(action => ({ id: action.id, name: action.name, description: action.description, icon: action.icon, category: action.category, tags: action.tags ?? [], target: action.target ?? { type: 'um_alvo' as const } })),
-    ...(snapshot.abilityGraphs ?? []).filter(action => ownedActionIds.has(action.id)).map(action => { const validGraph = Array.isArray(action.nodes) && Array.isArray(action.edges); const areaScope = validGraph ? action.nodes.find(node => node.type === 'alvo' && ['linha', 'cone'].includes(String((node.props as any)?.scope))) : null; return { id: action.id, name: action.header.name, description: action.header.description, icon: action.header.icon, category: 'habilidade', tags: action.header.tags ?? [], target: action.header.target ?? { type: 'um_alvo' as const }, requiresAim: !!areaScope, requiresSecondaryTarget: validGraph && action.nodes.some(node => node.type === 'alvo' && (node.props as any)?.scope === 'escolha'), requiresDestination: validGraph && action.nodes.some(node => node.type === 'mover' && (node.props as any)?.kind === 'teleportar') }; }),
+    ...snapshot.grimoire.filter(action => ownedActionIds.has(action.id)).map(action => ({ id: action.id, name: action.name || 'Ação', description: action.description || '', icon: action.icon || '', category: action.category || 'habilidade', tags: safeTags(action.tags), target: action.target ?? { type: 'um_alvo' as const } })),
+    ...(snapshot.abilityGraphs ?? []).filter(action => ownedActionIds.has(action.id)).map(action => { const validGraph = Array.isArray(action.nodes) && Array.isArray(action.edges); const areaScope = validGraph ? action.nodes.find(node => node.type === 'alvo' && ['linha', 'cone'].includes(String((node.props as any)?.scope))) : null; return { id: action.id, name: action.header?.name || 'Habilidade', description: action.header?.description || '', icon: action.header?.icon || '', category: 'habilidade', tags: safeTags(action.header?.tags), target: action.header?.target ?? { type: 'um_alvo' as const }, requiresAim: !!areaScope, requiresSecondaryTarget: validGraph && action.nodes.some(node => node.type === 'alvo' && (node.props as any)?.scope === 'escolha'), requiresDestination: validGraph && action.nodes.some(node => node.type === 'mover' && (node.props as any)?.kind === 'teleportar') }; }),
   ];
   const { code: _secretCode, ...safeOwner } = owner;
 

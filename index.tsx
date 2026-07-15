@@ -6,7 +6,7 @@ import PlayerMirror from './components/PlayerMirror';
 import GmProtectedDashboard from './components/online/GmProtectedDashboard';
 import GraphEditorDemo from './components/arsenal/graph/GraphEditorDemo';
 import { LoginPage, PlayerOnlinePage, SetupPage } from './components/online/AccessPages';
-import PlayerDashboard from './components/online/PlayerDashboard';
+import PlayerDashboard, { PlayerDashboardBoundary } from './components/online/PlayerDashboard';
 import { injectThemeVars } from './utils/theme';
 
 const rootElement = document.getElementById('root');
@@ -26,7 +26,7 @@ root.render(
       : view === 'graph-editor-demo' ? <GraphEditorDemo />
       : view === 'login' ? <LoginPage />
       : view === 'setup' ? <SetupPage />
-      : view === 'player-online' ? <PlayerDashboard />
+      : view === 'player-online' ? <PlayerDashboardBoundary><PlayerDashboard /></PlayerDashboardBoundary>
       : <App />}
   </React.StrictMode>
 );

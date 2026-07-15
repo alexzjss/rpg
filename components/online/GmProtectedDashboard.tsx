@@ -14,8 +14,19 @@ function installOnlineSync(initialRevision: number, onStatus: (value: string) =>
     saving = true; dirty = false; onStatus('Salvando alterações…');
     try { const result = await OnlineCampaign.save(await makeSnapshot(), revision); revision = Number(result.revision); onStatus('Campanha sincronizada'); }
     catch (error) {
-      try { const latest = await OnlineCampaign.load(); if (latest) revision = Number(latest.revision); } catch { /* mantém a revisão atual */ }
-      dirty = true; onStatus(error instanceof Error ? error.message : 'Falha na sincronização');
+      try {
+        const latest = await OnlineCampaign.load();
+        if (latest) {
+          applyingRemote = true;
+          await DatabaseService.saveFullSnapshot(latest.data);
+          revision = Number(latest.revision);
+          applyingRemote = false;
+          onStatus('Estado mais recente recebido');
+        }
+      } catch {
+        applyingRemote = false;
+        onStatus(error instanceof Error ? error.message : 'Falha na sincronização');
+      }
     }
     finally { saving = false; if (dirty) schedule(); }
   };

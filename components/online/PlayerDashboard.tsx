@@ -12,7 +12,8 @@ import './PlayerDashboard.css';
 type RequestItem = { id: string; action_id: string; status: string; created_at: string };
 
 const needsTarget = (action: PlayerActionView) => action.requiresAim || action.target.type === 'um_alvo' || action.target.type === 'multiplos_alvos';
-const isReaction = (action: PlayerActionView) => action.tags.some(tag => /rea[cç][aã]o/i.test(tag));
+const actionTags = (action: PlayerActionView) => Array.isArray(action.tags) ? action.tags : [];
+const isReaction = (action: PlayerActionView) => actionTags(action).some(tag => /rea[cç][aã]o/i.test(tag));
 
 function asMapCharacter(person: PublicParticipant, masked = false): Character {
   const resource = person as any;
@@ -64,7 +65,7 @@ export default function PlayerDashboard() {
   const actionAllowed = (action: PlayerActionView) => view.permissions.canAct || (isReaction(action) && view.permissions.canReact && !view.encounter.isPaused);
   const targetableIds = armed && actionAllowed(armed) && needsTarget(armed) ? publicPeople.map(person => person.id) : [];
   const pending = requests.filter(item => item.status === 'pending').length;
-  const actions = view.actions.filter(action => !search || `${action.name} ${action.tags.join(' ')}`.toLowerCase().includes(search.toLowerCase()));
+  const actions = (Array.isArray(view.actions) ? view.actions : []).filter(action => !search || `${action.name} ${actionTags(action).join(' ')}`.toLowerCase().includes(search.toLowerCase()));
 
   const selectToken = (id: string) => {
     if (!armed || !needsTarget(armed) || !actionAllowed(armed)) return;
@@ -121,7 +122,7 @@ export default function PlayerDashboard() {
       </section>
       <section className="cena-deck-actions player-deck__actions">
         <header><div><small>ARSENAL PESSOAL</small><strong>COMANDOS</strong></div><label><Search size={13}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar…"/></label></header>
-        <div className="player-deck__list">{actions.map(action => <button key={action.id} data-category={action.category} className={`cena-command ${armed?.id === action.id ? 'is-open' : ''}`} disabled={!actionAllowed(action)} onClick={() => arm(action)}>{action.icon ? <i style={{ backgroundImage: `url(${action.icon})` }}/> : <Swords size={17}/>}<span className="cena-command__copy"><strong>{action.name}</strong><small>{action.tags.slice(0,2).join(' · ') || action.category}</small></span>{isReaction(action) && <b>R</b>}</button>)}{!actions.length && <p>Nenhuma ação no arsenal.</p>}</div>
+        <div className="player-deck__list">{actions.map(action => <button key={action.id} data-category={action.category} className={`cena-command ${armed?.id === action.id ? 'is-open' : ''}`} disabled={!actionAllowed(action)} onClick={() => arm(action)}>{action.icon ? <i style={{ backgroundImage: `url(${action.icon})` }}/> : <Swords size={17}/>}<span className="cena-command__copy"><strong>{action.name}</strong><small>{actionTags(action).slice(0,2).join(' · ') || action.category}</small></span>{isReaction(action) && <b>R</b>}</button>)}{!actions.length && <p>Nenhuma ação no arsenal.</p>}</div>
       </section>
       {armed && <section className="player-deck__confirm">
         <p>{armed.description || 'Sem descrição.'}</p>
@@ -136,3 +137,13 @@ export default function PlayerDashboard() {
 }
 
 function CrosshairIcon(){ return <span className="player-scene__crosshair">＋</span>; }
+
+export class PlayerDashboardBoundary extends React.Component<React.PropsWithChildren, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error) { console.error('PlayerDashboard render failed', error); }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return <main className="pd-loading"><h1>Não foi possível montar a Cena</h1><p>Os dados foram preservados. Atualize a página; se continuar, envie ao mestre a mensagem abaixo.</p><code>{this.state.error.message}</code><button onClick={() => window.location.reload()}>ATUALIZAR</button></main>;
+  }
+}
