@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { getUserReducedMotion } from '../../utils/motionPref';
 
 export interface SeqStep<P extends string> {
   phase: P;
@@ -77,7 +76,7 @@ export function useScramble(finalValue: number, sides: number, rolling: boolean)
   useEffect(() => {
     if (!rolling) { setV(finalValue); return; }
     const s = Math.max(1, sides || 20);
-    const id = setInterval(() => setV(1 + Math.floor(Math.random() * s)), 55);
+    const id = setInterval(() => setV(1 + Math.floor(Math.random() * s)), 95);
     return () => clearInterval(id);
   }, [rolling, finalValue, sides]);
   return v;
@@ -110,13 +109,12 @@ export function getPacing(tier: AnimTier, reduced: boolean): Pacing {
     return { cardShown: 60, reactionShown: 60, rollsShown: 120, resultShown: 1000, resolveShown: 400 };
   }
   if (tier === 'dramatic') {
-    return { cardShown: 460, reactionShown: 520, rollsShown: 1100, resultShown: 1400, resolveShown: 900 };
+    return { cardShown: 420, reactionShown: 460, rollsShown: 920, resultShown: 1240, resolveShown: 760 };
   }
-  return { cardShown: 220, reactionShown: 0, rollsShown: 380, resultShown: 720, resolveShown: 560 };
+  return { cardShown: 180, reactionShown: 0, rollsShown: 320, resultShown: 620, resolveShown: 460 };
 }
 
 export function prefersReducedMotion(): boolean {
-  if (getUserReducedMotion()) return true;
   if (typeof window === 'undefined' || !window.matchMedia) return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

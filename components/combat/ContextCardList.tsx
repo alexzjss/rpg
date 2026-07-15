@@ -60,6 +60,8 @@ type SkillEntry = {
   accent: string;
   sideLabel: string;
   metaLabel?: string;
+  image?: string;
+  imagePosition?: string;
   pinned?: boolean;
   disabled?: boolean;
   disabledReason?: string;
@@ -126,6 +128,23 @@ const SkillIcon: React.FC<{ entry: SkillEntry }> = ({ entry }) => {
   return <Zap size={17} />;
 };
 
+const previewPill: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  minHeight: 20,
+  padding: '4px 7px',
+  border: '1px solid rgba(255,255,255,.13)',
+  borderRadius: 999,
+  background: 'rgba(5,7,10,.42)',
+  backdropFilter: 'blur(8px)',
+  color: '#f3f6fb',
+  fontSize: 8,
+  fontWeight: 900,
+  letterSpacing: '.1em',
+  textTransform: 'uppercase',
+  textShadow: '0 1px 3px rgba(0,0,0,.85)',
+};
+
 const ContextCardList: React.FC<ContextCardListProps> = ({
   selectedAction,
   combat,
@@ -173,6 +192,7 @@ const ContextCardList: React.FC<ContextCardListProps> = ({
       typeLabel: 'IT',
       accent: 'var(--gold-mid)',
       sideLabel: `x${item.quantity}`,
+      image: item.image,
       item,
     }));
 
@@ -184,6 +204,7 @@ const ContextCardList: React.FC<ContextCardListProps> = ({
       typeLabel: 'AR',
       accent: '#f87171',
       sideLabel: (w.damage ?? 0) > 0 ? `${w.damage} dmg` : '—',
+      image: w.image,
       weapon: w,
     }));
 
@@ -203,6 +224,7 @@ const ContextCardList: React.FC<ContextCardListProps> = ({
       typeLabel: 'SE',
       accent: '#fb923c',
       sideLabel: (s.executionModes ?? (s.executionMode ? [s.executionMode] : ['immediate']))[0] ?? 'ritual',
+      image: s.image,
       seal: s,
     }));
   } else {
@@ -255,6 +277,8 @@ const ContextCardList: React.FC<ContextCardListProps> = ({
         accent: theme.topColor,
         sideLabel: getCardCostLabel(card),
         metaLabel: getCardMetaLabel(card),
+        image: card.image,
+        imagePosition: (card as any).iconPosition,
         pinned: pinnedIds.includes(card.id),
         disabled: !affordable,
         disabledReason: affordable ? undefined : getUnavailableReason(card, currentAura, maxAmmo, currentAmmo),
@@ -362,19 +386,35 @@ const ContextCardList: React.FC<ContextCardListProps> = ({
             })}
           </div>
 
-          <div className="mp-skill-description" style={{ ['--skill-color' as any]: activeEntry?.accent ?? 'var(--gold-mid)' }}>
-            <div className="mp-skill-description__top">
-              <span>{activeEntry?.typeLabel}</span>
-              <strong>{activeEntry?.name}</strong>
-              <em>{activeEntry?.sideLabel}</em>
+          <div
+            className="mp-skill-description"
+            style={{
+              ['--skill-color' as any]: activeEntry?.accent ?? 'var(--gold-mid)',
+              position: 'relative',
+              minHeight: 250,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end',
+              overflow: 'hidden',
+              background: activeEntry?.image
+                ? `linear-gradient(180deg,rgba(7,9,13,.04) 0%,rgba(7,9,13,.26) 42%,rgba(7,9,13,.82) 100%),url(${activeEntry.image}) ${activeEntry.imagePosition ?? '50% 50%'}/cover`
+                : `radial-gradient(circle at 65% 22%,${activeEntry?.accent ?? '#d4a853'}38,transparent 44%),linear-gradient(145deg,#151922,#090b10)`,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+              <span style={previewPill}>{activeEntry?.typeLabel}</span>
+              <span style={previewPill}>{activeEntry?.sideLabel}</span>
             </div>
-            <p>
+            <div className="mp-skill-description__top" style={{ background: 'rgba(5,7,10,.34)', backdropFilter: 'blur(8px)', borderRadius: 8, padding: '8px 9px' }}>
+              <strong>{activeEntry?.name}</strong>
+            </div>
+            <p style={{ color: '#d7dee8', textShadow: '0 1px 3px rgba(0,0,0,.9)' }}>
               {activeEntry?.description ||
                 (activeEntry?.disabledReason
                   ? activeEntry.disabledReason
                   : 'Sem descricao registrada.')}
             </p>
-            {activeEntry?.metaLabel && <small>{activeEntry.metaLabel}</small>}
+            {activeEntry?.metaLabel && <small style={{ ...previewPill, alignSelf: 'flex-start' }}>{activeEntry.metaLabel}</small>}
           </div>
         </>
       )}

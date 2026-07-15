@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#090b12" />
+    <title>RPG Codex — Ficha do Personagem</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="ritual.css" />
+  </head>
+  <body>
+    <div class="ambient ambient--one"></div>
+    <div class="ambient ambient--two"></div>
+
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Voltar ao início do visualizador">
+        <span class="brand__sigil">R</span>
+        <span><strong>RPG CODEX</strong><small>Arquivo de personagem</small></span>
+      </a>
+      <button id="change-file" class="button button--quiet is-hidden" type="button">Trocar arquivo</button>
+    </header>
+
+    <main>
+      <section id="import-view" class="import-view" aria-labelledby="import-title">
+        <div class="eyebrow">VISUALIZADOR INDEPENDENTE</div>
+        <h1 id="import-title">Abra uma ficha.<br /><span>Revele a história.</span></h1>
+        <p class="intro">Importe o arquivo <code>.json</code> exportado pelo RPG Codex. Nada é enviado para a internet: a ficha é lida somente neste dispositivo.</p>
+
+        <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-describedby="drop-help">
+          <input id="file-input" type="file" accept="application/json,.json" hidden />
+          <div class="drop-zone__icon" aria-hidden="true">↥</div>
+          <strong>Importar dados do personagem</strong>
+          <span id="drop-help">Escolha o arquivo ou arraste-o para cá</span>
+          <button id="pick-file" class="button button--primary" type="button">Escolher arquivo</button>
+        </div>
+        <p id="import-error" class="message message--error is-hidden" role="alert"></p>
+
+        <div class="privacy-note">
+          <span aria-hidden="true">◇</span>
+          <p><strong>Privado por natureza</strong>Este visualizador não possui banco de dados, login, rastreamento ou conexão com o sistema principal.</p>
+        </div>
+      </section>
+
+      <section id="character-view" class="character-view is-hidden" aria-live="polite">
+        <div id="character-content"></div>
+      </section>
+    </main>
+
+    <footer>RPG CODEX <span>◆</span> LEITOR DE ARQUIVO LOCAL</footer>
+    <script src="ritual-engine.js"></script>
+    <script src="ritual-builder.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

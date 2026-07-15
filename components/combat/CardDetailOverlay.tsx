@@ -3,6 +3,9 @@ import { X, Target, Swords, Layers, Flame, ChevronRight } from 'lucide-react';
 import { Card, CombatState, Combatant, Character, Item } from '../../types';
 import { DAMAGE_TYPES } from '../../utils/theme';
 import { resolveOwnedItems } from '../../utils/items';
+import ArsenalCardPreview from '../arsenal/ArsenalCardPreview';
+import { arsenalCardAtLevel } from '../../utils/arsenal';
+import { cardToArsenal } from '../../utils/arsenalMigration';
 
 // Rótulos de bônus (espelha App.tsx)
 const BONUS_TYPE_LABELS: Record<string, string> = {
@@ -81,9 +84,10 @@ const CardDetailOverlay: React.FC<CardDetailOverlayProps> = ({
   const shownAura = levelData?.auraCost ?? card.auraCost;
   const shownDice = levelData?.diceRoll ?? card.diceRoll;
   const shownDesc = (level > 1 && levelData?.description) ? levelData.description : card.description;
+  const previewCard = React.useMemo(() => arsenalCardAtLevel(cardToArsenal(card), level), [card, level]);
 
   const damageType = (card as any).damageType as string | undefined;
-  const dtInfo = damageType && damageType !== 'normal'
+  const dtInfo = damageType && damageType !== 'fisico'
     ? DAMAGE_TYPES.find(d => d.value === damageType)
     : null;
 
@@ -232,6 +236,7 @@ const CardDetailOverlay: React.FC<CardDetailOverlayProps> = ({
 
           {/* ── CENTRO: A Relíquia ── */}
           <div className="mp-relic-card-wrap">
+            <ArsenalCardPreview card={previewCard} className="mp-relic-arsenal-preview" />
             <div className="mp-relic-card" style={{ ['--relic-accent' as string]: accent }}>
               <span className="mp-relic-card__shimmer" aria-hidden />
               <div className="mp-relic-card__head">
@@ -399,6 +404,8 @@ const RELIC_CSS = `
     width: 184px; flex-shrink: 0; pointer-events: auto;
     display: flex; flex-direction: column; gap: 9px;
   }
+  .mp-relic-grimoire { display: none; }
+  .mp-relic-actions .mp-relic-scroll { display: none; }
   .mp-relic-grimoire { animation: mp-relic-side-in 0.5s 0.15s both; }
   .mp-relic-actions { animation: mp-relic-side-in 0.5s 0.3s both; }
   @keyframes mp-relic-side-in { from { opacity: 0; transform: translateY(14px) scale(0.92); } to { opacity: 1; transform: none; } }
@@ -460,6 +467,14 @@ const RELIC_CSS = `
   .mp-relic-card-wrap {
     flex-shrink: 0; pointer-events: auto; position: relative; z-index: 2;
     animation: mp-relic-float 3.6s 0.7s ease-in-out infinite;
+    width: min(390px, 48vw);
+    max-height: min(78vh, 720px);
+    overflow-y: auto;
+    padding: 2px;
+  }
+  .mp-relic-card-wrap > .mp-relic-card { display: none; }
+  .mp-relic-arsenal-preview {
+    min-height: min(72vh, 620px) !important;
   }
   @keyframes mp-relic-float {
     0%,100% { transform: translateY(0) rotate(0); }

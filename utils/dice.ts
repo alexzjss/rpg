@@ -9,6 +9,8 @@ export interface RollResult {
   numDice: number;
 }
 
+import { consumeForcedNext, readDiceControl } from './diceControl';
+
 export const rollDice = (notation: string = "1d20", globalBonus: number = 0): RollResult => {
   const match = notation.match(/(\d+)d(\d+)([+-]\d+)?/);
   if (!match) return { total: 0, dieRoll: 0, bonus: 0, notation: "invalid", individualRolls: [], numSides: 20, numDice: 1 };
@@ -17,13 +19,37 @@ export const rollDice = (notation: string = "1d20", globalBonus: number = 0): Ro
   const numSides = parseInt(match[2]);
   const notationBonus = match[3] ? parseInt(match[3]) : 0;
 
+  const control = readDiceControl();
+  const forced = consumeForcedNext();
+  const naturalMin = numDice;
+  const naturalMax = numDice * numSides;
+  const configured = control.allowedValues.filter(v => v >= naturalMin && v <= naturalMax);
+  const lower = Math.max(naturalMin, control.min ?? naturalMin);
+  const upper = Math.min(naturalMax, control.max ?? naturalMax);
+  const pool = configured.length ? configured.filter(v => v >= lower && v <= upper) : [];
+  let desired: number | null = null;
+  if (control.enabled) {
+    if (forced != null) desired = Math.max(naturalMin, Math.min(naturalMax, forced));
+    else if (pool.length) desired = pool[Math.floor(Math.random() * pool.length)];
+    else if (lower <= upper) desired = lower + Math.floor(Math.random() * (upper - lower + 1));
+  }
+
   const individualRolls: number[] = [];
-  for (let i = 0; i < numDice; i++) {
-    individualRolls.push(Math.floor(Math.random() * numSides) + 1);
+  if (desired != null) {
+    let remaining = desired;
+    for (let i = 0; i < numDice; i++) {
+      const diceLeft = numDice - i - 1;
+      const value = Math.max(1, Math.min(numSides, remaining - diceLeft));
+      individualRolls.push(value); remaining -= value;
+    }
+    // Embaralha a composição sem alterar o total, evitando padrões visíveis.
+    individualRolls.sort(() => Math.random() - .5);
+  } else {
+    for (let i = 0; i < numDice; i++) individualRolls.push(Math.floor(Math.random() * numSides) + 1);
   }
 
   const dieRoll = individualRolls.reduce((a, b) => a + b, 0);
-  const totalBonus = notationBonus + globalBonus;
+  const totalBonus = notationBonus + globalBonus + (control.enabled ? control.defaultAdjustment : 0);
 
   return {
     dieRoll,

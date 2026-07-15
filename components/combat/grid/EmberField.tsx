@@ -37,10 +37,10 @@ function seeded(i: number): EmberSpec {
   };
 }
 
-const EMBERS = Array.from({ length: 22 }, (_, i) => seeded(i));
+const EMBERS = Array.from({ length: 16 }, (_, i) => seeded(i));
 
-const EmberField: React.FC<{ count?: number }> = ({ count = 22 }) => {
-  const embers = count === 22 ? EMBERS : EMBERS.slice(0, count);
+const EmberField: React.FC<{ count?: number }> = ({ count = 16 }) => {
+  const embers = count === 16 ? EMBERS : EMBERS.slice(0, count);
   return (
     <div className="mp-embers" aria-hidden>
       {embers.map((e, i) => (

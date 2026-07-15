@@ -1,0 +1,28 @@
+{
+  "ritualCombinations": [
+    {
+      "id": "explosao-ignea",
+      "name": "Explosão Ígnea",
+      "description": "Amplifica um selo de fogo usando enxofre como catalisador.",
+      "requiredNodes": ["selo-do-fogo", "selo-de-explosao"],
+      "optionalNodes": ["selo-estabilizador"],
+      "requiredMaterials": [{ "id": "enxofre", "name": "Enxofre", "quantity": 1 }],
+      "validStructures": ["line", "triangle", "circle", "tree", "cross"],
+      "ordered": true,
+      "minimumConnections": 2,
+      "forbiddenTags": ["sagrado"],
+      "requiredTags": ["fogo"],
+      "cost": { "aura": 4, "hp": 0 },
+      "result": {
+        "effectType": "damage",
+        "name": "Explosão Ígnea",
+        "damageType": "fogo",
+        "power": 8,
+        "area": 2,
+        "range": 6,
+        "duration": 0,
+        "conditions": ["queimando"]
+      }
+    }
+  ]
+}

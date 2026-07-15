@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useKeyboardNav } from './useKeyboardNav';
 
-function setup(activeTab = 'combat') {
+function setup(activeTab = 'cena') {
   const onSelect = vi.fn();
   const view = renderHook(
     ({ tab }) => useKeyboardNav({ activeTab: tab as any, onSelect }),
@@ -12,29 +12,27 @@ function setup(activeTab = 'combat') {
 }
 
 describe('useKeyboardNav', () => {
-  it('"3" seleciona o 3º destino (characters)', () => {
-    const { result, onSelect } = setup('combat');
-    act(() => result.current.handleKey({ key: '3', preventDefault() {} } as any));
-    expect(onSelect).toHaveBeenCalledWith('characters');
-  });
-
-  it('"1" e "2" vão direto a combat e journey', () => {
-    const { result, onSelect } = setup('arsenal');
+  it('"1" vai direto para cena', () => {
+    const { result, onSelect } = setup('cena');
     act(() => result.current.handleKey({ key: '1', preventDefault() {} } as any));
-    expect(onSelect).toHaveBeenCalledWith('combat');
+    expect(onSelect).toHaveBeenCalledWith('cena');
+  });
+
+  it('"2" não corresponde a nenhum destino (não chama onSelect)', () => {
+    const { result, onSelect } = setup('cena');
     act(() => result.current.handleKey({ key: '2', preventDefault() {} } as any));
-    expect(onSelect).toHaveBeenCalledWith('journey');
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('ArrowRight cicla para a próxima aba', () => {
-    const { result, onSelect } = setup('combat'); // índice 0
+  it('ArrowRight com um único destino permanece em cena', () => {
+    const { result, onSelect } = setup('cena');
     act(() => result.current.handleKey({ key: 'ArrowRight', preventDefault() {} } as any));
-    expect(onSelect).toHaveBeenCalledWith('journey'); // índice 1
+    expect(onSelect).toHaveBeenCalledWith('cena');
   });
 
-  it('ArrowLeft de combat dá a volta para o último (extras)', () => {
-    const { result, onSelect } = setup('combat');
+  it('ArrowLeft com um único destino permanece em cena', () => {
+    const { result, onSelect } = setup('cena');
     act(() => result.current.handleKey({ key: 'ArrowLeft', preventDefault() {} } as any));
-    expect(onSelect).toHaveBeenCalledWith('extras');
+    expect(onSelect).toHaveBeenCalledWith('cena');
   });
 });

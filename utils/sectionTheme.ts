@@ -58,26 +58,26 @@ const CHARACTERS_VARS: Record<string, string> = {
   '--ember-deep':  '#1e4e9a',
 };
 
-const EXTRAS_VARS: Record<string, string> = {
-  '--sec-accent':   '#9aa3b0',
-  '--sec-accent-2': '#cdd3dc',
-  '--sec-accent-3': '#6b7280',
-  '--sec-ink':      '#e8ebf0',
-  '--gold-dim':    '#3a3f47',
-  '--gold-mid':    '#8a93a0',
-  '--gold-bright': '#cdd3dc',
-  '--gold-pale':   '#eef1f5',
-  '--border-gold': 'rgba(160,170,185,0.28)',
-  '--ember':       '#8a93a0',
-  '--ember-deep':  '#4a4f57',
+const CENA_VARS: Record<string, string> = {
+  '--sec-accent':   '#E0102B',
+  '--sec-accent-2': '#cfcfe6',
+  '--sec-accent-3': '#B00C22',
+  '--sec-ink':      '#ececef',
+  '--gold-dim':    '#3a1620',
+  '--gold-mid':    '#E0102B',
+  '--gold-bright': '#ff2a44',
+  '--gold-pale':   '#ffd9de',
+  '--border-gold': 'rgba(224,16,43,0.32)',
+  '--ember':       '#E0102B',
+  '--ember-deep':  '#8a0a1c',
 };
 
 export const SECTION_THEMES: Record<TabId, SectionThemeDef> = {
+  cena:       { atmosphere: atmosphereForTab('cena'),       vars: CENA_VARS },
   combat:     { atmosphere: atmosphereForTab('combat'),     vars: COMBAT_VARS },
   journey:    { atmosphere: atmosphereForTab('journey'),    vars: JOURNEY_VARS },
   characters: { atmosphere: atmosphereForTab('characters'), vars: CHARACTERS_VARS },
   arsenal:    { atmosphere: atmosphereForTab('arsenal'),    vars: ARSENAL_VARS },
-  extras:     { atmosphere: atmosphereForTab('extras'),     vars: EXTRAS_VARS },
 };
 
 // União de todas as chaves --sec-* declaradas por qualquer seção (para limpeza ao trocar).

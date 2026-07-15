@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "description": "Receitas reconhecidas pelo construtor ritualístico. Use ritual.key dos selos e itens em requiredNodes e requiredMaterials.",
+  "ritualCombinations": [
+    {
+      "id": "salto-do-vendaval",
+      "name": "Salto do Vendaval",
+      "description": "O selo de Vento conduz e amplia o deslocamento produzido pelo selo de Salto.",
+      "requiredNodes": ["salto", "vento"],
+      "optionalNodes": [],
+      "requiredMaterials": [],
+      "validStructures": ["line", "cluster"],
+      "ordered": false,
+      "minimumConnections": 1,
+      "forbiddenTags": ["terra"],
+      "requiredTags": [],
+      "cost": { "aura": 3, "hp": 0 },
+      "result": {
+        "effectType": "movement",
+        "name": "Salto do Vendaval",
+        "range": 8,
+        "duration": 0,
+        "description": "Move o conjurador instantaneamente e produz uma rajada no ponto de chegada."
+      }
+    },
+    {
+      "id": "travessia-glacial",
+      "name": "Travessia Glacial",
+      "description": "Salto e Gelo são estabilizados por um Fragmento de Meteoro Azul.",
+      "requiredNodes": ["salto", "gelo"],
+      "optionalNodes": ["vento"],
+      "requiredMaterials": [
+        { "id": "fragmento-de-meteoro-azul", "name": "Fragmento de Meteoro (Azul)", "quantity": 1 }
+      ],
+      "validStructures": ["line", "triangle", "cluster"],
+      "ordered": false,
+      "minimumConnections": 2,
+      "forbiddenTags": ["fogo"],
+      "requiredTags": [],
+      "cost": { "aura": 4, "hp": 0 },
+      "result": {
+        "effectType": "movement-control",
+        "name": "Travessia Glacial",
+        "damageType": "gelo",
+        "power": 4,
+        "range": 7,
+        "area": 1,
+        "duration": 1,
+        "conditions": ["congelado"]
+      }
+    },
+    {
+      "id": "tormenta-consagrada",
+      "name": "Tormenta Consagrada",
+      "description": "Vento e Gelo circulam através de Água Benta para formar uma tormenta purificadora.",
+      "requiredNodes": ["vento", "gelo"],
+      "optionalNodes": ["salto"],
+      "requiredMaterials": [
+        { "id": "agua-benta", "name": "Água Benta", "quantity": 1 }
+      ],
+      "validStructures": ["triangle", "line", "cluster"],
+      "ordered": false,
+      "minimumConnections": 2,
+      "forbiddenTags": ["fogo"],
+      "requiredTags": [],
+      "cost": { "aura": 5, "hp": 0 },
+      "result": {
+        "effectType": "damage-control",
+        "name": "Tormenta Consagrada",
+        "damageType": "água",
+        "power": 7,
+        "range": 6,
+        "area": 2,
+        "duration": 2,
+        "conditions": ["molhado", "congelamento"]
+      }
+    }
+  ]
+}

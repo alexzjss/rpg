@@ -1,6 +1,23 @@
+import type { ArsenalEffect, ArsenalHolding, ChargeConfig, CooldownConfig } from './utils/arsenal';
+
 export type CardType = 'ataque' | 'reação' | 'ação' | 'reforço' | 'vínculo' | 'combinação' | 'forma';
 
-export type DamageType = 'normal' | 'fogo' | 'raio' | 'água' | 'terra' | 'vento' | 'escuridão' | 'luminoso' | 'sangue' | 'aura';
+export type DamageType = 'fisico' | 'fogo' | 'raio' | 'água' | 'terra' | 'vento' | 'escuridão' | 'luminoso' | 'sangue' | 'aura';
+
+/** Elemento de dano do sistema unificado (mesma união do DamageType legado). */
+export type Element = DamageType;
+
+/** Afinidade elemental de uma ficha: fraco ×1.5, resistente ×0.5, imune ×0. */
+export type Affinity = 'fraco' | 'resistente' | 'imune';
+
+/** Posse de uma entrada do grimório por um personagem. */
+export interface GrimoireHolding {
+  entryId: string;
+  /** Unidades possuídas (consumíveis). Ausente = 1. */
+  quantity?: number;
+  /** Nível escolhido no módulo de níveis da entrada. Ausente = perfil base. */
+  level?: number;
+}
 
 export interface ArsenalBase {
   id: string;
@@ -8,6 +25,9 @@ export interface ArsenalBase {
   image: string;
   description: string;
   isHidden?: boolean;
+  /** Equipe explícita para participantes invocados que vivem no roster de NPCs. */
+  teamOverride?: 'party' | 'npc';
+  summonedRoundsRemaining?: number;
 }
 
 export interface CardLevel {
@@ -17,6 +37,8 @@ export interface CardLevel {
   ammoCost?: number;
   diceRoll?: string;
   damage?: number;
+  damageValue?: number;
+  impactValue?: number;
   damageType?: DamageType;
   dc?: number;
   conditionEffect?: string;
@@ -66,7 +88,15 @@ export interface Item {
   link?: string;
   isHidden?: boolean;
   quantity?: number;
+  maxQuantity?: number;
+  durability?: number;
+  maxDurability?: number;
+  wearPerUse?: number;
+  usesPerActivation?: number;
+  cooldown?: CooldownConfig;
+  charges?: ChargeConfig | null;
   category?: string;
+  effects?: ArsenalEffect[];
   // Combat usage
   usableInCombat?: boolean;
   combatHeal?: number;
@@ -74,6 +104,7 @@ export interface Item {
   combatDamageType?: DamageType;
   combatAuraRecover?: number;
   combatAmmoRecover?: number;
+  combatAuraCost?: number;
   combatConditionEffect?: string;
   combatConditionDuration?: number;
   combatDc?: number;
@@ -81,6 +112,9 @@ export interface Item {
   combatAmmoCost?: number;
   combatTargeting?: "self" | "other" | "area" | "choice";
   combatDiceRoll?: string;
+  combatRange?: number;
+  combatAreaSize?: number;
+  combatAreaShape?: 'circle' | 'cone' | 'line' | 'square';
 }
 
 export interface Card {
@@ -92,6 +126,8 @@ export interface Card {
   type: CardType;
   dc?: number;
   damage?: number;
+  damageValue?: number;
+  impactValue?: number;
   damageType?: DamageType;
   description: string;
   conditionEffect?: string;
@@ -148,6 +184,8 @@ export interface Weapon {
 export interface OwnedItem {
   itemId: string;
   quantity: number;
+  durability?: number;
+  maxDurability?: number;
 }
 
 export interface ActiveForma {
@@ -225,6 +263,10 @@ export interface Character {
   id: string;
   name: string;
   icon: string;
+  /** CSS `object-position`/`background-position` do retrato (ex.: "50% 30%"). */
+  iconPosition?: string;
+  bannerImage?: string;
+  bannerImagePosition?: string;
   maxHp: number;
   currentHp: number;
   maxAura: number;
@@ -232,7 +274,21 @@ export interface Character {
   maxAmmo: number;
   currentAmmo: number;
   baseInitiative: number;
-  deslocamento?: number;   // unidades de movimento (padrão: 6)
+  defense?: number;   // defesa para teste de acerto (default DEFAULT_DEFENSE)
+  defenseMax?: number;
+  defenseCurrent?: number;
+  defenseReduction?: number;
+  defenseRegeneration?: number;
+  defenseActivationThreshold?: number;
+  staggerMax?: number;
+  staggerCurrent?: number;
+  staggerRecovery?: number;
+  staggerDamageMultiplier?: number;
+  staggerDuration?: number;
+  isDefenseBroken?: boolean;
+  isStaggered?: boolean;
+  staggerTurnsRemaining?: number;
+  speed?: number;          // velocidade base; influencia iniciativa e ordem efetiva
   cardIds: string[];
   pinnedCardIds?: string[];
   weaponIds?: string[];
@@ -241,12 +297,24 @@ export interface Character {
   isInJourney?: boolean;
   items: Item[];
   isHidden?: boolean;
+  /** @deprecated Mantido apenas para abrir arquivos antigos. Todos agora são personagens. */
   role?: 'cast' | 'npc';
   code?: string;
   bonds?: string[]; // list of vínculo names this character has
   stacks?: CharacterStack[];
   ownedItems?: OwnedItem[]; // posse referenciada (catálogo global)
+  /** Acervo unificado do grimório (substituirá cardIds/sealIds/weaponIds/ownedItems na Fase 3). */
+  grimoire?: GrimoireHolding[];
+  /** Estado canônico de posse/equipamento. Os campos legados acima seguem como adaptadores da UI atual. */
+  arsenal?: ArsenalHolding[];
+  /** Efeitos canônicos atualmente aplicados diretamente ao personagem. */
+  activeEffects?: Array<{ effect: ArsenalEffect; stacks: number; remaining?: number; sourceId?: string; appliedAtRound?: number; metadata?: Record<string, unknown> }>;
+  /** Afinidades elementais: fraco / resistente / imune por elemento. */
+  affinities?: Partial<Record<Element, Affinity>>;
 }
+
+/** Defesa padrão quando o personagem não tem `defense` definido. */
+export const DEFAULT_DEFENSE = 10;
 
 export interface Combatant extends Character {
   combatId: string;
@@ -269,11 +337,6 @@ export interface CombatHistoryItem {
   timestamp: number;
 }
 
-export interface FieldCondition extends Condition {
-  id: string;
-  sourceCard?: string;
-}
-
 export interface CustomPin {
   id: string;
   label: string;
@@ -293,7 +356,6 @@ export interface CombatState {
   turnIndex: number;
   combatants: Combatant[];
   history: CombatHistoryItem[];
-  fieldConditions: FieldCondition[];
   backgroundImage: string;
   globalBonus: number;
   gridWidth: number;
@@ -308,7 +370,6 @@ export interface CombatState {
   // Novos campos da refatoração da grid
   gridVisible: boolean;
   gridDensity: number;        // ex: 10 → grade 10×10 visual
-  escala: number;             // % arena por unidade de deslocamento (ex: 10)
   fog?: FogState;
   aoeTemplates?: AoETemplate[];
 }
@@ -427,6 +488,20 @@ export interface Seal {
   healHp?: number;
   conditionEffect?: string;
   conditionDuration?: number;
+  effects?: ArsenalEffect[];
+  cooldown?: CooldownConfig;
+  charges?: ChargeConfig | null;
+  combatTargeting?: "self" | "other" | "area" | "choice";
+  directionMode?: 'source_to_target' | 'target_to_source' | 'around_user' | 'line' | 'cone' | 'free';
+  range?: number;
+  areaSize?: number;
+  connectors?: Array<'top' | 'right' | 'bottom' | 'left' | 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'>;
+  ritualKey?: string;
+  ritualRole?: 'nucleo' | 'condutor' | 'amplificador' | 'estabilizador' | 'material';
+  rotationAllowed?: boolean;
+  maxPerRitual?: number | null;
+  connectionTags?: string[];
+  forbiddenConnectionTags?: string[];
   duration?: number;
   damageModTarget?: SealDamageModTarget;
   damageModCardType?: string;
@@ -473,6 +548,8 @@ export interface PresetConditionTemplate {
   /** minimum roll needed (for Paralisado) */
   defaultMinRoll?: number;
   damageType?: DamageType;
+  /** Efeito aplicado no início do turno do portador. */
+  perTurn?: 'damage' | 'heal';
 }
 
 export const PRESET_CONDITIONS: PresetConditionTemplate[] = [
@@ -484,6 +561,7 @@ export const PRESET_CONDITIONS: PresetConditionTemplate[] = [
     defaultDuration: 3,
     defaultValue: 3,
     damageType: 'fogo',
+    perTurn: 'damage',
   },
   {
     name: 'Eletrocutado',
@@ -493,6 +571,7 @@ export const PRESET_CONDITIONS: PresetConditionTemplate[] = [
     defaultDuration: 2,
     defaultValue: 3,
     damageType: 'raio',
+    perTurn: 'damage',
   },
   {
     name: 'Molhado',
@@ -510,6 +589,7 @@ export const PRESET_CONDITIONS: PresetConditionTemplate[] = [
     color: '#a3e635',
     defaultDuration: 4,
     defaultValue: 2,
+    perTurn: 'damage',
   },
   {
     name: 'Paralisado',
@@ -543,6 +623,7 @@ export const PRESET_CONDITIONS: PresetConditionTemplate[] = [
     defaultDuration: 3,
     defaultValue: 2,
     damageType: 'sangue',
+    perTurn: 'damage',
   },
   {
     name: 'Amaldiçoado',
@@ -587,6 +668,7 @@ export const PRESET_CONDITIONS: PresetConditionTemplate[] = [
     color: '#22c55e',
     defaultDuration: 3,
     defaultValue: 3,
+    perTurn: 'heal',
   },
   {
     name: 'Protegido',
