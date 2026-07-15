@@ -1,76 +1,138 @@
 import React from 'react';
-import { Activity, ChevronDown, Clock3, Crosshair, Heart, History, LogOut, Map, RefreshCw, Search, Shield, Sparkles, Swords, UserRound, Wifi } from 'lucide-react';
+import { Check, Clock3, LogOut, RefreshCw, Search, Shield, Sparkles, Swords, Wifi, X } from 'lucide-react';
+import type { Character } from '../../types';
 import { OnlineAuth } from '../../online/authClient';
 import { PlayerOnline } from '../../online/playerClient';
-import type { PlayerActionView, PlayerCampaignView, PublicAlly, PublicParticipant } from '../../online/playerView';
+import type { PlayerActionView, PlayerCampaignView, PublicParticipant } from '../../online/playerView';
+import SceneBackdrop from '../../tabs/cena/SceneBackdrop';
+import PauseCurtain from '../../tabs/cena/PauseCurtain';
+import MapBoard from '../../tabs/cena/MapBoard';
 import './PlayerDashboard.css';
 
-type Tab = 'scene' | 'actions' | 'history';
 type RequestItem = { id: string; action_id: string; status: string; created_at: string };
 
-function Portrait({ person, large = false }: { person: PublicParticipant; large?: boolean }) {
-  return person.icon ? <img className={`pd-portrait ${large ? 'is-large' : ''}`} src={person.icon} alt={`Retrato de ${person.name}`} style={{ objectPosition: person.iconPosition }} /> : <span className={`pd-portrait pd-portrait--empty ${large ? 'is-large' : ''}`}><UserRound /></span>;
-}
+const needsTarget = (action: PlayerActionView) => action.requiresAim || action.target.type === 'um_alvo' || action.target.type === 'multiplos_alvos';
+const isReaction = (action: PlayerActionView) => action.tags.some(tag => /rea[cç][aã]o/i.test(tag));
 
-function Meter({ label, current, max, tone }: { label: string; current: number; max: number; tone: 'hp' | 'aura' | 'ammo' }) {
-  const percentage = max > 0 ? Math.max(0, Math.min(100, current / max * 100)) : 0;
-  return <div className="pd-meter"><div className="pd-meter__label"><span>{label}</span><strong>{current}<small> / {max}</small></strong></div><div className="pd-meter__track"><span className={`pd-meter__fill is-${tone}`} style={{ width: `${percentage}%` }} /></div></div>;
-}
-
-function Conditions({ person }: { person: PublicParticipant }) {
-  if (!person.conditions?.length) return <span className="pd-empty-inline">Sem condições</span>;
-  return <div className="pd-tags">{person.conditions.map((condition: any, index) => <span key={condition.id ?? condition.name ?? index}>{condition.name ?? condition.label ?? String(condition)}</span>)}</div>;
-}
-
-function ResourceCard({ ally }: { ally: PublicAlly }) {
-  return <article className="pd-roster-card"><div className="pd-roster-card__head"><Portrait person={ally} /><div><strong>{ally.name}</strong><Conditions person={ally} /></div></div><Meter label="Vida" current={ally.currentHp} max={ally.maxHp} tone="hp" /><Meter label="Aura" current={ally.currentAura} max={ally.maxAura} tone="aura" /></article>;
-}
-
-function BattleMap({ view, moving, onMove }: { view: PlayerCampaignView; moving: boolean; onMove: (dx: number, dy: number) => void }) {
-  const tokens: Array<PublicParticipant & { side: 'self' | 'ally' | 'enemy' }> = [{ ...view.character, position: view.position, side: 'self' }, ...view.allies.map(item => ({ ...item, side: 'ally' as const })), ...view.enemies.map(item => ({ ...item, side: 'enemy' as const }))];
-  return <section className="pd-map-card"><div className="pd-section-title"><div><small>CENA ATUAL</small><h2><Map /> Mapa tático</h2></div><span className={`pd-permission ${view.permissions.canMove ? 'is-open' : ''}`}>{view.permissions.canMove ? 'Movimento liberado' : 'Movimento bloqueado'}</span></div><div className="pd-map" style={view.scene.image ? { backgroundImage: `linear-gradient(rgba(8,11,18,.24),rgba(8,11,18,.5)),url(${view.scene.image})`, backgroundPosition: view.scene.imagePosition } : undefined}>{tokens.filter(token => token.position).map(token => <div key={token.id} className={`pd-token is-${token.side}`} title={token.name} style={{ left: `${token.position!.x}%`, top: `${token.position!.y}%` }}><Portrait person={token} /><span>{token.name}</span></div>)}<div className="pd-map__grid" /></div><div className="pd-map-controls"><div><strong>Sua posição</strong><span>X {Math.round(view.position.x)} · Y {Math.round(view.position.y)}</span></div><div className="pd-dpad"><span /><button aria-label="Mover para cima" disabled={!view.permissions.canMove || moving} onClick={() => onMove(0,-5)}>↑</button><span /><button aria-label="Mover para esquerda" disabled={!view.permissions.canMove || moving} onClick={() => onMove(-5,0)}>←</button><button aria-label="Mover para baixo" disabled={!view.permissions.canMove || moving} onClick={() => onMove(0,5)}>↓</button><button aria-label="Mover para direita" disabled={!view.permissions.canMove || moving} onClick={() => onMove(5,0)}>→</button></div><span>Passos de 5% do mapa</span></div></section>;
-}
-
-function ActionCard({ action, allowed, participants, selected, busy, onSelect, onRequest }: { action: PlayerActionView; allowed: boolean; participants: PublicParticipant[]; selected: string[]; busy: boolean; onSelect: (ids: string[]) => void; onRequest: (secondary?: string, destination?: { x: number; y: number }) => void }) {
-  const [expanded, setExpanded] = React.useState(false);
-  const [secondary, setSecondary] = React.useState('');
-  const [destination, setDestination] = React.useState({ x: '50', y: '50' });
-  const requiresTarget = action.requiresAim || action.target.type === 'um_alvo' || action.target.type === 'multiplos_alvos';
-  const multiple = action.target.type === 'multiplos_alvos' && !action.requiresAim;
-  const invalidDestination = !Number.isFinite(Number(destination.x)) || !Number.isFinite(Number(destination.y));
-  const disabled = !allowed || busy || (requiresTarget && !selected.length) || (action.requiresSecondaryTarget && !secondary) || (action.requiresDestination && invalidDestination);
-  return <article className={`pd-action ${allowed ? 'is-available' : ''}`}><div className="pd-action__art" style={action.icon ? { backgroundImage: `linear-gradient(180deg,transparent,#101722),url(${action.icon})` } : undefined}><span>{action.category}</span>{allowed && <b>DISPONÍVEL</b>}</div><div className="pd-action__body"><h3>{action.name}</h3><p className={expanded ? 'is-expanded' : ''}>{action.description || 'Sem descrição.'}</p>{action.description?.length > 120 && <button className="pd-text-button" onClick={() => setExpanded(value => !value)}>{expanded ? 'Mostrar menos' : 'Ler descrição'} <ChevronDown className={expanded ? 'is-rotated' : ''} /></button>}<div className="pd-action__meta">{action.tags.slice(0, 4).map(tag => <span key={tag}>{tag}</span>)}</div>
-    {requiresTarget && <label className="pd-field">{action.requiresAim ? 'DIREÇÃO DA ÁREA' : multiple ? 'ALVOS' : 'ALVO'}<select multiple={multiple} size={multiple ? Math.min(4, participants.length) : 1} value={selected} onChange={event => onSelect(Array.from(event.currentTarget.selectedOptions).map(option => option.value))}>{participants.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select>{multiple && <small>Até {action.target.type === 'multiplos_alvos' ? action.target.maxTargets : 1} alvos</small>}</label>}
-    {action.requiresSecondaryTarget && <label className="pd-field">ALVO DA SEGUNDA ETAPA<select value={secondary} onChange={event => setSecondary(event.target.value)}><option value="">Selecione…</option>{participants.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>}
-    {action.requiresDestination && <fieldset className="pd-destination"><legend>DESTINO DO TELEPORTE</legend><div className="pd-mini-map" onClick={event => { const box = event.currentTarget.getBoundingClientRect(); setDestination({ x: String(Math.round((event.clientX - box.left) / box.width * 100)), y: String(Math.round((event.clientY - box.top) / box.height * 100)) }); }}>{participants.filter(person => person.position).map(person => <i key={person.id} style={{ left: `${person.position!.x}%`, top: `${person.position!.y}%` }} />)}<b style={{ left: `${Number(destination.x)}%`, top: `${Number(destination.y)}%` }} /></div><div className="pd-coordinate"><label>X<input type="number" min="0" max="100" value={destination.x} onChange={event => setDestination(current => ({ ...current, x: event.target.value }))} /></label><label>Y<input type="number" min="0" max="100" value={destination.y} onChange={event => setDestination(current => ({ ...current, y: event.target.value }))} /></label></div></fieldset>}
-    <button className="pd-primary" disabled={disabled} onClick={() => onRequest(secondary || undefined, action.requiresDestination ? { x: Number(destination.x), y: Number(destination.y) } : undefined)}>{busy ? 'ENVIANDO…' : !allowed ? 'AGUARDE SEU TURNO' : 'SOLICITAR AO MESTRE'}</button></div></article>;
+function asMapCharacter(person: PublicParticipant, masked = false): Character {
+  const resource = person as any;
+  return {
+    ...person,
+    currentHp: masked ? 1 : resource.currentHp ?? 1,
+    maxHp: masked ? 1 : resource.maxHp ?? 1,
+    currentAura: resource.currentAura ?? 0,
+    maxAura: resource.maxAura ?? 0,
+    currentAmmo: resource.currentAmmo ?? 0,
+    maxAmmo: resource.maxAmmo ?? 0,
+    baseInitiative: resource.baseInitiative ?? 0,
+  } as Character;
 }
 
 export default function PlayerDashboard() {
   const [view, setView] = React.useState<PlayerCampaignView | null>(null);
   const [requests, setRequests] = React.useState<RequestItem[]>([]);
-  const [tab, setTab] = React.useState<Tab>('scene');
   const [notice, setNotice] = React.useState('');
   const [search, setSearch] = React.useState('');
   const [moving, setMoving] = React.useState(false);
-  const [requesting, setRequesting] = React.useState<string | null>(null);
-  const [selectedTargets, setSelectedTargets] = React.useState<Record<string, string[]>>({});
-  const [lastSync, setLastSync] = React.useState<Date | null>(null);
-  const load = React.useCallback(async (quiet = false) => { try { const [state, history] = await Promise.all([PlayerOnline.state(), PlayerOnline.actionRequests()]); setView(state); setRequests(history); setLastSync(new Date()); if (!quiet) setNotice(''); } catch (error) { setNotice(error instanceof Error ? error.message : 'Falha ao carregar a mesa.'); } }, []);
-  React.useEffect(() => { void load(); const timer = window.setInterval(() => document.visibilityState === 'visible' && void load(true), 3000); return () => window.clearInterval(timer); }, [load]);
+  const [requesting, setRequesting] = React.useState(false);
+  const [armed, setArmed] = React.useState<PlayerActionView | null>(null);
+  const [targets, setTargets] = React.useState<string[]>([]);
+  const [secondary, setSecondary] = React.useState('');
+  const [destination, setDestination] = React.useState({ x: 50, y: 50 });
+  const [historyOpen, setHistoryOpen] = React.useState(false);
+
+  const load = React.useCallback(async (quiet = false) => {
+    try {
+      const [state, history] = await Promise.all([PlayerOnline.state(), PlayerOnline.actionRequests()]);
+      setView(state); setRequests(history);
+      if (!quiet) setNotice('');
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Falha ao carregar a mesa.'); }
+  }, []);
+
+  React.useEffect(() => {
+    void load();
+    const timer = window.setInterval(() => document.visibilityState === 'visible' && void load(true), 2500);
+    return () => window.clearInterval(timer);
+  }, [load]);
+
   if (!view) return <main className="pd-loading"><span className="pd-loader" /><h1>Preparando sua mesa</h1><p>{notice || 'Sincronizando personagem e cena…'}</p></main>;
-  const participants: PublicParticipant[] = [{ ...view.character, position: view.position }, ...view.allies, ...view.enemies];
-  const move = async (dx: number, dy: number) => { if (!view.permissions.canMove || moving) return; setMoving(true); try { await PlayerOnline.move(view.position.x + dx, view.position.y + dy, view.revision); await load(true); } catch (error) { setNotice(error instanceof Error ? error.message : 'Não foi possível mover o token.'); } finally { setMoving(false); } };
-  const requestAction = async (action: PlayerActionView, secondary?: string, destination?: { x: number; y: number }) => { setRequesting(action.id); try { await PlayerOnline.requestAction(action.id, selectedTargets[action.id] ?? [], secondary, destination); setNotice(`${action.name} foi enviada ao mestre.`); await load(true); } catch (error) { setNotice(error instanceof Error ? error.message : 'Não foi possível solicitar a ação.'); } finally { setRequesting(null); } };
-  const turnLabel = !view.encounter.isActive ? 'Exploração livre' : view.permissions.isOwnTurn ? 'Seu turno' : 'Aguardando turno';
-  const filteredActions = view.actions.filter(action => !search || `${action.name} ${action.description} ${action.tags.join(' ')}`.toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR')));
+
+  const publicPeople: PublicParticipant[] = [{ ...view.character, position: view.position }, ...view.allies, ...view.enemies];
+  const enemyIds = view.enemies.map(person => person.id);
+  const participants = publicPeople.map(person => asMapCharacter(person, enemyIds.includes(person.id)));
+  const tokens = Object.fromEntries(publicPeople.filter(person => person.position).map(person => [person.id, person.position! ]));
+  const actionAllowed = (action: PlayerActionView) => view.permissions.canAct || (isReaction(action) && view.permissions.canReact && !view.encounter.isPaused);
+  const targetableIds = armed && actionAllowed(armed) && needsTarget(armed) ? publicPeople.map(person => person.id) : [];
   const pending = requests.filter(item => item.status === 'pending').length;
-  return <main className="pd-shell"><header className="pd-topbar"><div className="pd-brand"><Sparkles /><span><b>RPG CODEX</b><small>Portal do jogador</small></span></div><nav aria-label="Navegação do jogador"><button className={tab === 'scene' ? 'is-active' : ''} onClick={() => setTab('scene')}><Map /> Cena</button><button className={tab === 'actions' ? 'is-active' : ''} onClick={() => setTab('actions')}><Swords /> Ações{pending > 0 && <i>{pending}</i>}</button><button className={tab === 'history' ? 'is-active' : ''} onClick={() => setTab('history')}><History /> Histórico</button></nav><div className="pd-top-actions"><span title="Última sincronização"><Wifi /> {lastSync ? lastSync.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'}</span><button aria-label="Atualizar" onClick={() => load()}><RefreshCw /></button><button aria-label="Sair" onClick={() => OnlineAuth.logout().finally(() => window.location.assign('/?view=login'))}><LogOut /></button></div></header>
-    <section className="pd-hero" style={view.scene.image ? { backgroundImage: `linear-gradient(90deg,rgba(7,10,16,.96),rgba(7,10,16,.45)),url(${view.scene.image})`, backgroundPosition: view.scene.imagePosition } : undefined}><div><small>{view.scene.subtitle || 'Cena atual'}</small><h1>{view.scene.locationName}</h1><div className="pd-turn-row"><span className={`pd-turn ${view.permissions.isOwnTurn ? 'is-own' : ''}`}><Swords /> {turnLabel}</span>{view.encounter.isActive && <span>Rodada {view.encounter.round}</span>}{view.encounter.isPaused && <span className="is-warning">Combate pausado</span>}</div></div><div className="pd-hero-character"><Portrait person={view.character} large /><span><small>JOGANDO COMO</small><strong>{view.character.name}</strong></span></div></section>
-    {notice && <div className={`pd-toast ${notice.includes('enviada') ? 'is-success' : ''}`} role="status">{notice}<button aria-label="Fechar aviso" onClick={() => setNotice('')}>×</button></div>}
-    <div className="pd-layout"><aside className="pd-sidebar"><section className="pd-character-card"><div className="pd-section-title"><div><small>RECURSOS</small><h2><Heart /> Estado atual</h2></div></div><Meter label="Pontos de Vida" current={view.character.currentHp} max={view.character.maxHp} tone="hp" /><Meter label="Aura" current={view.character.currentAura} max={view.character.maxAura} tone="aura" /><Meter label="Munição" current={view.character.currentAmmo} max={view.character.maxAmmo} tone="ammo" /><div className="pd-condition-block"><small>CONDIÇÕES</small><Conditions person={view.character} /></div></section><section className="pd-quick-status"><div><Shield /><span><small>DEFESA</small><strong>{view.character.defenseCurrent ?? view.character.defense ?? 10}</strong></span></div><div><Activity /><span><small>VELOCIDADE</small><strong>{view.character.speed ?? view.character.baseInitiative}</strong></span></div></section>{pending > 0 && <button className="pd-pending-shortcut" onClick={() => setTab('history')}><Clock3 /><span><strong>{pending} solicitação{pending === 1 ? '' : 'ões'} pendente{pending === 1 ? '' : 's'}</strong><small>Acompanhar decisões do mestre</small></span></button>}</aside>
-      <div className="pd-content">{tab === 'scene' && <><BattleMap view={view} moving={moving} onMove={move} /><div className="pd-rosters"><section><div className="pd-section-title"><div><small>GRUPO</small><h2><Shield /> Aliados</h2></div><span>{view.allies.length}</span></div><div className="pd-roster-grid">{view.allies.map(ally => <ResourceCard key={ally.id} ally={ally} />)}{!view.allies.length && <div className="pd-empty">Nenhum aliado na cena.</div>}</div></section><section><div className="pd-section-title"><div><small>AMEAÇAS</small><h2><Crosshair /> Inimigos visíveis</h2></div><span>{view.enemies.length}</span></div><div className="pd-enemy-list">{view.enemies.map(enemy => <article key={enemy.id}><Portrait person={enemy} /><div><strong>{enemy.name}</strong><Conditions person={enemy} /></div><span>Informação limitada</span></article>)}{!view.enemies.length && <div className="pd-empty">Nenhuma ameaça visível.</div>}</div></section></div></>}
-      {tab === 'actions' && <section className="pd-actions-page"><div className="pd-page-head"><div><small>ARSENAL DO PERSONAGEM</small><h2>Habilidades e ações</h2><p>Escolha os alvos e envie para confirmação do mestre.</p></div><label className="pd-search"><Search /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar ação, descrição ou tag…" /></label></div><div className="pd-action-grid">{filteredActions.map(action => { const reaction = action.tags.some(tag => /rea[cç][aã]o/i.test(tag)); const allowed = view.permissions.canAct || (reaction && view.permissions.canReact); return <ActionCard key={action.id} action={action} allowed={allowed} participants={participants} selected={selectedTargets[action.id] ?? []} busy={requesting === action.id} onSelect={ids => setSelectedTargets(current => ({ ...current, [action.id]: action.target.type === 'multiplos_alvos' ? ids.slice(0, action.target.maxTargets) : ids.slice(0, 1) }))} onRequest={(secondary, destination) => requestAction(action, secondary, destination)} />; })}{!filteredActions.length && <div className="pd-empty pd-empty--large">Nenhuma ação corresponde à busca.</div>}</div></section>}
-      {tab === 'history' && <section className="pd-history"><div className="pd-page-head"><div><small>ATIVIDADE RECENTE</small><h2>Solicitações ao mestre</h2><p>Acompanhe o resultado das suas últimas ações.</p></div></div><div className="pd-timeline">{requests.map(item => { const action = view.actions.find(candidate => candidate.id === item.action_id); return <article key={item.id} className={`is-${item.status}`}><i /><div><strong>{action?.name ?? 'Ação'}</strong><span>{item.status === 'approved' ? 'Aprovada e executada' : item.status === 'rejected' ? 'Rejeitada pelo mestre' : 'Aguardando decisão'}</span></div><time>{new Date(item.created_at).toLocaleString('pt-BR')}</time></article>; })}{!requests.length && <div className="pd-empty pd-empty--large">Você ainda não enviou nenhuma ação.</div>}</div></section>}</div></div>
+  const actions = view.actions.filter(action => !search || `${action.name} ${action.tags.join(' ')}`.toLowerCase().includes(search.toLowerCase()));
+
+  const selectToken = (id: string) => {
+    if (!armed || !needsTarget(armed) || !actionAllowed(armed)) return;
+    if (armed.target.type === 'multiplos_alvos' && !armed.requiresAim) {
+      setTargets(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id].slice(0, armed.target.maxTargets));
+    } else setTargets([id]);
+  };
+  const moveToken = async (id: string, pos: { x: number; y: number }) => {
+    if (id !== view.character.id || !view.permissions.canMove || moving) return;
+    setMoving(true);
+    try { await PlayerOnline.move(pos.x, pos.y, view.revision); await load(true); }
+    catch (error) { setNotice(error instanceof Error ? error.message : 'Não foi possível mover o token.'); }
+    finally { setMoving(false); }
+  };
+  const arm = (action: PlayerActionView) => {
+    if (!actionAllowed(action)) return;
+    setArmed(current => current?.id === action.id ? null : action); setTargets([]); setSecondary('');
+  };
+  const sendAction = async () => {
+    if (!armed || requesting || !actionAllowed(armed) || (needsTarget(armed) && !targets.length)) return;
+    setRequesting(true);
+    try {
+      await PlayerOnline.requestAction(armed.id, targets, secondary || undefined, armed.requiresDestination ? destination : undefined);
+      setNotice(`${armed.name} foi enviada ao mestre.`); setArmed(null); setTargets([]); await load(true);
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Não foi possível solicitar a ação.'); }
+    finally { setRequesting(false); }
+  };
+
+  const turnText = !view.encounter.isActive ? 'EXPLORAÇÃO LIVRE' : view.permissions.isOwnTurn ? 'SEU TURNO' : 'AGUARDANDO TURNO';
+  return <main className={`cena-shell player-scene is-combat ${view.scene.isNight ? 'is-night' : ''}`}>
+    <SceneBackdrop image={view.scene.image} imagePosition={view.scene.imagePosition} combat={view.encounter.isActive} />
+    <PauseCurtain isPaused={view.encounter.isPaused} image={view.scene.pausedImage || view.scene.image} imagePosition={view.scene.pausedImagePosition || view.scene.imagePosition} participants={participants} display={view.scene.pausedDisplay} />
+
+    <header className="player-scene__bar">
+      <div><Sparkles size={16}/><span><small>{view.scene.subtitle || 'CENA ATUAL'}</small><strong>{view.scene.locationName}</strong></span></div>
+      <b className={view.permissions.isOwnTurn ? 'is-own' : ''}>{turnText}{view.encounter.isActive && ` · RODADA ${view.encounter.round}`}</b>
+      <nav><span><Wifi size={13}/> AO VIVO</span><button title="Atualizar" onClick={() => load()}><RefreshCw size={16}/></button><button title="Sair" onClick={() => OnlineAuth.logout().finally(() => window.location.assign('/?view=login'))}><LogOut size={16}/></button></nav>
+    </header>
+
+    {notice && <div className="player-scene__notice">{notice}<button onClick={() => setNotice('')}><X size={14}/></button></div>}
+    {armed && <div className="player-scene__aim"><CrosshairIcon/><span><small>AÇÃO PREPARADA</small><strong>{armed.name}</strong><em>{needsTarget(armed) ? targets.length ? `${targets.length} alvo(s) marcado(s)` : 'Selecione no mapa' : 'Pronta para enviar'}</em></span></div>}
+
+    <section className="cena-arena-column player-scene__arena">
+      <div className="cena-arena-stage">
+        <MapBoard image={view.scene.image} imagePosition={view.scene.imagePosition} participants={participants} tokens={tokens} activeId={view.encounter.currentTurnId} combat={view.encounter.isActive} enemyIds={enemyIds} movableIds={view.permissions.canMove ? [view.character.id] : []} maskEnemyResources targetableIds={targetableIds} selectedTargetId={targets[0] ?? null} areaPreviewIds={targets.slice(1)} onMoveToken={moveToken} onSelect={selectToken}/>
+      </div>
+    </section>
+
+    <aside className="cena-command-deck player-deck">
+      <section className="player-deck__identity">
+        <i style={view.character.icon ? { backgroundImage: `url(${view.character.icon})`, backgroundPosition: view.character.iconPosition } : undefined}>{!view.character.icon && view.character.name[0]}</i>
+        <div><small>JOGANDO COMO</small><strong>{view.character.name}</strong><span>PV {view.character.currentHp}/{view.character.maxHp} · AURA {view.character.currentAura}/{view.character.maxAura}</span></div>
+        <Shield size={18}/>
+      </section>
+      <section className="cena-deck-actions player-deck__actions">
+        <header><div><small>ARSENAL PESSOAL</small><strong>COMANDOS</strong></div><label><Search size={13}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar…"/></label></header>
+        <div className="player-deck__list">{actions.map(action => <button key={action.id} data-category={action.category} className={`cena-command ${armed?.id === action.id ? 'is-open' : ''}`} disabled={!actionAllowed(action)} onClick={() => arm(action)}>{action.icon ? <i style={{ backgroundImage: `url(${action.icon})` }}/> : <Swords size={17}/>}<span className="cena-command__copy"><strong>{action.name}</strong><small>{action.tags.slice(0,2).join(' · ') || action.category}</small></span>{isReaction(action) && <b>R</b>}</button>)}{!actions.length && <p>Nenhuma ação no arsenal.</p>}</div>
+      </section>
+      {armed && <section className="player-deck__confirm">
+        <p>{armed.description || 'Sem descrição.'}</p>
+        {armed.requiresSecondaryTarget && <label>SEGUNDO ALVO<select value={secondary} onChange={e => setSecondary(e.target.value)}><option value="">Selecione…</option>{publicPeople.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>}
+        {armed.requiresDestination && <label>DESTINO<div><input type="number" min="0" max="100" value={destination.x} onChange={e => setDestination({...destination,x:Number(e.target.value)})}/><input type="number" min="0" max="100" value={destination.y} onChange={e => setDestination({...destination,y:Number(e.target.value)})}/></div></label>}
+        <button disabled={requesting || (needsTarget(armed) && !targets.length) || (armed.requiresSecondaryTarget && !secondary)} onClick={sendAction}><Check size={16}/>{requesting ? 'ENVIANDO…' : 'SOLICITAR AO MESTRE'}</button>
+      </section>}
+      <button className="player-deck__history" onClick={() => setHistoryOpen(value => !value)}><Clock3 size={15}/> HISTÓRICO {pending > 0 && <b>{pending}</b>}</button>
+      {historyOpen && <section className="player-deck__history-list">{requests.slice(0,8).map(item => <div key={item.id} className={`is-${item.status}`}><span>{view.actions.find(action => action.id === item.action_id)?.name || 'Ação'}</span><b>{item.status === 'approved' ? 'APROVADA' : item.status === 'rejected' ? 'RECUSADA' : 'PENDENTE'}</b></div>)}</section>}
+    </aside>
   </main>;
 }
+
+function CrosshairIcon(){ return <span className="player-scene__crosshair">＋</span>; }

@@ -1,6 +1,7 @@
 import type { Character, Condition } from '../types';
 import type { TargetConfig } from '../utils/arsenal';
 import type { AppSnapshot } from '../utils/database';
+import type { PausedDisplayState } from '../utils/cena';
 
 export interface PublicParticipant {
   id: string;
@@ -34,6 +35,9 @@ export interface PlayerCampaignView {
     image: string;
     imagePosition?: string;
     isNight: boolean;
+    pausedImage?: string;
+    pausedImagePosition?: string;
+    pausedDisplay?: PausedDisplayState | null;
   };
   encounter: {
     isActive: boolean;
@@ -98,6 +102,9 @@ export function buildPlayerCampaignView(snapshot: AppSnapshot, characterId: stri
       image: snapshot.cena.scene.image,
       imagePosition: snapshot.cena.scene.imagePosition,
       isNight: snapshot.cena.scene.isNight,
+      pausedImage: snapshot.cena.scene.pausedImage,
+      pausedImagePosition: snapshot.cena.scene.pausedImagePosition,
+      pausedDisplay: snapshot.cena.pausedDisplay,
     },
     encounter: { isActive: snapshot.cena.encounter.isActive, isPaused: snapshot.cena.encounter.isPaused, round: snapshot.cena.encounter.round, currentTurnId, order },
     permissions: { isOwnTurn, canMove: !snapshot.cena.encounter.isActive || (isOwnTurn && !snapshot.cena.encounter.isPaused), canAct: isOwnTurn && !snapshot.cena.encounter.isPaused, canReact: snapshot.cena.encounter.isActive && !snapshot.cena.encounter.reactionsUsed[characterId] },

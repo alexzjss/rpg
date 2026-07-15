@@ -48,6 +48,10 @@ export interface MapBoardProps {
   iconOverrides?: Record<string, string | undefined>;
   auraColors?: Record<string, string | undefined>;
   formaAvailableColors?: Record<string, string | undefined>;
+  /** Quando informado, somente estes tokens podem ser arrastados. */
+  movableIds?: string[];
+  /** Oculta a barra de vida dos inimigos sem precisar enviar seus recursos reais. */
+  maskEnemyResources?: boolean;
 }
 
 interface TokenProps {
@@ -64,13 +68,15 @@ interface TokenProps {
   impact?: MapTargetImpact;
   selectedTarget?: boolean;
   inArea?: boolean;
+  movable?: boolean;
+  maskResources?: boolean;
   onPointerDown: (event: React.PointerEvent<HTMLDivElement>, id: string) => void;
   onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void;
   onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void;
   onPointerCancel: (event: React.PointerEvent<HTMLDivElement>) => void;
 }
 
-const Token: React.FC<TokenProps> = ({ participant, position, active, enemy, dragging, tokenIcon, auraColor, formaAvailColor, effect, targetable, impact, selectedTarget, inArea, onPointerDown, onPointerMove, onPointerUp, onPointerCancel }) => {
+const Token: React.FC<TokenProps> = ({ participant, position, active, enemy, dragging, tokenIcon, auraColor, formaAvailColor, effect, targetable, impact, selectedTarget, inArea, movable = true, maskResources, onPointerDown, onPointerMove, onPointerUp, onPointerCancel }) => {
   const hp = participant.maxHp > 0 ? Math.max(0, Math.min(100, participant.currentHp / participant.maxHp * 100)) : 0;
   const ghostHp = useGhostPct(hp);
   const isDefeated = participant.currentHp <= 0;
@@ -79,7 +85,7 @@ const Token: React.FC<TokenProps> = ({ participant, position, active, enemy, dra
   const elementClass = effect?.damageType ? `is-element-${String(effect.damageType).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : '';
   return <div data-token-id={participant.id} title={participant.name}
     onPointerDown={event => onPointerDown(event, participant.id)} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}
-    className={`cena-token ${enemy ? 'is-enemy' : 'is-ally'} ${active ? 'is-active' : ''} ${auraColor ? 'has-forma' : ''} ${formaAvailColor ? 'is-forma-available' : ''} ${targetable ? 'is-targetable' : ''} ${selectedTarget ? 'is-target-selected' : ''} ${inArea ? 'is-in-area' : ''} ${impact ? 'has-impact-preview' : ''} ${impact?.intent ? `intent-${impact.intent}` : ''} ${hp <= 25 && !isDefeated ? 'is-low' : ''} ${isDefeated ? 'is-defeated' : ''} ${justDowned ? 'is-downing' : ''} ${dragging ? 'is-dragging' : ''}`}
+    className={`cena-token ${enemy ? 'is-enemy' : 'is-ally'} ${active ? 'is-active' : ''} ${movable ? 'is-movable' : 'is-locked'} ${auraColor ? 'has-forma' : ''} ${formaAvailColor ? 'is-forma-available' : ''} ${targetable ? 'is-targetable' : ''} ${selectedTarget ? 'is-target-selected' : ''} ${inArea ? 'is-in-area' : ''} ${impact ? 'has-impact-preview' : ''} ${impact?.intent ? `intent-${impact.intent}` : ''} ${!maskResources && hp <= 25 && !isDefeated ? 'is-low' : ''} ${!maskResources && isDefeated ? 'is-defeated' : ''} ${justDowned ? 'is-downing' : ''} ${dragging ? 'is-dragging' : ''}`}
     style={{ left: `${position.x}%`, top: `${position.y}%`, '--token-hp': `${hp * 3.6}deg`, '--token-image': tokenIcon ? `url(${tokenIcon})` : 'none', '--token-image-position': participant.iconPosition || '50% 50%', '--ring': auraColor || undefined, '--forma-avail-color': formaAvailColor || undefined } as React.CSSProperties}>
     <div className="cena-token__runes">âœ¦</div>
     {formaAvailColor && <span className="cena-token__forma-glow" aria-hidden />}
@@ -87,7 +93,7 @@ const Token: React.FC<TokenProps> = ({ participant, position, active, enemy, dra
       {!tokenIcon && <span>{participant.name.charAt(0).toUpperCase()}</span>}
       {isDefeated && <span className="cena-token__downed" aria-label={`${participant.name} derrotado`}><Skull size={14} /></span>}
     </div>
-    <div className="cena-token__label"><strong>{participant.name}</strong><i><i className="cena-token__label-ghost" style={{ width: `${ghostHp}%` }} /><b style={{ width: `${hp}%` }} /></i></div>
+    <div className="cena-token__label"><strong>{participant.name}</strong>{!maskResources && <i><i className="cena-token__label-ghost" style={{ width: `${ghostHp}%` }} /><b style={{ width: `${hp}%` }} /></i>}</div>
     {impact && <div className={`cena-token__impact ${impact.intent ? `intent-${impact.intent}` : ''} ${impact.hpDelta && impact.hpDelta > 0 ? 'is-heal' : 'is-damage'}`}>
       <strong>{impact.accuracyLabel ?? (impact.hpDelta ? `${impact.hpDelta > 0 ? '+' : '-'}${Math.abs(impact.hpDelta)}` : impact.defenseDelta ? `DEF ${impact.defenseDelta}` : impact.note)}</strong>
       {impact.comparison && <small>{impact.comparison}</small>}
@@ -121,7 +127,7 @@ interface DragSession {
   frame: number | null;
 }
 
-const MapBoard: React.FC<MapBoardProps> = ({ image, imagePosition, participants, tokens, activeId, onMoveToken, onSelect, combat = false, enemyIds = [], targetEffect, targetableIds = [], targetImpacts = {}, selectedTargetId = null, areaPreviewIds = [], iconOverrides = {}, auraColors = {}, formaAvailableColors = {} }) => {
+const MapBoard: React.FC<MapBoardProps> = ({ image, imagePosition, participants, tokens, activeId, onMoveToken, onSelect, combat = false, enemyIds = [], targetEffect, targetableIds = [], targetImpacts = {}, selectedTargetId = null, areaPreviewIds = [], iconOverrides = {}, auraColors = {}, formaAvailableColors = {}, movableIds, maskEnemyResources = false }) => {
   const boardRef = React.useRef<HTMLDivElement>(null);
   const dragRef = React.useRef<DragSession | null>(null);
   const [transient, setTransient] = React.useState<Record<string, { x: number; y: number }>>({});
@@ -149,6 +155,7 @@ const MapBoard: React.FC<MapBoardProps> = ({ image, imagePosition, participants,
   };
   const beginDrag = (event: React.PointerEvent<HTMLDivElement>, id: string) => {
     if ((event.button ?? 0) !== 0) return;
+    if (movableIds && !movableIds.includes(id)) { selectRef.current(id); return; }
     const position = clientToPct(event.clientX, event.clientY);
     if (!position) return;
     event.preventDefault();
@@ -208,6 +215,8 @@ const MapBoard: React.FC<MapBoardProps> = ({ image, imagePosition, participants,
         targetable={targetableIds.includes(participant.id)}
         selectedTarget={selectedTargetId === participant.id}
         inArea={areaPreviewIds.includes(participant.id)}
+        movable={!movableIds || movableIds.includes(participant.id)}
+        maskResources={maskEnemyResources && enemyIds.includes(participant.id)}
         impact={impact}
         onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={finishDrag} onPointerCancel={cancelDrag}
       />;
