@@ -1,7 +1,6 @@
 import type { Character, Condition } from '../types';
 import type { TargetConfig } from '../utils/arsenal';
 import type { AppSnapshot } from '../utils/database';
-import { graphAreaConfig } from '../utils/abilityArea';
 
 export interface PublicParticipant {
   id: string;
@@ -85,7 +84,7 @@ export function buildPlayerCampaignView(snapshot: AppSnapshot, characterId: stri
   ]);
   const actions: PlayerActionView[] = [
     ...snapshot.grimoire.filter(action => ownedActionIds.has(action.id)).map(action => ({ id: action.id, name: action.name, description: action.description, icon: action.icon, category: action.category, tags: action.tags ?? [], target: action.target ?? { type: 'um_alvo' as const } })),
-    ...(snapshot.abilityGraphs ?? []).filter(action => ownedActionIds.has(action.id)).map(action => { const validGraph = Array.isArray(action.nodes) && Array.isArray(action.edges); const area = validGraph ? graphAreaConfig(action, Math.max(1, owner.arsenal?.find(item => item.cardId === action.id)?.maxLevel ?? 1)) : null; return { id: action.id, name: action.header.name, description: action.header.description, icon: action.header.icon, category: 'habilidade', tags: action.header.tags ?? [], target: action.header.target ?? { type: 'um_alvo' as const }, requiresAim: area?.shape === 'linha' || area?.shape === 'cone', requiresSecondaryTarget: validGraph && action.nodes.some(node => node.type === 'alvo' && (node.props as any)?.scope === 'escolha'), requiresDestination: validGraph && action.nodes.some(node => node.type === 'mover' && (node.props as any)?.kind === 'teleportar') }; }),
+    ...(snapshot.abilityGraphs ?? []).filter(action => ownedActionIds.has(action.id)).map(action => { const validGraph = Array.isArray(action.nodes) && Array.isArray(action.edges); const areaScope = validGraph ? action.nodes.find(node => node.type === 'alvo' && ['linha', 'cone'].includes(String((node.props as any)?.scope))) : null; return { id: action.id, name: action.header.name, description: action.header.description, icon: action.header.icon, category: 'habilidade', tags: action.header.tags ?? [], target: action.header.target ?? { type: 'um_alvo' as const }, requiresAim: !!areaScope, requiresSecondaryTarget: validGraph && action.nodes.some(node => node.type === 'alvo' && (node.props as any)?.scope === 'escolha'), requiresDestination: validGraph && action.nodes.some(node => node.type === 'mover' && (node.props as any)?.kind === 'teleportar') }; }),
   ];
   const { code: _secretCode, ...safeOwner } = owner;
 

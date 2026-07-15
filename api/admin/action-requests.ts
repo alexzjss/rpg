@@ -1,7 +1,6 @@
 import { json, readJson } from '../_lib/http.js';
 import { currentSession } from '../_lib/session.js';
 import { dbRequest } from '../_lib/supabase.js';
-import { executeOnlineAction } from '../../online/actionExecution.js';
 
 export default async function handler(req: any, res: any) {
   try {
@@ -32,6 +31,7 @@ export default async function handler(req: any, res: any) {
       const encounter = stored.data.cena.encounter;
       const reaction = request.payload?.reaction === true;
       if (!reaction && encounter.isActive && (encounter.isPaused || encounter.order[encounter.turnIndex]?.refId !== request.actor_character_id)) return json(res, 409, { error: 'O turno mudou; rejeite este pedido e solicite a ação novamente.' });
+      const { executeOnlineAction } = await import('../../online/actionExecution.js');
       const result = executeOnlineAction(stored.data, { actorId: request.actor_character_id, actionId: request.action_id, targetIds: request.target_ids, choiceTargetId: request.payload?.choiceTargetId, destination: request.payload?.destination, reaction });
       const saved = await dbRequest<any[]>('rpc/save_campaign_snapshot', { method: 'POST', body: JSON.stringify({ p_campaign_id: account.campaign_id, p_expected_revision: Number(stored.revision), p_snapshot_version: stored.snapshot_version, p_data: result.snapshot }) });
       execution = { revision: Number(saved[0]?.revision), summary: result.summary, status: result.status };
