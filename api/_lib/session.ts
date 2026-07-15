@@ -12,7 +12,8 @@ export interface SessionRow {
 }
 
 export async function currentSession(req: any): Promise<SessionRow | null> {
-  const token = parseCookies(req.headers?.cookie).vat_session;
+  const headerToken = req.headers?.['x-vat-session'];
+  const token = (typeof headerToken === 'string' && headerToken) || parseCookies(req.headers?.cookie).vat_session;
   if (!token) return null;
   const select = 'id,account_id,expires_at,campaign_accounts(id,campaign_id,username,role,character_id,active,campaigns(id,slug))';
   const rows = await dbRequest<SessionRow[]>(`campaign_sessions?token_hash=eq.${tokenHash(token)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=${select}`);

@@ -11,7 +11,7 @@ export interface OnlineSession {
 }
 
 export interface LoginInput { campaign: string; username: string; password: string }
-export interface LoginResult { session: OnlineSession }
+export interface LoginResult { token: string; session: OnlineSession }
 
 export type ActionRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'resolved';
 

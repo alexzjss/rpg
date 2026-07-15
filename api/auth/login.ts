@@ -25,7 +25,7 @@ export default async function handler(req: any, res: any) {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     await dbRequest('campaign_sessions', { method: 'POST', headers: { prefer: 'return=minimal' }, body: JSON.stringify({ account_id: account.id, token_hash: tokenHash(token), expires_at: expiresAt }) });
     res.setHeader('set-cookie', sessionCookie(token));
-    return json(res, 200, { session: { accountId: account.id, campaignId: account.campaign_id, campaignSlug: account.campaigns.slug, username: account.username, role: account.role, characterId: account.character_id, expiresAt } });
+    return json(res, 200, { token, session: { accountId: account.id, campaignId: account.campaign_id, campaignSlug: account.campaigns.slug, username: account.username, role: account.role, characterId: account.character_id, expiresAt } });
   } catch (error) {
     console.error(error);
     return json(res, 500, { error: 'Não foi possível entrar agora.' });
