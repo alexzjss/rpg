@@ -10,6 +10,17 @@ function character(id: string, name: string, hp = 20): any {
 }
 
 describe('executeOnlineAction', () => {
+  it('executa cartas legadas que aparecem no mesmo menu do mestre', () => {
+    const hero = character('hero', 'Heroína'); hero.cardIds = ['legado'];
+    const enemy = { ...character('enemy', 'Inimigo'), isNpc: true, present: true, hidden: false };
+    const cena = createDefaultCena(); cena.npcRoster = [enemy]; cena.encounter.isActive = true; cena.encounter.order = [{ refId: 'hero', side: 'party', initiative: 10 }];
+    const snapshot: any = { version: 8, savedAt: '', characters: [hero], cards: [{ id: 'legado', name: 'Golpe antigo', image: '', auraCost: 0, type: 'ataque', damage: 3, description: '', diceRoll: '1d20+99' }], items: [], seals: [], weapons: [], grimoire: [], abilityGraphs: [], combat: {}, journey: {}, cena };
+    const result = executeOnlineAction(snapshot, { actorId: 'hero', actionId: 'legado', targetIds: ['enemy'] });
+    expect(result.summary).toContain('Golpe antigo');
+    expect(result.snapshot.cena.npcRoster[0].currentHp).toBeLessThan(20);
+    expect(result.snapshot.cena.encounter.turn.majorUsed).toBe(true);
+  });
+
   it('aplica custo e dano sem alterar o snapshot original', () => {
     const hero = character('hero', 'Heroína');
     hero.arsenal = [{ cardId: 'golpe', quantity: 1, equipped: true, active: true }];

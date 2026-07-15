@@ -47,6 +47,8 @@ export interface RosterPanelProps {
   targetPreview?: { diceRoll: string; damage?: number; damageType?: DamageType; healHp?: number; conditionName?: string; targeting: 'self' | 'other' } | null;
   targetImpacts?: Record<string, TargetImpactPreview>;
   streamingMode?: boolean;
+  /** Replica segura: mantém o visual, remove ferramentas e mascara NPCs. */
+  playerMode?: boolean;
 }
 
 const iconButton: React.CSSProperties = { background: 'transparent', border: 0, cursor: 'pointer', color: '#8c8378', padding: 3, display: 'flex' };
@@ -246,7 +248,7 @@ const Row: React.FC<RowProps> = ({ char, side, selected, current, feedback, form
       <div className="cena-combatant__title"><strong>{char.name}</strong></div>
       <Vital kind="hp" current={char.currentHp} max={char.maxHp} ghostPct={ghosts.hp} previewDelta={impact?.hpDelta} mask={mask} />
       <Vital kind="aura" current={char.currentAura} max={char.maxAura} ghostPct={ghosts.aura} previewCost={auraPreviewCost} mask={mask} />
-      <DefenseVitals char={char} ghostPct={ghosts.defense} preview={impact} />
+      {!mask && <DefenseVitals char={char} ghostPct={ghosts.defense} preview={impact} />}
       {current && <CurrentEffects char={char} />}
     </div>
     {children && <div className="cena-combatant__tools">{children}</div>}
@@ -257,7 +259,7 @@ const Row: React.FC<RowProps> = ({ char, side, selected, current, feedback, form
 const RosterPanel: React.FC<RosterPanelProps> = ({
   party, npcRoster, active, currentTurnId = null, targetFeedback = null, round, orderIds = [], onNextTurn, onSelectTurn, onEditCharacter,
   onSelectActive, onToggleHidden, onTogglePresent, onRemoveNpc, onReorderTurn, turnControlsDisabled = false,
-  formaStates = {}, auraPreview = null, targetPreview = null, targetImpacts = {}, streamingMode = false,
+  formaStates = {}, auraPreview = null, targetPreview = null, targetImpacts = {}, streamingMode = false, playerMode = false,
 }) => {
   const [preview, setPreview] = React.useState<{ char: Character; top: number } | null>(null);
   const visibleNpcs = npcRoster.filter(npc => !npc.hidden);
@@ -332,10 +334,10 @@ const RosterPanel: React.FC<RosterPanelProps> = ({
     auraPreviewCost={auraPreview?.charId === char.id ? auraPreview.cost : undefined}
     impact={targetImpacts[char.id]}
     ghosts={ghostsById[char.id]}
-    mask={streamingMode && side === 'npc'}
+    mask={(streamingMode || playerMode) && side === 'npc'}
     onClick={() => onSelectActive({ id: char.id, side })} onEdit={onEditCharacter ? () => onEditCharacter(char.id) : undefined}
     onInspect={(inspected, top) => setPreview({ char: inspected, top })} onInspectEnd={() => setPreview(null)}>
-    {side === 'npc' ? npcTools(char as NpcEntry) : undefined}
+    {side === 'npc' && !playerMode ? npcTools(char as NpcEntry) : undefined}
   </Row>;
 
   return <><section className="cena-roster">
@@ -347,7 +349,7 @@ const RosterPanel: React.FC<RosterPanelProps> = ({
       </>}
       {!round && <>{party.length ? party.map(char => renderRow(char, 'party')) : <p className="cena-roster__empty">Nenhum personagem no combate.</p>}</>}
     </div>
-  </section>{preview && createPortal(<div className="cena-floating-card" style={{ top: Math.max(16, Math.min(window.innerHeight - 280, preview.top - 16)) }}>
+  </section>{preview && !(playerMode && npcRoster.some(npc => npc.id === preview.char.id)) && createPortal(<div className="cena-floating-card" style={{ top: Math.max(16, Math.min(window.innerHeight - 280, preview.top - 16)) }}>
     <div className="cena-floating-card__portrait" style={preview.char.icon ? { backgroundImage: `url(${preview.char.icon})` } : undefined}>{!preview.char.icon && preview.char.name.charAt(0)}</div>
     <div className="cena-floating-card__heading"><span>COMBATENTE</span><strong>{preview.char.name}</strong></div>
     <div className="cena-floating-card__stats"><span><b>HP</b>{preview.char.currentHp}/{preview.char.maxHp}</span><span><b>AURA</b>{preview.char.currentAura}/{preview.char.maxAura}</span>{preview.char.maxAmmo > 0 && <span><b>MUN</b>{preview.char.currentAmmo}</span>}<span><b>DEF</b>{migrateCharacterDefense(preview.char).defenseCurrent}/{migrateCharacterDefense(preview.char).defenseMax}</span></div>

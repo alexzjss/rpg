@@ -8,6 +8,7 @@ export interface LogPanelProps {
   notes: string;
   onNotesChange: (next: string) => void;
   streamingMode?: boolean;
+  readOnly?: boolean;
 }
 
 interface Milestone { icon: string; label: string; tone: string }
@@ -38,7 +39,7 @@ const tab = (active: boolean): React.CSSProperties => ({
   borderBottom: active ? '2px solid #8ce9ff' : '2px solid transparent',
 });
 
-const LogPanel: React.FC<LogPanelProps> = ({ log, hiddenEntryIds = [], notes, onNotesChange, streamingMode = false }) => {
+const LogPanel: React.FC<LogPanelProps> = ({ log, hiddenEntryIds = [], notes, onNotesChange, streamingMode = false, readOnly = false }) => {
   const [view, setView] = React.useState<'log' | 'notes'>('log');
   const [query, setQuery] = React.useState('');
   const feedRef = React.useRef<HTMLDivElement>(null);
@@ -288,7 +289,7 @@ const LogPanel: React.FC<LogPanelProps> = ({ log, hiddenEntryIds = [], notes, on
       `}</style>
       <div role="tablist" style={{ display: 'flex', borderBottom: '1px solid #1e1e24' }}>
         <button role="tab" aria-selected={view === 'log'} style={tab(view === 'log')} onClick={() => setView('log')}>LOG</button>
-        <button role="tab" aria-selected={view === 'notes'} style={tab(view === 'notes')} onClick={() => setView('notes')}>NOTAS</button>
+        {!readOnly && <button role="tab" aria-selected={view === 'notes'} style={tab(view === 'notes')} onClick={() => setView('notes')}>NOTAS</button>}
       </div>
       {view === 'log' && (
         <>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Clock3, LogOut, RefreshCw, Search, Shield, Sparkles, Swords, Wifi, X } from 'lucide-react';
+import { Check, Clock3, LogOut, RefreshCw, ScrollText, Shield, Sparkles, Wifi, X } from 'lucide-react';
 import type { Character } from '../../types';
 import { OnlineAuth } from '../../online/authClient';
 import { PlayerOnline } from '../../online/playerClient';
@@ -7,6 +7,13 @@ import type { PlayerActionView, PlayerCampaignView, PublicParticipant } from '..
 import SceneBackdrop from '../../tabs/cena/SceneBackdrop';
 import PauseCurtain from '../../tabs/cena/PauseCurtain';
 import MapBoard from '../../tabs/cena/MapBoard';
+import RosterPanel from '../../tabs/cena/RosterPanel';
+import ActionMenu from '../../tabs/cena/ActionMenu';
+import LogPanel from '../../tabs/cena/LogPanel';
+import FieldEffectsBar from '../../tabs/cena/FieldEffectsBar';
+import { actorActions, type ActionCategory, type ResolvedAction } from '../../utils/actions';
+import { resolveCards, resolveOwnedItems, resolveSeals, resolveWeapons } from '../../utils/items';
+import { isReactionCard } from '../../utils/arsenalState';
 import './PlayerDashboard.css';
 
 type RequestItem = { id: string; action_id: string; status: string; created_at: string };
@@ -14,6 +21,20 @@ type RequestItem = { id: string; action_id: string; status: string; created_at: 
 const needsTarget = (action: PlayerActionView) => action.requiresAim || action.target.type === 'um_alvo' || action.target.type === 'multiplos_alvos';
 const actionTags = (action: PlayerActionView) => Array.isArray(action.tags) ? action.tags : [];
 const isReaction = (action: PlayerActionView) => actionTags(action).some(tag => /rea[cç][aã]o/i.test(tag));
+const resolvedIsReaction = (action: ResolvedAction) => !!action.arsenalCard && isReactionCard(action.arsenalCard)
+  || !!action.abilityGraph?.header?.tags?.some(tag => /rea[cç][aã]o/i.test(String(tag)));
+const playerActionOf = (action: ResolvedAction): PlayerActionView => {
+  const graph = action.abilityGraph;
+  const nodes = Array.isArray(graph?.nodes) ? graph!.nodes : [];
+  return {
+    id: action.id, name: action.name, description: action.description ?? '', image: action.image,
+    icon: action.image ?? '', category: action.category, tags: [...(action.arsenalCard?.tags?.map(String) ?? graph?.header?.tags?.map(String) ?? []), ...(resolvedIsReaction(action) ? ['reação'] : [])],
+    target: action.arsenalCard?.target ?? graph?.header?.target ?? { type: action.targeting === 'self' ? 'proprio_usuario' : 'um_alvo' },
+    requiresAim: nodes.some(node => node.type === 'alvo' && ['linha', 'cone'].includes(String((node.props as any)?.scope))),
+    requiresSecondaryTarget: nodes.some(node => node.type === 'alvo' && (node.props as any)?.scope === 'escolha'),
+    requiresDestination: nodes.some(node => node.type === 'mover' && (node.props as any)?.kind === 'teleportar'),
+  } as PlayerActionView;
+};
 
 function asMapCharacter(person: PublicParticipant, masked = false): Character {
   const resource = person as any;
@@ -41,6 +62,7 @@ export default function PlayerDashboard() {
   const [secondary, setSecondary] = React.useState('');
   const [destination, setDestination] = React.useState({ x: 50, y: 50 });
   const [historyOpen, setHistoryOpen] = React.useState(false);
+  const [logOpen, setLogOpen] = React.useState(false);
 
   const load = React.useCallback(async (quiet = false) => {
     try {
@@ -66,6 +88,18 @@ export default function PlayerDashboard() {
   const targetableIds = armed && actionAllowed(armed) && needsTarget(armed) ? publicPeople.map(person => person.id) : [];
   const pending = requests.filter(item => item.status === 'pending').length;
   const actions = (Array.isArray(view.actions) ? view.actions : []).filter(action => !search || `${action.name} ${actionTags(action).join(' ')}`.toLowerCase().includes(search.toLowerCase()));
+  const resolvedActions = actorActions({
+    cards: resolveCards(view.character as Character, view.arsenalData.cards),
+    seals: resolveSeals(view.character as Character, view.arsenalData.seals),
+    weapons: resolveWeapons(view.character as Character, view.arsenalData.weapons),
+    items: resolveOwnedItems(view.character as Character, view.arsenalData.items),
+    arsenalCards: view.arsenalData.arsenalCards,
+    abilityGraphs: view.arsenalData.abilityGraphs.map(graph => ({ graph, level: view.arsenalData.holdings.find(holding => holding.cardId === graph.id)?.maxLevel ?? 1 })),
+  });
+  const menuActions = (Object.keys(resolvedActions) as ActionCategory[]).reduce<Record<ActionCategory, ResolvedAction[]>>((out, category) => {
+    out[category] = resolvedActions[category].filter(action => view.permissions.canAct || (view.permissions.canReact && resolvedIsReaction(action)));
+    return out;
+  }, { atacar: [], habilidade: [], item: [] });
 
   const selectToken = (id: string) => {
     if (!armed || !needsTarget(armed) || !actionAllowed(armed)) return;
@@ -108,22 +142,19 @@ export default function PlayerDashboard() {
     {notice && <div className="player-scene__notice">{notice}<button onClick={() => setNotice('')}><X size={14}/></button></div>}
     {armed && <div className="player-scene__aim"><CrosshairIcon/><span><small>AÇÃO PREPARADA</small><strong>{armed.name}</strong><em>{needsTarget(armed) ? targets.length ? `${targets.length} alvo(s) marcado(s)` : 'Selecione no mapa' : 'Pronta para enviar'}</em></span></div>}
 
+    <button className={`cena-journal-tab ${logOpen ? 'is-open' : ''}`} onClick={() => setLogOpen(value => !value)} aria-label={logOpen ? 'Fechar diário de combate' : 'Abrir diário de combate'}><ScrollText size={18}/><span>DIÁRIO</span></button>
+    <div className={`cena-journal-drawer ${logOpen ? 'is-open' : ''}`} aria-hidden={!logOpen}><LogPanel log={view.encounter.log} notes="" onNotesChange={() => {}} streamingMode readOnly /></div>
+
     <section className="cena-arena-column player-scene__arena">
+      <FieldEffectsBar effects={view.encounter.fieldEffects} />
       <div className="cena-arena-stage">
         <MapBoard image={view.scene.image} imagePosition={view.scene.imagePosition} participants={participants} tokens={tokens} activeId={view.encounter.currentTurnId} combat={view.encounter.isActive} enemyIds={enemyIds} movableIds={view.permissions.canMove ? [view.character.id] : []} maskEnemyResources targetableIds={targetableIds} selectedTargetId={targets[0] ?? null} areaPreviewIds={targets.slice(1)} onMoveToken={moveToken} onSelect={selectToken}/>
       </div>
     </section>
 
     <aside className="cena-command-deck player-deck">
-      <section className="player-deck__identity">
-        <i style={view.character.icon ? { backgroundImage: `url(${view.character.icon})`, backgroundPosition: view.character.iconPosition } : undefined}>{!view.character.icon && view.character.name[0]}</i>
-        <div><small>JOGANDO COMO</small><strong>{view.character.name}</strong><span>PV {view.character.currentHp}/{view.character.maxHp} · AURA {view.character.currentAura}/{view.character.maxAura}</span></div>
-        <Shield size={18}/>
-      </section>
-      <section className="cena-deck-actions player-deck__actions">
-        <header><div><small>ARSENAL PESSOAL</small><strong>COMANDOS</strong></div><label><Search size={13}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar…"/></label></header>
-        <div className="player-deck__list">{actions.map(action => <button key={action.id} data-category={action.category} className={`cena-command ${armed?.id === action.id ? 'is-open' : ''}`} disabled={!actionAllowed(action)} onClick={() => arm(action)}>{action.icon ? <i style={{ backgroundImage: `url(${action.icon})` }}/> : <Swords size={17}/>}<span className="cena-command__copy"><strong>{action.name}</strong><small>{actionTags(action).slice(0,2).join(' · ') || action.category}</small></span>{isReaction(action) && <b>R</b>}</button>)}{!actions.length && <p>Nenhuma ação no arsenal.</p>}</div>
-      </section>
+      <section className="cena-deck-roster"><RosterPanel party={[asMapCharacter({ ...view.character, position: view.position }), ...view.allies.map(ally => asMapCharacter(ally))]} npcRoster={view.enemies.map(enemy => ({ ...asMapCharacter(enemy, true), present: true, hidden: false })) as any} active={{ id: view.character.id, side: 'party' }} currentTurnId={view.encounter.currentTurnId} round={view.encounter.isActive ? view.encounter.round : undefined} orderIds={view.encounter.order.map(entry => entry.refId)} onSelectActive={ref => selectToken(ref.id)} onToggleHidden={() => {}} onTogglePresent={() => {}} onRemoveNpc={() => {}} turnControlsDisabled={view.encounter.isPaused} streamingMode playerMode /></section>
+      <section className="cena-deck-actions"><ActionMenu actions={menuActions} onSelectAction={action => arm(playerActionOf(action))} arsenalWeapons={view.arsenalData.arsenalCards.filter(card => card.category === 'arma')} equippedWeaponId={view.arsenalData.holdings.find(holding => holding.equipped)?.cardId ?? null} holdings={view.arsenalData.holdings} preparations={view.arsenalData.preparations} /></section>
       {armed && <section className="player-deck__confirm">
         <p>{armed.description || 'Sem descrição.'}</p>
         {armed.requiresSecondaryTarget && <label>SEGUNDO ALVO<select value={secondary} onChange={e => setSecondary(e.target.value)}><option value="">Selecione…</option>{publicPeople.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>}

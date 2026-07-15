@@ -11,11 +11,29 @@ import { effectiveTokens } from '../utils/mapPositions';
 import { graphAreaConfig, resolveAreaTargets } from '../utils/abilityArea';
 import { ensureNodesRegistered } from '../utils/nodes';
 import { graphFormaVisual } from '../utils/abilityGraphAction';
+import { normalizeCard, normalizeItem, normalizeSeal, normalizeWeapon, resolveAction, type ResolvedAction, type StatSnapshot } from '../utils/actions';
 
 export interface ExecuteOnlineActionInput { actorId: string; actionId: string; targetIds: string[]; choiceTargetId?: string; destination?: { x: number; y: number }; reaction?: boolean }
 export interface ExecuteOnlineActionResult { snapshot: AppSnapshot; status: 'concluida' | 'preparando'; summary: string }
 
 function allParticipants(snapshot: AppSnapshot): Character[] { return [...snapshot.characters, ...snapshot.cena.npcRoster]; }
+
+function legacyStats(character: Character): StatSnapshot {
+  const defense = migrateCharacterDefense(character);
+  return { currentHp: character.currentHp, maxHp: character.maxHp, currentAura: character.currentAura, maxAura: character.maxAura, currentAmmo: character.currentAmmo, maxAmmo: character.maxAmmo, defense: character.defense, defenseMax: defense.defenseMax, defenseCurrent: defense.defenseCurrent, defenseReduction: defense.defenseReduction, defenseRegeneration: defense.defenseRegeneration, defenseActivationThreshold: defense.defenseActivationThreshold, staggerMax: defense.staggerMax, staggerCurrent: defense.staggerCurrent, staggerRecovery: defense.staggerRecovery, staggerDamageMultiplier: defense.staggerDamageMultiplier, staggerDuration: defense.staggerDuration, isDefenseBroken: defense.isDefenseBroken, isStaggered: defense.isStaggered, staggerTurnsRemaining: defense.staggerTurnsRemaining, conditions: character.conditions ?? [] };
+}
+
+function legacyAction(snapshot: AppSnapshot, actor: Character, id: string): ResolvedAction | null {
+  const card = (snapshot.cards ?? []).find(item => item.id === id && (actor.cardIds ?? []).includes(id));
+  if (card) return normalizeCard(card);
+  const seal = (snapshot.seals ?? []).find(item => item.id === id && (actor.sealIds ?? []).includes(id));
+  if (seal) return normalizeSeal(seal);
+  const weapon = (snapshot.weapons ?? []).find(item => item.id === id && (actor.weaponIds ?? []).includes(id));
+  if (weapon) return normalizeWeapon(weapon);
+  const owned = (actor.ownedItems ?? []).find(item => item.itemId === id);
+  const item = owned ? (snapshot.items ?? []).find(candidate => candidate.id === id) : null;
+  return item && owned ? normalizeItem({ ...item, quantity: owned.quantity, durability: owned.durability, maxDurability: owned.maxDurability }) : null;
+}
 
 function actorState(snapshot: AppSnapshot, character: Character): ArsenalActorState {
   const defense = migrateCharacterDefense(character);
@@ -121,6 +139,18 @@ export function executeOnlineAction(source: AppSnapshot, input: ExecuteOnlineAct
     snapshot.cena.log.push(...buildArsenalCombatLog({ card, beforeActor, beforeTargets, result }));
     if (!input.reaction) snapshot.cena.encounter.turn = { ...snapshot.cena.encounter.turn, majorUsed: true };
     return { snapshot, status: result.status, summary: `${actor.name} usou ${card.name}.` };
+  }
+  const legacy = legacyAction(snapshot, actor, input.actionId);
+  if (legacy) {
+    const target = legacy.targeting === 'self' ? actor : targets[0];
+    if (!target) throw new Error('target_required');
+    const result = resolveAction(actor.name, legacyStats(actor), target.name, legacyStats(target), legacy);
+    replaceParticipant(snapshot, actor.id, current => ({ ...current, currentHp: Math.max(0, Math.min(current.maxHp, current.currentHp + (result.actorDelta.hp ?? 0))), currentAura: Math.max(0, Math.min(current.maxAura, current.currentAura + (result.actorDelta.aura ?? 0))), currentAmmo: Math.max(0, Math.min(current.maxAmmo, current.currentAmmo + (result.actorDelta.ammo ?? 0))) }));
+    replaceParticipant(snapshot, target.id, current => ({ ...current, currentHp: Math.max(0, Math.min(current.maxHp, current.currentHp + (result.targetDelta.hp ?? 0))), currentAura: Math.max(0, Math.min(current.maxAura, current.currentAura + (result.targetDelta.aura ?? 0))), currentAmmo: Math.max(0, Math.min(current.maxAmmo, current.currentAmmo + (result.targetDelta.ammo ?? 0))), ...(result.defenseDelta ?? {}), conditions: result.conditionApplied ? [...(current.conditions ?? []), result.conditionApplied] : current.conditions }));
+    snapshot.cena.log.push(...result.log);
+    if (!input.reaction) snapshot.cena.encounter.turn = { ...snapshot.cena.encounter.turn, majorUsed: true };
+    if (input.reaction) snapshot.cena.encounter.reactionsUsed[actor.id] = true;
+    return { snapshot, status: 'concluida', summary: `${actor.name} usou ${legacy.name}.` };
   }
   const graph = (snapshot.abilityGraphs ?? []).find(item => item.id === input.actionId);
   if (!graph) throw new Error('action_not_found');
