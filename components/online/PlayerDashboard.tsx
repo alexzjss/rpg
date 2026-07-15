@@ -95,7 +95,7 @@ export default function PlayerDashboard() {
   };
 
   const turnText = !view.encounter.isActive ? 'EXPLORAÇÃO LIVRE' : view.permissions.isOwnTurn ? 'SEU TURNO' : 'AGUARDANDO TURNO';
-  return <main className={`cena-shell player-scene is-combat ${view.scene.isNight ? 'is-night' : ''}`}>
+  return <main className={`cena-shell player-scene is-combat ${view.scene.isNight ? 'is-night' : ''}`} style={{ height: '100dvh', minHeight: '100dvh' }}>
     <SceneBackdrop image={view.scene.image} imagePosition={view.scene.imagePosition} combat={view.encounter.isActive} />
     <PauseCurtain isPaused={view.encounter.isPaused} image={view.scene.pausedImage || view.scene.image} imagePosition={view.scene.pausedImagePosition || view.scene.imagePosition} participants={participants} display={view.scene.pausedDisplay} />
 
